@@ -1,6 +1,5 @@
 import { createInterface } from 'node:readline';
 import { GameState } from '../game/GameState.js';
-import type { ChainElement } from '../models/types.js';
 
 const config = {
   targetScore: 50,
@@ -16,17 +15,22 @@ function formatStone(id: number, l: number, r: number): string {
   return `[${id}] (${l}|${r})`;
 }
 
-function formatChain(chain: ReadonlyArray<ChainElement>): string {
-  if (chain.length === 0) return '(boş)';
-  return chain
-    .map((el) => (el.type === 'STONE' ? `(${el.data.leftVal}|${el.data.rightVal})` : el.data.symbol))
-    .join(' ');
+function formatBoard(game: GameState): string {
+  const rootId = game.board.getRootNodeId();
+  if (rootId === null) return '(boş)';
+  const rootNode = game.board.getNodes().find((n) => n.nodeId === rootId)!;
+  const lines = [`(${rootNode.leftVal}|${rootNode.rightVal})`];
+  for (const edge of game.board.getEdges()) {
+    const child = game.board.getNodes().find((n) => n.nodeId === edge.childNodeId)!;
+    lines.push(`  ${edge.parentBase} ${edge.operator.symbol} (${child.leftVal}|${child.rightVal})`);
+  }
+  return lines.join('\n');
 }
 
 function printState(): void {
   console.log('\n' + '='.repeat(50));
   console.log(`Tur ${game.turn}/${config.maxTurns}  |  Skor: ${game.score}/${config.targetScore}  |  Durum: ${game.status}`);
-  console.log('Masa: ' + formatChain(game.board.getChain()));
+  console.log('Masa:\n' + formatBoard(game));
   console.log('Elindeki taşlar:');
   game.hand.forEach((s, i) => console.log('  ' + formatStone(i, s.leftVal, s.rightVal)));
   console.log('Elindeki operatörler:');

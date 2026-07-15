@@ -4,6 +4,7 @@ export interface DominoStone {
   id: string;
   leftVal: number;
   rightVal: number;
+  isGolden?: boolean;
 }
 
 export interface OperatorCard {

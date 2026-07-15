@@ -1,0 +1,272 @@
+@import "tailwindcss";
+
+@keyframes chain-place {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
+  }
+  55% {
+    transform: scale(1.08);
+    opacity: 1;
+    box-shadow: 0 0 18px 4px rgba(56, 189, 248, 0.55);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
+  }
+}
+
+.animate-chain-place {
+  animation: chain-place 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Retro Fonts */
+.font-pixel {
+  font-family: 'VT323', monospace;
+}
+
+.font-outfit {
+  font-family: 'Outfit', sans-serif;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+}
+
+/* CRT Screen Effect */
+.crt {
+  position: relative;
+  overflow: hidden;
+}
+
+.crt::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.12) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.005), rgba(0, 0, 255, 0.02));
+  z-index: 20;
+  background-size: 100% 3px, 3px 100%;
+  pointer-events: none;
+}
+
+/* Psychedelic Swirling Green Felt Background */
+@keyframes swirl {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.swirl-bg {
+  background: linear-gradient(135deg, #14532d, #064e3b, #022c22, #166534);
+  background-size: 400% 400%;
+  animation: swirl 15s ease infinite;
+}
+
+/* Balatro-style card layout */
+.balatro-card {
+  perspective: 1000px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.balatro-card:hover {
+  transform: translateY(-6px) rotate(-1.5deg) scale(1.05);
+}
+
+/* Shop Neon text */
+.shop-neon {
+  text-shadow: 0 0 5px rgba(239, 68, 68, 0.8), 0 0 10px rgba(239, 68, 68, 0.5), 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+.shop-neon-green {
+  text-shadow: 0 0 5px rgba(16, 185, 129, 0.8), 0 0 10px rgba(16, 185, 129, 0.5), 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+.shop-neon-blue {
+  text-shadow: 0 0 5px rgba(14, 165, 233, 0.8), 0 0 10px rgba(14, 165, 233, 0.5), 0 0 20px rgba(14, 165, 233, 0.3);
+}
+
+/* Diagonal Shine Effect */
+@keyframes card-shine {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shine {
+  background-image: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.15) 40%,
+    rgba(255, 255, 255, 0.15) 45%,
+    rgba(255, 255, 255, 0) 55%
+  );
+  background-size: 200% 100%;
+  animation: card-shine 4s infinite linear;
+}
+
+/* Staggered Card Deal Slide-In */
+@keyframes card-deal {
+  0% {
+    transform: translateY(120px) scale(0.4) rotate(15deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.animate-card-deal {
+  animation: card-deal 450ms cubic-bezier(0.175, 0.885, 0.32, 1.1) backwards;
+}
+
+@keyframes swirl-red-blue {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.swirl-red-blue-bg {
+  background: linear-gradient(135deg, #7f1d1d, #0f172a, #1e3a8a, #450a0a);
+  background-size: 300% 300%;
+  animation: swirl-red-blue 12s ease infinite;
+}
+
+/* Flowing "current" along the energy line connecting unfrozen chain tiles */
+@keyframes energy-flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+.energy-line {
+  animation: energy-flow 900ms linear infinite;
+  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.85));
+}
+
+/* Faint placeholder silhouette shown inside empty collection slots */
+.slot-silhouette {
+  opacity: 0.12;
+}
+
+@keyframes score-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+  50% {
+    box-shadow: 0 0 20px 6px rgba(16, 185, 129, 0.45);
+  }
+}
+
+.animate-score-pulse {
+  animation: score-pulse-glow 1.6s ease-in-out infinite;
+}
+
+@keyframes toast-in {
+  0% {
+    transform: translate(-50%, 12px);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 220ms ease-out;
+}
+
+@keyframes fade-in-simple {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in-simple 180ms ease-out;
+}
+
+/* Impact ring burst at the moment a connection resolves during scoring */
+@keyframes impact-ring {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.animate-impact-ring {
+  animation: impact-ring 550ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes hand-bonus-pop {
+  0% {
+    transform: scale(0.4) rotate(-4deg);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.15) rotate(2deg);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.05) rotate(0deg);
+    opacity: 0;
+  }
+}
+
+.animate-hand-bonus-pop {
+  animation: hand-bonus-pop 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Big Balatro-style "+9" score popup for each connection resolving during scoring */
+@keyframes score-step-pop {
+  0% {
+    transform: translateY(10px) scale(0.5);
+    opacity: 0;
+  }
+  25% {
+    transform: translateY(-8px) scale(1.15);
+    opacity: 1;
+  }
+  70% {
+    transform: translateY(-18px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-40px) scale(0.9);
+    opacity: 0;
+  }
+}
+
+.animate-score-step-pop {
+  animation: score-step-pop 650ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
