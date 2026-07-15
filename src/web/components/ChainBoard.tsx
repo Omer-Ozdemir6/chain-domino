@@ -24,13 +24,17 @@ const SLOT_CLASS: Record<SlotState, string> = {
   illegal: 'cursor-not-allowed border-solid border-rose-400 bg-rose-50 text-rose-400 dark:bg-rose-900/20',
 };
 
-function SlotButton({ state, onClick }: { state: SlotState; onClick: () => void }) {
+function SlotButton({ state, onClick, compact }: { state: SlotState; onClick: () => void; compact?: boolean }) {
   return (
     <button
       type="button"
       onClick={state === 'legal' ? onClick : undefined}
       disabled={state !== 'legal'}
-      className={`flex h-14 w-14 items-center justify-center rounded-lg border-2 text-2xl font-bold transition ${SLOT_CLASS[state]}`}
+      className={[
+        compact ? 'flex h-9 w-9 rounded-full text-base' : 'flex h-14 w-14 rounded-lg text-2xl',
+        'items-center justify-center border-2 font-bold transition',
+        SLOT_CLASS[state],
+      ].join(' ')}
     >
       {state === 'legal' ? '+' : '×'}
     </button>
@@ -125,10 +129,27 @@ function orientForDisplay(
     : { left: node.rightVal, right: node.leftVal, vertical: false };
 }
 
-// Sized to hug the tiles' actual rendered footprint (109x76 horizontal, 56x149 vertical for
-// h-18/w-13 Tile boxes) so dominoes sit edge-to-edge like a real chain instead of floating apart.
-const COL_SIZE = 113;
-const ROW_SIZE = 152;
+// The board uses "doubled coordinates": a domino sits on every EVEN grid line, and the operator
+// between two touching dominoes sits on the ODD line between them. Giving those two kinds of
+// lines very different track sizes — a full tile-sized track for dominoes, a small badge-sized
+// track for operators — is what makes the chain actually look like a real domino chain (tiles
+// touching edge-to-edge with just a small connector badge on the seam) instead of floating apart.
+const NODE_COL = 113; // matches Tile's rendered footprint (h-18/w-13 boxes side by side)
+const NODE_ROW = 152; // matches Tile's vertical footprint when stacked N/S
+const OP_SIZE = 44; // small round operator badge track (both axes)
+
+/** Builds the per-track pixel sizes, cumulative offsets, and a center() lookup for one axis. */
+function buildAxis(minCoord: number, maxCoord: number, nodeSize: number) {
+  const sizes: number[] = [];
+  for (let c = minCoord; c <= maxCoord; c++) {
+    sizes.push(Math.abs(c) % 2 === 0 ? nodeSize : OP_SIZE);
+  }
+  const offsets: number[] = [0];
+  for (const s of sizes) offsets.push(offsets[offsets.length - 1] + s);
+  const total = offsets[offsets.length - 1];
+  const center = (c: number) => offsets[c - minCoord] + sizes[c - minCoord] / 2;
+  return { sizes, total, center };
+}
 
 /**
  * Tracks an element's content-box size so the board can scale itself to always fit inside it.
@@ -203,16 +224,21 @@ export default function ChainBoard({
     position: 'relative' as const,
     zIndex: 1,
   });
-  const pixelCenter = ([x, y]: Vec): Vec => [(x - minX + 0.5) * COL_SIZE, (y - minY + 0.5) * ROW_SIZE];
+
+  const xAxis = buildAxis(minX, maxX, NODE_COL);
+  const yAxis = buildAxis(minY, maxY, NODE_ROW);
+  const pixelCenter = ([x, y]: Vec): Vec => [xAxis.center(x), yAxis.center(y)];
 
   const nodes = board.getNodes();
   const nodeById = new Map(nodes.map((n) => [n.nodeId, n]));
 
-  const contentWidth = (maxX - minX + 1) * COL_SIZE;
-  const contentHeight = (maxY - minY + 1) * ROW_SIZE;
-  
-  // Proportional zoom: fits both width and height, caps at 1.35x zoom and 0.35x shrink, with 10% breathing room
-  const minScale = 0.55;
+  const contentWidth = xAxis.total;
+  const contentHeight = yAxis.total;
+
+  // Proportional zoom: fits both width and height, caps at 1.35x zoom, and never lets the board
+  // grow so small that a control becomes unreachable — the container falls back to scrolling
+  // instead of clipping if a chain is too tall/wide even at the floor scale.
+  const minScale = 0.4;
   const maxScale = 1.35;
   const autoScale =
     containerSize.width > 0 && containerSize.height > 0
@@ -228,7 +254,7 @@ export default function ChainBoard({
   return (
     <div
       ref={containerRef}
-      className="flex h-full w-full overflow-hidden rounded-xl bg-slate-950/30 p-2 shadow-inner justify-center items-center"
+      className="flex h-full w-full overflow-auto rounded-xl bg-slate-950/30 p-2 shadow-inner justify-center items-center"
     >
       <div
         style={{
@@ -241,8 +267,8 @@ export default function ChainBoard({
         <div
           className="grid place-items-center"
           style={{
-            gridTemplateColumns: `repeat(${maxX - minX + 1}, ${COL_SIZE}px)`,
-            gridTemplateRows: `repeat(${maxY - minY + 1}, ${ROW_SIZE}px)`,
+            gridTemplateColumns: xAxis.sizes.map((s) => `${s}px`).join(' '),
+            gridTemplateRows: yAxis.sizes.map((s) => `${s}px`).join(' '),
             transform: `scale(${scale})`,
             transformOrigin: '0 0',
             position: 'absolute',
@@ -332,6 +358,7 @@ export default function ChainBoard({
                   animateIn
                   frozen={edge.frozen}
                   highlighted={isHighlighted}
+                  compact
                 />
               </div>
             );
@@ -350,6 +377,7 @@ export default function ChainBoard({
                   symbol={slot.pendingOperator!.symbol}
                   highlighted={isBreakerTarget}
                   onClick={isBreakerTarget && onSelectOperatorSlot ? () => onSelectOperatorSlot(slotId) : undefined}
+                  compact
                 />
               </div>,
               showButton && (
@@ -365,7 +393,7 @@ export default function ChainBoard({
           const state: SlotState = legalSlotIds.has(slotId) ? 'legal' : 'illegal';
           return (
             <div key={slotId} style={cell(pos)}>
-              <SlotButton state={state} onClick={() => onCommit(slotId)} />
+              <SlotButton state={state} onClick={() => onCommit(slotId)} compact />
             </div>
           );
         })}

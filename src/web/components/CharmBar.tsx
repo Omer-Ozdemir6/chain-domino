@@ -155,7 +155,7 @@ export default function CharmBar({ charms, maxCharmSlots = 5, highlightedCharmId
                 className={`balatro-card relative cursor-help flex flex-col justify-between w-28 h-40 p-2 rounded-lg border-2 text-center transition select-none shrink-0 ${isHighlighted ? 'border-emerald-400 ring-4 ring-emerald-500 scale-105 z-50 shadow-[0_0_15px_5px_rgba(16,185,129,0.7)] animate-bounce' : cardClass}`}
               >
                 {isHighlighted && charmPopupText && (
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-emerald-500 border border-emerald-300 text-white font-pixel text-[9px] px-1.5 py-0.5 rounded shadow-md z-50 whitespace-nowrap animate-pulse">
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-max max-w-44 bg-emerald-500 border border-emerald-300 text-white font-pixel text-xs px-2 py-1 rounded-lg shadow-lg z-50 text-center animate-pulse">
                     {charmPopupText}
                   </div>
                 )}

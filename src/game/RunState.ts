@@ -433,13 +433,26 @@ export class RunState {
     const turnsUsed = this.game.turn - 1;
     const maxTurnsVal = this.selectedDeck === 'BLUE' ? 7 : 6;
     const turnsLeft = Math.max(0, maxTurnsVal - turnsUsed);
+    const blindTarget = this.getBlindTarget(this.activeBlind!);
 
     const blindReward = this.activeBlind === 'SMALL' ? 3 : this.activeBlind === 'BIG' ? 4 : 5;
     const interest = Math.min(5, Math.floor(this.money / 5));
-    const totalPayout = blindReward + turnsLeft * 1 + interest;
+
+    const roundEndCtx: RoundEndContext = {
+      finalScore: this.game.score,
+      target: blindTarget,
+      turnsUsed,
+      turnsLeft,
+      nodes: this.game.board.getNodes(),
+    };
+    const charmBonus = this.roundHooks.reduce(
+      (sum, h) => sum + (h.onRoundEnd ? h.onRoundEnd(roundEndCtx) : 0),
+      0
+    );
+
+    const totalPayout = blindReward + turnsLeft * 1 + interest + charmBonus;
 
     this.money += totalPayout;
-    const blindTarget = this.getBlindTarget(this.activeBlind!);
 
     this.history.push({
       round: this.round,

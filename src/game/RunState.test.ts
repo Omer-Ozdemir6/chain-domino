@@ -57,6 +57,23 @@ describe('RunState', () => {
     expect(run.money - moneyBefore).toBe(6);
   });
 
+  it("a round-end charm's onRoundEnd hook actually pays out on completeRound", () => {
+    const run = new RunState();
+    run.initializeRun('RED', 'WHITE');
+    run.ownedCharmIds = ['generous_trader']; // flat +$5 every round
+    run.startBlind('SMALL');
+    run.act((g) => {
+      g.score = run.getBlindTarget('SMALL');
+    });
+    run.game.turn = 6; // 0 turns left, 0 interest bonus
+    const moneyBefore = run.money;
+    run.act((g) => g.skipTurn());
+
+    expect(run.phase).toBe('SHOP');
+    // small blind reward = 3, turnsLeft = 0, interest = 0, charm bonus = 5.
+    expect(run.money - moneyBefore).toBe(8);
+  });
+
   it('buyItem rejects insufficient money, then succeeds and deducts cost', () => {
     const run = new RunState();
     run.initializeRun('RED', 'WHITE');

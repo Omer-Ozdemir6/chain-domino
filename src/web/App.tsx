@@ -19,6 +19,21 @@ import { playPlaceSound } from './sound.js';
 
 const RUN_CONFIG: Partial<RunConfig> = {};
 
+/** The plain arithmetic result, before any operator-level or charm bonus — used as the baseline
+ *  to measure each owned charm's own isolated contribution for the scoring-animation recap. */
+function rawEdgeValue(operator: 'ADD' | 'SUBTRACT' | 'MULTIPLY' | 'DIVIDE', parentBase: number, childExposed: number): number {
+  switch (operator) {
+    case 'ADD':
+      return parentBase + childExposed;
+    case 'SUBTRACT':
+      return parentBase - childExposed;
+    case 'MULTIPLY':
+      return parentBase * childExposed;
+    case 'DIVIDE':
+      return childExposed === 0 ? parentBase : Math.round(parentBase / childExposed);
+  }
+}
+
 /** The whole game is designed at this one fixed resolution and uniformly scaled to fit any
  *  screen (desktop or mobile) — same layout everywhere, never reflowed, never clipped. */
 const DESIGN_WIDTH = 1440;
@@ -191,47 +206,58 @@ export default function App() {
         setHighlightedEdgeId(null);
         setHighlightedNodeId(null);
 
-        // Now animate triggering charms (Jokers)
+        // Now recap what each owned charm actually did this turn. The per-edge popups above
+        // already include every charm's contribution (composed into the real evaluator), so
+        // this step is purely informational — it must NOT add to the score again.
+        const hookCtx = { ownedCharmIds: run.ownedCharmIds };
+        const rawTotal = edges.reduce(
+          (sum, e) => sum + rawEdgeValue(e.operator.type, e.parentBase, e.childExposedValue),
+          0
+        );
+
+        // Only recap charms that actually did something observable this turn.
+        const activeCharmIds = run.ownedCharmIds.filter((id) => {
+          const def = CHARMS.find((c) => c.id === id);
+          if (!def) return false;
+          const hooks = def.createHooks(hookCtx);
+          if (hooks.onOperatorResolve) {
+            const affected = edges.some((e) => {
+              const base = rawEdgeValue(e.operator.type, e.parentBase, e.childExposedValue);
+              return hooks.onOperatorResolve!(e.operator.type, e.parentBase, e.childExposedValue, base) !== base;
+            });
+            if (affected) return true;
+          }
+          if (hooks.onEvaluationEnd) {
+            return hooks.onEvaluationEnd(rawTotal) !== rawTotal;
+          }
+          return false;
+        });
+
         let charmIndex = 0;
-        const ownedCharms = run.ownedCharmIds;
 
         function runCharmStep() {
-          if (charmIndex < ownedCharms.length) {
-            const charmId = ownedCharms[charmIndex];
+          if (charmIndex < activeCharmIds.length) {
+            const charmId = activeCharmIds[charmIndex];
+            const def = CHARMS.find((c) => c.id === charmId)!;
+            const hooks = def.createHooks(hookCtx);
+
+            let delta = 0;
+            if (hooks.onOperatorResolve) {
+              for (const e of edges) {
+                const base = rawEdgeValue(e.operator.type, e.parentBase, e.childExposedValue);
+                delta += hooks.onOperatorResolve(e.operator.type, e.parentBase, e.childExposedValue, base) - base;
+              }
+            }
+            if (hooks.onEvaluationEnd) {
+              delta += hooks.onEvaluationEnd(rawTotal) - rawTotal;
+            }
+
             setHighlightedCharmId(charmId);
+            setCharmPopupText(`${def.name}: ${delta >= 0 ? '+' : ''}${delta}`);
             playPlaceSound();
 
-            // Give floating tag above card
-            let bubbleText = 'Aktif!';
-            if (charmId === 'division_master') bubbleText = '+3';
-            else if (charmId === 'multiplier_frenzy') bubbleText = '+4';
-            else if (charmId === 'symmetry_bonus') bubbleText = '+5';
-            else if (charmId === 'chain_end_interest') bubbleText = '+10%';
-            setCharmPopupText(bubbleText);
-
-            // Compute hypothetical bonus so score rolls up with the charm animation
-            let charmBonus = 0;
-            if (charmId === 'division_master') {
-              const divideEdges = edges.filter((e) => e.operator.type === 'DIVIDE').length;
-              charmBonus = divideEdges * 3;
-            } else if (charmId === 'multiplier_frenzy') {
-              const mulEdges = edges.filter((e) => e.operator.type === 'MULTIPLY').length;
-              charmBonus = mulEdges * 4;
-            } else if (charmId === 'symmetry_bonus') {
-              const symmetricEdges = edges.filter((e) => e.parentBase === e.childExposedValue).length;
-              charmBonus = symmetricEdges * 5;
-            } else if (charmId === 'chain_end_interest') {
-              charmBonus = Math.round(runningScoreVal * 0.1);
-            }
-
-            if (charmBonus > 0) {
-              const newScore = runningScoreVal + charmBonus;
-              rollScoreTo(newScore, 300);
-              runningScoreVal = newScore;
-            }
-
             charmIndex++;
-            setTimeout(runCharmStep, 600);
+            setTimeout(runCharmStep, 900);
           } else {
             // Animation complete: commit score in core engine
             setHighlightedCharmId(null);

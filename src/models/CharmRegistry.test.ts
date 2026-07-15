@@ -21,9 +21,9 @@ const ctx = (overrides: Partial<RoundEndContext> = {}): RoundEndContext => ({
 });
 
 describe('CharmRegistry', () => {
-  it('has exactly 24 charms with unique ids', () => {
-    expect(CHARMS).toHaveLength(24);
-    expect(new Set(CHARMS.map((c) => c.id)).size).toBe(24);
+  it('has at least 100 charms with unique ids', () => {
+    expect(CHARMS.length).toBeGreaterThanOrEqual(100);
+    expect(new Set(CHARMS.map((c) => c.id)).size).toBe(CHARMS.length);
   });
 
   it('Bölüm Ustası adds +3 only to DIVIDE edges', () => {
