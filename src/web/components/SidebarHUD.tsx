@@ -31,6 +31,10 @@ interface SidebarHUDProps {
   onSkip: () => void;
   onDiscard: () => void;
   message: string | null;
+  /** 'sidebar' (default): tall left column for the landscape canvas. 'topbar': compact
+   *  horizontal strip with no action buttons, for the portrait canvas (buttons render
+   *  separately at the bottom of the screen there, closer to the thumbs). */
+  layout?: 'sidebar' | 'topbar';
 }
 
 const STATUS_LABEL: Record<GameStatus, string> = {
@@ -62,6 +66,7 @@ export default function SidebarHUD({
   onUndo,
   onSkip,
   onDiscard,
+  layout = 'sidebar',
 }: SidebarHUDProps) {
   let bossWarning: string | null = null;
   if (round === 3) {
@@ -70,6 +75,50 @@ export default function SidebarHUD({
     bossWarning = 'Hassas Denge';
   } else if (round === 8) {
     bossWarning = 'Büyük Baskı';
+  }
+
+  const opLevelsStrip = (
+    <div className="flex items-center gap-2 text-[11px] font-mono">
+      <span className="font-bold text-emerald-400">+L{operatorLevels.ADD ?? 1}</span>
+      <span className="font-bold text-rose-400">-L{operatorLevels.SUBTRACT ?? 1}</span>
+      <span className="font-bold text-amber-400">xL{operatorLevels.MULTIPLY ?? 1}</span>
+      <span className="font-bold text-teal-400">÷L{operatorLevels.DIVIDE ?? 1}</span>
+    </div>
+  );
+
+  if (layout === 'topbar') {
+    return (
+      <div className="w-full bg-slate-900 border-b-4 border-slate-950 px-3 py-2 flex items-center gap-3 text-white select-none shrink-0">
+        <div className="flex flex-col leading-tight shrink-0">
+          <span className="font-pixel text-2xl text-emerald-400 leading-none">{score}</span>
+          <span className="text-[9px] text-amber-500 font-bold">Hedef {targetScore}</span>
+        </div>
+        <div className="flex-1 grid grid-cols-4 gap-1.5 text-center">
+          <div>
+            <span className="block text-[8px] text-slate-400 uppercase font-bold leading-none">Ante</span>
+            <span className="font-pixel text-sm text-slate-200">{round}/{totalRounds}</span>
+          </div>
+          <div>
+            <span className="block text-[8px] text-slate-400 uppercase font-bold leading-none">Tur</span>
+            <span className="font-pixel text-sm text-amber-400">{turn}/{maxTurns}</span>
+          </div>
+          <div>
+            <span className="block text-[8px] text-slate-400 uppercase font-bold leading-none">Iskarta</span>
+            <span className="font-pixel text-sm text-rose-400">{discardsLeft}</span>
+          </div>
+          <div>
+            <span className="block text-[8px] text-slate-400 uppercase font-bold leading-none">Para</span>
+            <span className="font-pixel text-sm text-amber-500">${money}</span>
+          </div>
+        </div>
+        {bossWarning && (
+          <div className="bg-rose-950/40 border border-rose-500/20 text-[8px] font-bold text-rose-400 uppercase py-0.5 px-1 rounded animate-pulse shrink-0">
+            ⚠️{bossWarning}
+          </div>
+        )}
+        {opLevelsStrip}
+      </div>
+    );
   }
 
   return (

@@ -12,6 +12,14 @@ const RARITY_CARD_CLASS: Record<CharmRarity, string> = {
 const CURSE_CARD_CLASS =
   'border-rose-800 bg-rose-50/95 text-rose-950 shadow-md dark:border-rose-700 dark:bg-rose-950/80 dark:text-rose-100';
 
+const GEM_CLASS: Record<CharmRarity, string> = {
+  COMMON: 'bg-stone-500 shadow-[0_0_8px_#78716c]',
+  UNCOMMON: 'bg-teal-400 shadow-[0_0_8px_#2dd4bf]',
+  RARE: 'bg-rose-500 shadow-[0_0_8px_#f43f5e]',
+  LEGENDARY: 'bg-amber-400 shadow-[0_0_10px_#fbbf24] animate-pulse',
+};
+const CURSE_GEM = 'bg-fuchsia-500 shadow-[0_0_10px_#d946ef] animate-pulse';
+
 const RARITY_LABEL_COLOR: Record<CharmRarity, string> = {
   COMMON: 'text-stone-400 dark:text-stone-500',
   UNCOMMON: 'text-teal-600 dark:text-teal-400',
@@ -75,30 +83,46 @@ export default function CharmBar({ charms, maxCharmSlots = 5, highlightedCharmId
 
           const isHighlighted = highlightedCharmId === charm.id;
           const cardClass = charm.curse ? CURSE_CARD_CLASS : RARITY_CARD_CLASS[charm.rarity];
+          
+          const tooltipContent = (
+            <div className="flex flex-col gap-1.5 p-1 select-none text-left leading-normal font-sans">
+              <div className="flex items-center justify-between border-b border-amber-800/40 pb-1">
+                <span className="font-bold text-xs text-amber-200">{charm.name}</span>
+                <span className={`text-[8.5px] uppercase font-extrabold ${RARITY_LABEL_COLOR[charm.rarity]}`}>
+                  {charm.curse ? 'LANETLİ' : charm.rarity}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-200 leading-relaxed">
+                {charm.description}
+              </p>
+              <div className="flex justify-between items-center text-[9px] text-amber-400/80 border-t border-amber-800/20 pt-1">
+                <span>Satış Değeri: ${Math.round(charm.cost / 2)}</span>
+                <span>Değer: ${charm.cost}</span>
+              </div>
+            </div>
+          );
+
+          const gemClass = charm.curse ? CURSE_GEM : GEM_CLASS[charm.rarity];
           return (
-            <InfoTooltip key={charm.id} text={charm.description} widthClass="w-56">
+            <InfoTooltip key={charm.id} text={tooltipContent} widthClass="w-56" side="bottom">
               <div
-                className={`balatro-card relative cursor-help flex flex-col justify-between w-28 h-40 p-2 rounded-lg border-2 text-center transition select-none shrink-0 ${isHighlighted ? 'border-emerald-400 ring-4 ring-emerald-500 scale-105 z-50 shadow-[0_0_15px_5px_rgba(16,185,129,0.7)] animate-bounce' : cardClass}`}
+                className={`balatro-card relative cursor-help flex flex-col justify-between w-28 h-40 p-2.5 rounded-lg border-2 text-center transition select-none shrink-0 ${isHighlighted ? 'border-emerald-400 ring-4 ring-emerald-500 scale-105 z-50 shadow-[0_0_15px_5px_rgba(16,185,129,0.7)] animate-bounce' : cardClass}`}
               >
+                {/* Rarity Gem indicators in top corner (Balatro style) */}
+                <div className={`absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 ${gemClass}`} title={charm.curse ? 'Lanetli' : charm.rarity} />
+                
                 {isHighlighted && charmPopupText && (
                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-max max-w-44 bg-emerald-500 border border-emerald-300 text-white font-pixel text-xs px-2 py-1 rounded-lg shadow-lg z-50 text-center animate-pulse">
                     {charmPopupText}
                   </div>
                 )}
-                <div className={`flex items-center justify-center gap-1 text-[9px] uppercase font-bold ${RARITY_LABEL_COLOR[charm.rarity]}`}>
-                  {charm.curse && <span title="Lanetli: iyi ve kötü etkisi birlikte gelir">⚠</span>}
-                  {charm.rarity}
-                </div>
 
-                {/* Visual Icon Art */}
-                <div className="my-0.5 flex items-center justify-center transform scale-75 origin-center">
+                {/* Visual Icon Art — Massive Balatro Joker graphics, fills the card body */}
+                <div className="flex-1 flex items-center justify-center transform scale-[2.1] origin-center my-auto">
                   {renderCharmIcon(charm.id)}
                 </div>
 
-                <div className="text-[11px] font-bold leading-tight">{charm.name}</div>
-                {/* Description always visible (not hover-only) — hover-only info is invisible on touch devices. */}
-                <p className="text-[9px] leading-snug opacity-80 line-clamp-3 flex-1">{charm.description}</p>
-                <div className="text-[10px] font-pixel font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded py-0.5 mt-0.5">${charm.cost}</div>
+                <div className="text-[9px] font-pixel font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded py-0.5 mt-0.5">${charm.cost}</div>
               </div>
             </InfoTooltip>
           );

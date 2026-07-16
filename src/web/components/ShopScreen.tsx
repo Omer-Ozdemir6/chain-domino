@@ -2,6 +2,7 @@ import type { CharmDef } from '../../models/Charm.js';
 import type { ShopOffer } from '../../game/RunState.js';
 import { renderCharmIcon } from './CharmBar.js';
 import { VOUCHER_ICON_MAP, CONSUMABLE_ICON_MAP } from './charmIconMap.js';
+import InfoTooltip from './InfoTooltip.js';
 
 interface ShopScreenProps {
   money: number;
@@ -12,6 +13,8 @@ interface ShopScreenProps {
   onBuy: (itemId: string) => void;
   onReroll: () => void;
   onContinue: () => void;
+  /** Stack the sign+buttons above the offer rack instead of beside it, for the narrow portrait canvas. */
+  isPortrait?: boolean;
 }
 
 const RARITY_BORDER: Record<CharmDef['rarity'], string> = {
@@ -22,6 +25,14 @@ const RARITY_BORDER: Record<CharmDef['rarity'], string> = {
 };
 
 const CURSE_BORDER = 'border-rose-800 bg-rose-950/30';
+
+const GEM_CLASS: Record<CharmDef['rarity'], string> = {
+  COMMON: 'bg-stone-500 shadow-[0_0_8px_#78716c]',
+  UNCOMMON: 'bg-teal-400 shadow-[0_0_8px_#2dd4bf]',
+  RARE: 'bg-rose-500 shadow-[0_0_8px_#f43f5e]',
+  LEGENDARY: 'bg-amber-400 shadow-[0_0_10px_#fbbf24] animate-pulse',
+};
+const CURSE_GEM = 'bg-fuchsia-500 shadow-[0_0_10px_#d946ef] animate-pulse';
 
 const RARITY_LABEL_CLASS: Record<CharmDef['rarity'], string> = {
   COMMON: 'text-stone-500',
@@ -160,26 +171,27 @@ export default function ShopScreen({
   onBuy,
   onReroll,
   onContinue,
+  isPortrait = false,
 }: ShopScreenProps) {
   const slotsFull = ownedCharms.length >= maxCharmSlots;
 
   return (
-    <div className="w-full h-full flex flex-row bg-stone-900 border-2 border-stone-950 p-4 gap-4 select-none overflow-y-auto">
-      {/* Left Column Controls */}
-      <div className="flex flex-col gap-4 w-36 shrink-0 justify-center">
+    <div className={`w-full h-full flex ${isPortrait ? 'flex-col' : 'flex-row'} bg-stone-900 border-2 border-stone-950 p-3 gap-3 select-none overflow-y-auto`}>
+      {/* Controls: a column beside the rack on landscape, a row above it on portrait */}
+      <div className={`flex gap-3 shrink-0 ${isPortrait ? 'flex-row items-center' : 'flex-col w-36 justify-center'}`}>
         {/* Carved wooden shop sign */}
-        <div className="rounded-xl border-4 border-amber-800 bg-linear-to-b from-amber-700 to-amber-900 p-3 text-center shadow-md">
-          <h2 className="text-3xl font-black text-amber-50 font-pixel tracking-widest uppercase shop-neon">
+        <div className={`rounded-xl border-4 border-amber-800 bg-linear-to-b from-amber-700 to-amber-900 text-center shadow-md ${isPortrait ? 'flex-1 py-2' : 'p-3'}`}>
+          <h2 className={`font-black text-amber-50 font-pixel tracking-widest uppercase shop-neon ${isPortrait ? 'text-xl' : 'text-3xl'}`}>
             MAĞAZA
           </h2>
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className={isPortrait ? 'flex gap-2 shrink-0' : 'flex flex-col gap-2'}>
           {/* Next Round Button (Red, matching screenshot) */}
           <button
             type="button"
             onClick={onContinue}
-            className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-500 active:translate-y-0.5 text-sm font-pixel font-bold text-white shadow-lg border-b-4 border-red-800 transition uppercase"
+            className={`${isPortrait ? 'flex-1' : 'w-full'} py-3.5 rounded-xl bg-red-600 hover:bg-red-500 active:translate-y-0.5 text-sm font-pixel font-bold text-white shadow-lg border-b-4 border-red-800 transition uppercase`}
           >
             Sonraki Tur
           </button>
@@ -189,7 +201,7 @@ export default function ShopScreen({
             type="button"
             onClick={onReroll}
             disabled={money < rerollCost}
-            className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:translate-y-0.5 text-sm font-pixel font-bold text-white disabled:opacity-30 border-b-4 border-emerald-800 transition uppercase"
+            className={`${isPortrait ? 'flex-1' : 'w-full'} py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:translate-y-0.5 text-sm font-pixel font-bold text-white disabled:opacity-30 border-b-4 border-emerald-800 transition uppercase`}
           >
             Yenile (${rerollCost})
           </button>
@@ -213,71 +225,91 @@ export default function ShopScreen({
               const charm = offer.item;
               const disabled = money < charm.cost || slotsFull;
               const borderClass = charm.curse ? CURSE_BORDER : RARITY_BORDER[charm.rarity];
-              return (
-                <div
-                  key={charm.id}
-                  className={`balatro-card flex flex-col justify-between w-30 h-46 md:w-36 md:h-56 p-2 md:p-3 rounded-xl border-2 transition shrink-0 ${borderClass}`}
-                >
-                  <div className="text-center">
-                    <span className={`text-[8.5px] md:text-[10px] uppercase tracking-wider font-extrabold flex items-center justify-center gap-1 ${RARITY_LABEL_CLASS[charm.rarity]}`}>
-                      {charm.curse && <span title="Lanetli">⚠</span>}
-                      {charm.rarity}
+              
+              const tooltipContent = (
+                <div className="flex flex-col gap-1.5 p-1 select-none text-left leading-normal font-sans">
+                  <div className="flex items-center justify-between border-b border-amber-800/40 pb-1">
+                    <span className="font-bold text-xs text-amber-200">{charm.name}</span>
+                    <span className={`text-[8.5px] uppercase font-extrabold ${RARITY_LABEL_CLASS[charm.rarity]}`}>
+                      {charm.curse ? 'LANETLİ' : charm.rarity}
                     </span>
-                    <h4 className="text-[10px] md:text-xs font-bold leading-tight mt-0.5 truncate text-slate-200" title={charm.name}>
-                      {charm.name}
-                    </h4>
                   </div>
-
-                  <div className="my-1 flex items-center justify-center transform scale-90">
-                    {renderCharmIcon(charm.id)}
-                  </div>
-
-                  <p className="text-[8.5px] md:text-[10px] text-slate-300 leading-normal text-center mb-1 md:mb-1.5 line-clamp-3 md:line-clamp-4">
+                  <p className="text-[10px] text-slate-200 leading-relaxed">
                     {charm.description}
                   </p>
-
-                  <button
-                    type="button"
-                    onClick={() => onBuy(charm.id)}
-                    disabled={disabled}
-                    className="w-full py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-[9.5px] md:text-[11px] font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition"
-                  >
-                    SATIN AL ${charm.cost}
-                  </button>
+                  <div className="flex justify-between items-center text-[9px] text-amber-400/80 border-t border-amber-800/20 pt-1">
+                    <span>Maliyet: ${charm.cost}</span>
+                  </div>
                 </div>
+              );
+
+              const gemClass = charm.curse ? CURSE_GEM : GEM_CLASS[charm.rarity];
+
+              return (
+                <InfoTooltip key={charm.id} text={tooltipContent} widthClass="w-56" side="top">
+                  <div
+                    className={`balatro-card relative flex flex-col justify-between w-30 h-46 md:w-36 md:h-56 p-2.5 rounded-xl border-2 transition shrink-0 ${borderClass}`}
+                  >
+                    {/* Rarity Gem indicator */}
+                    <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-slate-950/40 z-10 ${gemClass}`} title={charm.curse ? 'Lanetli' : charm.rarity} />
+
+                    {/* Massive visual card art */}
+                    <div className="flex-1 flex items-center justify-center transform scale-[2.1] origin-center my-auto">
+                      {renderCharmIcon(charm.id)}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onBuy(charm.id)}
+                      disabled={disabled}
+                      className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-[9.5px] md:text-[11px] font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition"
+                    >
+                      SATIN AL ${charm.cost}
+                    </button>
+                  </div>
+                </InfoTooltip>
               );
             }
 
             if (offer.type === 'VOUCHER') {
               const voucher = offer.item;
               const disabled = money < voucher.cost;
-              return (
-                <div
-                  key={voucher.id}
-                  className="balatro-card flex flex-col justify-between w-30 h-46 md:w-36 md:h-56 p-2 md:p-3 rounded-xl border-2 border-amber-600/80 bg-amber-950/20 shadow-[0_0_10px_rgba(217,119,6,0.3)] transition shrink-0"
-                >
-                  <div className="text-center">
-                    <span className="text-[8.5px] md:text-[10px] uppercase tracking-wider font-extrabold text-amber-500">KALICI</span>
-                    <h4 className="text-[10px] md:text-xs font-bold leading-tight mt-0.5 truncate text-slate-200" title={voucher.name}>
-                      {voucher.name}
-                    </h4>
+              
+              const tooltipContent = (
+                <div className="flex flex-col gap-1.5 p-1 select-none text-left leading-normal font-sans">
+                  <div className="flex items-center justify-between border-b border-amber-800/40 pb-1">
+                    <span className="font-bold text-xs text-amber-200">{voucher.name}</span>
+                    <span className="text-[8.5px] uppercase font-extrabold text-amber-500">VOUCHER</span>
                   </div>
-
-                  <div className="my-1 flex items-center justify-center transform scale-90">{renderVoucherIcon(voucher.id)}</div>
-
-                  <p className="text-[8.5px] md:text-[10px] text-slate-300 leading-normal text-center mb-1 md:mb-1.5 line-clamp-3 md:line-clamp-4">
+                  <p className="text-[10px] text-slate-200 leading-relaxed">
                     {voucher.description}
                   </p>
-
-                  <button
-                    type="button"
-                    onClick={() => onBuy(voucher.id)}
-                    disabled={disabled}
-                    className="w-full py-1 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-30 disabled:pointer-events-none text-[9.5px] md:text-[11px] font-bold font-pixel text-white shadow border-b-2 border-amber-800 transition"
-                  >
-                    SATIN AL ${voucher.cost}
-                  </button>
                 </div>
+              );
+
+              return (
+                <InfoTooltip key={voucher.id} text={tooltipContent} widthClass="w-56" side="top">
+                  <div
+                    className="balatro-card relative flex flex-col justify-between w-30 h-46 md:w-36 md:h-56 p-2.5 rounded-xl border-2 border-amber-600/80 bg-amber-950/20 shadow-[0_0_10px_rgba(217,119,6,0.3)] transition shrink-0"
+                  >
+                    {/* Rarity Gem indicator (Voucher gold gem) */}
+                    <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-slate-950/40 z-10 bg-amber-500 shadow-[0_0_8px_#d97706]" title="Voucher" />
+
+                    {/* Massive visual card art */}
+                    <div className="flex-1 flex items-center justify-center transform scale-[2.1] origin-center my-auto">
+                      {renderVoucherIcon(voucher.id)}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onBuy(voucher.id)}
+                      disabled={disabled}
+                      className="w-full py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-30 disabled:pointer-events-none text-[9.5px] md:text-[11px] font-bold font-pixel text-white shadow border-b-2 border-amber-800 transition"
+                    >
+                      SATIN AL ${voucher.cost}
+                    </button>
+                  </div>
+                </InfoTooltip>
               );
             }
 
@@ -288,38 +320,46 @@ export default function ShopScreen({
                 ? 'border-amber-600/80 bg-amber-950/20'
                 : 'border-teal-700/80 bg-teal-950/20';
             const labelColor = upgrade.type === 'COSMIC' ? 'text-amber-400' : 'text-teal-400';
-
-            return (
-              <div
-                key={upgrade.id}
-                className={`balatro-card flex flex-col justify-between w-30 h-46 md:w-36 md:h-56 p-2 md:p-3 rounded-xl border-2 transition shrink-0 ${borderClass}`}
-              >
-                <div className="text-center">
-                  <span className={`text-[8.5px] md:text-[10px] uppercase tracking-wider font-extrabold ${labelColor}`}>
+            
+            const tooltipContent = (
+              <div className="flex flex-col gap-1.5 p-1 select-none text-left leading-normal font-sans">
+                <div className="flex items-center justify-between border-b border-amber-800/40 pb-1">
+                  <span className="font-bold text-xs text-amber-200">{upgrade.name}</span>
+                  <span className={`text-[8.5px] uppercase font-extrabold ${labelColor}`}>
                     {upgrade.type === 'COSMIC' ? 'KOZMİK' : 'BÜYÜ'}
                   </span>
-                  <h4 className="text-[10px] md:text-xs font-bold leading-tight mt-0.5 truncate text-slate-200" title={upgrade.name}>
-                    {upgrade.name}
-                  </h4>
                 </div>
-
-                <div className="my-1 flex items-center justify-center transform scale-90">
-                  {renderUpgradeIcon(upgrade.id)}
-                </div>
-
-                <p className="text-[8.5px] md:text-[10px] text-slate-300 leading-normal text-center mb-1 md:mb-1.5 line-clamp-3 md:line-clamp-4">
+                <p className="text-[10px] text-slate-200 leading-relaxed">
                   {upgrade.description}
                 </p>
-
-                <button
-                  type="button"
-                  onClick={() => onBuy(upgrade.id)}
-                  disabled={disabled}
-                  className="w-full py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-[9.5px] md:text-[11px] font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition"
-                >
-                  SATIN AL ${upgrade.cost}
-                </button>
               </div>
+            );
+
+            const gemColor = upgrade.type === 'COSMIC' ? 'bg-amber-400 shadow-[0_0_8px_#fbbf24]' : 'bg-teal-400 shadow-[0_0_8px_#2dd4bf]';
+
+            return (
+              <InfoTooltip key={upgrade.id} text={tooltipContent} widthClass="w-56" side="top">
+                <div
+                  className={`balatro-card relative flex flex-col justify-between w-30 h-46 md:w-36 md:h-56 p-2.5 rounded-xl border-2 transition shrink-0 ${borderClass}`}
+                >
+                  {/* Rarity Gem indicator */}
+                  <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-slate-950/40 z-10 ${gemColor}`} title={upgrade.type === 'COSMIC' ? 'Kozmik' : 'Büyü'} />
+
+                  {/* Massive visual card art */}
+                  <div className="flex-1 flex items-center justify-center transform scale-[2.1] origin-center my-auto">
+                    {renderUpgradeIcon(upgrade.id)}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onBuy(upgrade.id)}
+                    disabled={disabled}
+                    className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-[9.5px] md:text-[11px] font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition"
+                  >
+                    SATIN AL ${upgrade.cost}
+                  </button>
+                </div>
+              </InfoTooltip>
             );
           })}
           {offers.length === 0 && (

@@ -16,9 +16,10 @@ interface TileProps {
   vertical?: boolean;
   isGolden?: boolean;
   highlighted?: boolean;
+  spellEffect?: 'GILD' | 'MAGNET' | null;
 }
 
-export default function Tile({ left, right, selected, onClick, animateIn, frozen, isDouble, vertical, isGolden, highlighted }: TileProps) {
+export default function Tile({ left, right, selected, onClick, animateIn, frozen, isDouble, vertical, isGolden, highlighted, spellEffect }: TileProps) {
   const clickable = Boolean(onClick);
   return (
     <button
@@ -26,7 +27,7 @@ export default function Tile({ left, right, selected, onClick, animateIn, frozen
       onClick={onClick}
       disabled={!clickable}
       className={[
-        'flex items-center rounded-lg border-2 bg-white font-mono text-lg font-semibold text-slate-800 shadow-sm transition shrink-0',
+        'flex items-center rounded-lg border-2 bg-white font-mono text-lg font-semibold text-slate-800 shadow-sm transition shrink-0 relative',
         vertical ? 'flex-col' : 'flex-row',
         'dark:bg-slate-800 dark:text-slate-100',
         clickable ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-md' : 'cursor-default',
@@ -57,6 +58,15 @@ export default function Tile({ left, right, selected, onClick, animateIn, frozen
         <span className="text-sm font-pixel font-bold leading-none text-slate-100">{right}</span>
         <Pips value={right} large />
       </span>
+      {spellEffect && (
+        <div className={`absolute inset-0 z-50 pointer-events-none rounded-lg spell-particle-${spellEffect.toLowerCase()}`}>
+          <span className={`absolute top-1/4 left-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : 'bg-sky-350'} animate-[spark-1_0.8s_ease-out_forwards]`} />
+          <span className={`absolute top-1/4 right-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : 'bg-sky-350'} animate-[spark-2_0.8s_ease-out_forwards]`} />
+          <span className={`absolute bottom-1/4 left-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : 'bg-sky-350'} animate-[spark-3_0.8s_ease-out_forwards]`} />
+          <span className={`absolute bottom-1/4 right-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : 'bg-sky-350'} animate-[spark-4_0.8s_ease-out_forwards]`} />
+          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white opacity-85 animate-[ping_0.6s_ease-out_infinite]" />
+        </div>
+      )}
     </button>
   );
 }

@@ -5,9 +5,10 @@ interface StoneHandProps {
   stones: DominoStone[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  spellEffect?: { id: string; type: 'GILD' | 'MAGNET' | 'BREAKER' } | null;
 }
 
-export default function StoneHand({ stones, selectedId, onSelect }: StoneHandProps) {
+export default function StoneHand({ stones, selectedId, onSelect, spellEffect }: StoneHandProps) {
   return (
     <div>
       <h2 className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-1">Taşlar</h2>
@@ -24,6 +25,7 @@ export default function StoneHand({ stones, selectedId, onSelect }: StoneHandPro
               right={s.rightVal}
               selected={selectedId === s.id}
               onClick={() => onSelect(s.id)}
+              spellEffect={spellEffect?.id === s.id && spellEffect.type === 'GILD' ? 'GILD' : null}
             />
           </div>
         ))}

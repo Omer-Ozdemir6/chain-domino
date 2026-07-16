@@ -34,33 +34,44 @@ function rawEdgeValue(operator: 'ADD' | 'SUBTRACT' | 'MULTIPLY' | 'DIVIDE', pare
   }
 }
 
-/** The whole game is designed at this one fixed resolution and uniformly scaled to fit any
- *  screen (desktop or mobile) — same layout everywhere, never reflowed, never clipped. */
-const DESIGN_WIDTH = 1440;
-const DESIGN_HEIGHT = 900;
+/**
+ * The game is designed at one of exactly two fixed resolutions — never an open-ended set of CSS
+ * breakpoints — and uniformly scaled (via a JS-computed transform) to fit the real viewport. A
+ * landscape screen (desktop, tablet-landscape) always gets the wide canvas; a portrait screen
+ * (phone, tablet-portrait) always gets the tall one. Every device in the same orientation bucket
+ * renders pixel-identical, just scaled — which is what actually avoids the "different layout on
+ * every phone" problem, since scaling a *landscape* canvas down to fit a *portrait* viewport is
+ * mathematically unreadable (the limiting dimension is width, so it shrinks to ~25-30%).
+ */
+const LANDSCAPE_CANVAS = { width: 1440, height: 900 };
+const PORTRAIT_CANVAS = { width: 480, height: 900 };
 
-/** Computes the scale factor that fits the fixed design canvas inside the real viewport. */
-function useCanvasScale(designWidth: number, designHeight: number): number {
-  const [scale, setScale] = useState(1);
+/** Picks the matching design canvas for the real viewport's orientation and computes its fit scale. */
+function useCanvasScale(): { scale: number; width: number; height: number; isPortrait: boolean } {
+  const [state, setState] = useState({ scale: 1, ...LANDSCAPE_CANVAS, isPortrait: false });
   useEffect(() => {
     function update() {
-      setScale(Math.min(window.innerWidth / designWidth, window.innerHeight / designHeight));
+      const isPortrait = window.innerHeight > window.innerWidth;
+      const canvas = isPortrait ? PORTRAIT_CANVAS : LANDSCAPE_CANVAS;
+      const scale = Math.min(window.innerWidth / canvas.width, window.innerHeight / canvas.height);
+      setState({ scale, ...canvas, isPortrait });
     }
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
-  }, [designWidth, designHeight]);
-  return scale;
+  }, []);
+  return state;
 }
 
 export default function App() {
-  const scale = useCanvasScale(DESIGN_WIDTH, DESIGN_HEIGHT);
+  const { scale, width: canvasWidth, height: canvasHeight, isPortrait } = useCanvasScale();
   const { run, act, shop, reset } = useRunState(RUN_CONFIG);
   const [selection, setSelection] = useState<Selection>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   // Consumable Casting State
   const [activeSpellIndex, setActiveSpellIndex] = useState<number | null>(null);
+  const [spellCastEffect, setSpellCastEffect] = useState<{ id: string; type: 'GILD' | 'MAGNET' | 'BREAKER' } | null>(null);
 
   // Step-by-Step Scoring Animation State
   const [isAnimating, setIsAnimating] = useState(false);
@@ -114,6 +125,8 @@ export default function App() {
       const res = shop((r) => r.useConsumable(activeSpellIndex, id));
       if (res.ok) {
         playPlaceSound();
+        setSpellCastEffect({ id, type: 'GILD' });
+        setTimeout(() => setSpellCastEffect(null), 1000);
         setMessage('Taş yaldızlandı (Altın Taş yapıldı)! Artık oynandığında +$3 kazandıracak.');
       } else {
         setMessage('Hata: ' + res.error);
@@ -313,6 +326,8 @@ export default function App() {
     const res = shop((r) => r.useConsumable(activeSpellIndex, nodeId));
     if (res.ok) {
       playPlaceSound();
+      setSpellCastEffect({ id: nodeId, type: 'MAGNET' });
+      setTimeout(() => setSpellCastEffect(null), 1000);
       setMessage('Taş tahtadan sökülüp elinize geri alındı.');
     } else {
       setMessage('Hata: ' + res.error);
@@ -325,6 +340,8 @@ export default function App() {
     const res = shop((r) => r.useConsumable(activeSpellIndex, slotId));
     if (res.ok) {
       playPlaceSound();
+      setSpellCastEffect({ id: slotId, type: 'BREAKER' });
+      setTimeout(() => setSpellCastEffect(null), 1000);
       setMessage('Operatör taşı kırıldı.');
     } else {
       setMessage('Hata: ' + res.error);
@@ -483,11 +500,24 @@ export default function App() {
       </div>
     );
   } else {
-  // Active Play/Shop Layout - Restructured into exactly 3 clean horizontal layers side-by-side
+  // Active Play/Shop Layout: sidebar-left on the landscape canvas, compact-topbar-on-top +
+  // a bottom action bar on the portrait canvas (same data/handlers either way).
+  const canSubmitNow = Boolean(
+    game &&
+      game.status === 'PLAYING' &&
+      !isAnimating &&
+      (game.board.getNodes().some((n) => !n.frozen) || game.board.getUnfrozenEdges().length > 0)
+  );
+  const formulaCompleteNow = !game || !game.board.hasPendingOperator();
+  const formulaReadyNow = Boolean(game) && game.status === 'PLAYING' && !isAnimating && !game.board.hasPendingOperator() && game.board.getUnfrozenEdges().length > 0;
+  const canRecoverNow = Boolean(game && game.canRecover() && !isAnimating);
+  const canUndoNow = Boolean(game && game.board.length > 0);
+
   content = (
     <div className="absolute inset-0 flex items-center justify-center bg-slate-950 p-2 overflow-hidden select-none">
-      <div className="w-full h-full flex flex-row bg-slate-900 rounded-3xl border-4 border-slate-950 overflow-hidden text-slate-100 shadow-2xl relative">
+      <div className={`w-full h-full flex ${isPortrait ? 'flex-col' : 'flex-row'} bg-slate-900 rounded-3xl border-4 border-slate-950 overflow-hidden text-slate-100 shadow-2xl relative`}>
         <SidebarHUD
+          layout={isPortrait ? 'topbar' : 'sidebar'}
           round={run.round}
           totalRounds={run.config.totalRounds}
           money={run.money}
@@ -499,16 +529,11 @@ export default function App() {
           scoring={isAnimating}
           operatorLevels={run.operatorLevels}
           discardsLeft={run.discardsLeft}
-          canSubmit={
-            game &&
-            game.status === 'PLAYING' &&
-            !isAnimating &&
-            (game.board.getNodes().some((n) => !n.frozen) || game.board.getUnfrozenEdges().length > 0)
-          }
-          formulaComplete={!game || !game.board.hasPendingOperator()}
-          formulaReady={Boolean(game) && game.status === 'PLAYING' && !isAnimating && !game.board.hasPendingOperator() && game.board.getUnfrozenEdges().length > 0}
-          canRecover={game && game.canRecover() && !isAnimating}
-          canUndo={game && game.board.length > 0}
+          canSubmit={canSubmitNow}
+          formulaComplete={formulaCompleteNow}
+          formulaReady={formulaReadyNow}
+          canRecover={canRecoverNow}
+          canUndo={canUndoNow}
           onSubmit={handleSubmit}
           onUndo={handleUndo}
           onDiscard={handleDiscard}
@@ -598,6 +623,7 @@ export default function App() {
                 onBuy={handleBuy}
                 onReroll={handleReroll}
                 onContinue={handleContinueShop}
+                isPortrait={isPortrait}
               />
             ) : (
               <ChainBoard
@@ -610,6 +636,7 @@ export default function App() {
                 activeSpellType={activeSpellType}
                 onSelectNode={handleSelectNode}
                 onSelectOperatorSlot={handleSelectOperatorSlot}
+                spellEffect={spellCastEffect}
               />
             )}
             {/* Big, clearly-readable score popup — rendered above ChainBoard's own internal
@@ -645,6 +672,7 @@ export default function App() {
                   stones={game.hand}
                   selectedId={selection?.kind === 'STONE' ? selection.id : null}
                   onSelect={selectStone}
+                  spellEffect={spellCastEffect}
                 />
               </div>
 
@@ -669,6 +697,8 @@ export default function App() {
                   onSelect={selectOperator}
                   deckRemaining={game.operatorDeck.remaining}
                   onDrawCycle={handleDrawCycleOperator}
+                  cycles={game.operatorDeckCycles}
+                  maxCycles={game.maxOperatorDeckCycles}
                 />
               </div>
             </div>
@@ -679,6 +709,47 @@ export default function App() {
             </p>
           )}
         </main>
+
+        {/* Portrait-only bottom action bar — thumb-reachable, mirrors SidebarHUD's buttons. */}
+        {isPortrait && (
+          <div className="shrink-0 grid grid-cols-3 gap-1.5 p-2 bg-slate-900 border-t-4 border-slate-950">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!canSubmitNow || !formulaCompleteNow}
+              className={[
+                'col-span-3 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:translate-y-0.5 text-sm font-bold text-white shadow border-b-2 border-emerald-800 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase',
+                formulaReadyNow && canSubmitNow && formulaCompleteNow ? 'animate-pulse ring-2 ring-emerald-300' : '',
+              ].join(' ')}
+            >
+              HESAPLA / GÖNDER
+            </button>
+            <button
+              type="button"
+              onClick={handleDiscard}
+              disabled={!canRecoverNow || run.discardsLeft <= 0}
+              className="py-1.5 rounded-lg bg-rose-800 hover:bg-rose-700 active:translate-y-0.5 text-[10px] font-bold text-white shadow border-b-2 border-rose-950 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase"
+            >
+              ISKARTA
+            </button>
+            <button
+              type="button"
+              onClick={handleUndo}
+              disabled={!canRecoverNow || !canUndoNow}
+              className="py-1.5 rounded-lg bg-slate-700 hover:bg-slate-650 active:translate-y-0.5 text-[10px] font-bold text-slate-200 border-b-2 border-slate-900 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase"
+            >
+              GERİ AL
+            </button>
+            <button
+              type="button"
+              onClick={handleSkip}
+              disabled={!canRecoverNow}
+              className="py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/30 active:translate-y-0.5 text-[10px] font-bold text-rose-400 border border-rose-500/20 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase"
+            >
+              ATLA
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -689,8 +760,8 @@ export default function App() {
       <div
         className="relative shrink-0"
         style={{
-          width: DESIGN_WIDTH,
-          height: DESIGN_HEIGHT,
+          width: canvasWidth,
+          height: canvasHeight,
           transform: `scale(${scale})`,
           transformOrigin: 'center center',
         }}

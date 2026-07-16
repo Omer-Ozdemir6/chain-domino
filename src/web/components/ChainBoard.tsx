@@ -16,6 +16,7 @@ interface ChainBoardProps {
   activeSpellType?: 'MAGNET' | 'BREAKER' | 'GILD' | null;
   onSelectNode?: (nodeId: string) => void;
   onSelectOperatorSlot?: (slotId: SlotId) => void;
+  spellEffect?: { id: string; type: 'GILD' | 'MAGNET' | 'BREAKER' } | null;
 }
 
 const SLOT_CLASS: Record<SlotState, string> = {
@@ -187,6 +188,7 @@ export default function ChainBoard({
   activeSpellType,
   onSelectNode,
   onSelectOperatorSlot,
+  spellEffect,
 }: ChainBoardProps) {
   const rootId = board.getRootNodeId();
   const { positions, slotCells, nodeDirs } = layoutGraph(board);
@@ -333,6 +335,7 @@ export default function ChainBoard({
                 isGolden={node.isGolden}
                 highlighted={highlightedNodeId === nodeId || isMagnetTarget}
                 onClick={isMagnetTarget && onSelectNode ? () => onSelectNode(nodeId) : undefined}
+                spellEffect={spellEffect?.id === nodeId && spellEffect.type === 'MAGNET' ? 'MAGNET' : null}
               />
             </div>
           );
@@ -378,6 +381,7 @@ export default function ChainBoard({
                   highlighted={isBreakerTarget}
                   onClick={isBreakerTarget && onSelectOperatorSlot ? () => onSelectOperatorSlot(slotId) : undefined}
                   compact
+                  spellEffect={spellEffect?.id === slotId && spellEffect.type === 'BREAKER' ? 'BREAKER' : null}
                 />
               </div>,
               showButton && (
