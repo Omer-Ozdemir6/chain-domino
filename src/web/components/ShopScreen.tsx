@@ -216,14 +216,14 @@ export default function ShopScreen({
               return (
                 <div
                   key={charm.id}
-                  className={`balatro-card flex flex-col justify-between w-36 h-56 p-3 rounded-xl border-2 transition shrink-0 ${borderClass}`}
+                  className={`balatro-card flex flex-col justify-between w-30 h-46 md:w-36 md:h-56 p-2 md:p-3 rounded-xl border-2 transition shrink-0 ${borderClass}`}
                 >
                   <div className="text-center">
-                    <span className={`text-[10px] uppercase tracking-wider font-extrabold flex items-center justify-center gap-1 ${RARITY_LABEL_CLASS[charm.rarity]}`}>
+                    <span className={`text-[8.5px] md:text-[10px] uppercase tracking-wider font-extrabold flex items-center justify-center gap-1 ${RARITY_LABEL_CLASS[charm.rarity]}`}>
                       {charm.curse && <span title="Lanetli">⚠</span>}
                       {charm.rarity}
                     </span>
-                    <h4 className="text-xs font-bold leading-tight mt-0.5 truncate text-slate-200" title={charm.name}>
+                    <h4 className="text-[10px] md:text-xs font-bold leading-tight mt-0.5 truncate text-slate-200" title={charm.name}>
                       {charm.name}
                     </h4>
                   </div>
@@ -232,7 +232,7 @@ export default function ShopScreen({
                     {renderCharmIcon(charm.id)}
                   </div>
 
-                  <p className="text-[10px] text-slate-300 leading-normal text-center mb-1.5 line-clamp-4">
+                  <p className="text-[8.5px] md:text-[10px] text-slate-300 leading-normal text-center mb-1 md:mb-1.5 line-clamp-3 md:line-clamp-4">
                     {charm.description}
                   </p>
 
@@ -240,7 +240,7 @@ export default function ShopScreen({
                     type="button"
                     onClick={() => onBuy(charm.id)}
                     disabled={disabled}
-                    className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-[11px] font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition"
+                    className="w-full py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-[9.5px] md:text-[11px] font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition"
                   >
                     SATIN AL ${charm.cost}
                   </button>
@@ -254,18 +254,18 @@ export default function ShopScreen({
               return (
                 <div
                   key={voucher.id}
-                  className="balatro-card flex flex-col justify-between w-36 h-56 p-3 rounded-xl border-2 border-amber-600/80 bg-amber-950/20 shadow-[0_0_10px_rgba(217,119,6,0.3)] transition shrink-0"
+                  className="balatro-card flex flex-col justify-between w-30 h-46 md:w-36 md:h-56 p-2 md:p-3 rounded-xl border-2 border-amber-600/80 bg-amber-950/20 shadow-[0_0_10px_rgba(217,119,6,0.3)] transition shrink-0"
                 >
                   <div className="text-center">
-                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-amber-500">KALICI</span>
-                    <h4 className="text-xs font-bold leading-tight mt-0.5 truncate text-slate-200" title={voucher.name}>
+                    <span className="text-[8.5px] md:text-[10px] uppercase tracking-wider font-extrabold text-amber-500">KALICI</span>
+                    <h4 className="text-[10px] md:text-xs font-bold leading-tight mt-0.5 truncate text-slate-200" title={voucher.name}>
                       {voucher.name}
                     </h4>
                   </div>
 
                   <div className="my-1 flex items-center justify-center transform scale-90">{renderVoucherIcon(voucher.id)}</div>
 
-                  <p className="text-[10px] text-slate-300 leading-normal text-center mb-1.5 line-clamp-4">
+                  <p className="text-[8.5px] md:text-[10px] text-slate-300 leading-normal text-center mb-1 md:mb-1.5 line-clamp-3 md:line-clamp-4">
                     {voucher.description}
                   </p>
 
@@ -273,7 +273,7 @@ export default function ShopScreen({
                     type="button"
                     onClick={() => onBuy(voucher.id)}
                     disabled={disabled}
-                    className="w-full py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-30 disabled:pointer-events-none text-[11px] font-bold font-pixel text-white shadow border-b-2 border-amber-800 transition"
+                    className="w-full py-1 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-30 disabled:pointer-events-none text-[9.5px] md:text-[11px] font-bold font-pixel text-white shadow border-b-2 border-amber-800 transition"
                   >
                     SATIN AL ${voucher.cost}
                   </button>
@@ -292,13 +292,13 @@ export default function ShopScreen({
             return (
               <div
                 key={upgrade.id}
-                className={`balatro-card flex flex-col justify-between w-36 h-56 p-3 rounded-xl border-2 transition shrink-0 ${borderClass}`}
+                className={`balatro-card flex flex-col justify-between w-30 h-46 md:w-36 md:h-56 p-2 md:p-3 rounded-xl border-2 transition shrink-0 ${borderClass}`}
               >
                 <div className="text-center">
-                  <span className={`text-[10px] uppercase tracking-wider font-extrabold ${labelColor}`}>
+                  <span className={`text-[8.5px] md:text-[10px] uppercase tracking-wider font-extrabold ${labelColor}`}>
                     {upgrade.type === 'COSMIC' ? 'KOZMİK' : 'BÜYÜ'}
                   </span>
-                  <h4 className="text-xs font-bold leading-tight mt-0.5 truncate text-slate-200" title={upgrade.name}>
+                  <h4 className="text-[10px] md:text-xs font-bold leading-tight mt-0.5 truncate text-slate-200" title={upgrade.name}>
                     {upgrade.name}
                   </h4>
                 </div>
@@ -307,7 +307,7 @@ export default function ShopScreen({
                   {renderUpgradeIcon(upgrade.id)}
                 </div>
 
-                <p className="text-[10px] text-slate-300 leading-normal text-center mb-1.5 line-clamp-4">
+                <p className="text-[8.5px] md:text-[10px] text-slate-300 leading-normal text-center mb-1 md:mb-1.5 line-clamp-3 md:line-clamp-4">
                   {upgrade.description}
                 </p>
 
@@ -315,7 +315,7 @@ export default function ShopScreen({
                   type="button"
                   onClick={() => onBuy(upgrade.id)}
                   disabled={disabled}
-                  className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-[11px] font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition"
+                  className="w-full py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-[9.5px] md:text-[11px] font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition"
                 >
                   SATIN AL ${upgrade.cost}
                 </button>

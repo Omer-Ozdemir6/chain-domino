@@ -31,7 +31,7 @@ function SlotButton({ state, onClick, compact }: { state: SlotState; onClick: ()
       onClick={state === 'legal' ? onClick : undefined}
       disabled={state !== 'legal'}
       className={[
-        compact ? 'flex h-9 w-9 rounded-full text-base' : 'flex h-14 w-14 rounded-lg text-2xl',
+        compact ? 'flex h-11 w-11 rounded-full text-xl' : 'flex h-14 w-14 rounded-lg text-2xl',
         'items-center justify-center border-2 font-bold transition',
         SLOT_CLASS[state],
       ].join(' ')}
@@ -136,7 +136,7 @@ function orientForDisplay(
 // touching edge-to-edge with just a small connector badge on the seam) instead of floating apart.
 const NODE_COL = 113; // matches Tile's rendered footprint (h-18/w-13 boxes side by side)
 const NODE_ROW = 152; // matches Tile's vertical footprint when stacked N/S
-const OP_SIZE = 44; // small round operator badge track (both axes)
+const OP_SIZE = 56; // small round operator badge track (both axes) — big enough that ÷ never blurs into +
 
 /** Builds the per-track pixel sizes, cumulative offsets, and a center() lookup for one axis. */
 function buildAxis(minCoord: number, maxCoord: number, nodeSize: number) {

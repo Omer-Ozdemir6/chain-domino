@@ -544,32 +544,39 @@ export default function App() {
                 </div>
               )}
               <div className="flex gap-2 flex-1 mt-1.5 items-center justify-center">
-                {Array.from({ length: Math.max(0, run.maxConsumableSlots - run.consumables.length) }, (_, i) => (
-                  <div
-                    key={`empty-${i}`}
-                    className="w-16 h-16 rounded-xl border-2 border-dashed border-slate-800 bg-slate-950/20 flex items-center justify-center shrink-0"
-                  >
-                    <svg className="slot-silhouette w-6 h-8 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 22s7-4 7-9V6l-7-3-7 3v7c0 5 7 9 7 9z" />
-                    </svg>
-                  </div>
-                ))}
-                {run.consumables.map((item, idx) => {
+                {Array.from({ length: run.maxConsumableSlots }, (_, i) => {
+                  const item = run.consumables[i];
+
+                  // Empty slot: a fixed, card-sized placeholder outline — same idea as CharmBar,
+                  // so a newly bought spell visibly sits into its own reserved spot.
+                  if (!item) {
+                    return (
+                      <div
+                        key={`empty-${i}`}
+                        className="w-16 h-24 rounded-xl border-2 border-dashed border-slate-800 bg-slate-950/20 flex items-center justify-center shrink-0"
+                      >
+                        <svg className="slot-silhouette w-6 h-8 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M12 22s7-4 7-9V6l-7-3-7 3v7c0 5 7 9 7 9z" />
+                        </svg>
+                      </div>
+                    );
+                  }
+
                   const def = SHOP_UPGRADES.find((u) => u.id === item)!;
-                  const isActive = activeSpellIndex === idx;
+                  const isActive = activeSpellIndex === i;
                   return (
                     <button
-                      key={`${item}-${idx}`}
+                      key={`${item}-${i}`}
                       title={def.description}
-                      onClick={() => setActiveSpellIndex(isActive ? null : idx)}
+                      onClick={() => setActiveSpellIndex(isActive ? null : i)}
                       className={[
-                        'w-16 h-16 rounded-xl border-2 transition select-none flex items-center justify-center relative',
+                        'w-16 h-24 rounded-xl border-2 transition select-none flex items-center justify-center relative shrink-0',
                         isActive
                           ? 'border-amber-500 bg-amber-950/40 ring-1 ring-amber-500 shadow-md animate-pulse'
                           : 'border-slate-800 bg-slate-950/30 hover:border-slate-700',
                       ].join(' ')}
                     >
-                      <div className="scale-65 transform origin-center">
+                      <div className="scale-75 transform origin-center">
                         {renderUpgradeIcon(item)}
                       </div>
                     </button>

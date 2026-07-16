@@ -53,7 +53,26 @@ export default function CharmBar({ charms, maxCharmSlots = 5, highlightedCharmId
         </h2>
       </div>
       <div className="flex flex-row flex-nowrap overflow-x-auto gap-3 pb-2 scrollbar-none">
-        {charms.map((charm) => {
+        {Array.from({ length: maxCharmSlots }, (_, i) => {
+          const charm = charms[i];
+
+          // Empty slot: a fixed, card-sized placeholder outline so every slot's position is
+          // always visible — a newly bought charm visibly "sits into" this exact spot.
+          if (!charm) {
+            return (
+              <div
+                key={`empty-${i}`}
+                className="relative flex flex-col items-center justify-center w-28 h-40 p-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 shrink-0"
+              >
+                <svg className="slot-silhouette w-9 h-11 text-slate-400 dark:text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="4" y="2" width="16" height="20" rx="2.5" />
+                  <circle cx="12" cy="10" r="2.5" fill="currentColor" stroke="none" />
+                  <path d="M12 12.5v3" />
+                </svg>
+              </div>
+            );
+          }
+
           const isHighlighted = highlightedCharmId === charm.id;
           const cardClass = charm.curse ? CURSE_CARD_CLASS : RARITY_CARD_CLASS[charm.rarity];
           return (
@@ -84,20 +103,6 @@ export default function CharmBar({ charms, maxCharmSlots = 5, highlightedCharmId
             </InfoTooltip>
           );
         })}
-        {charms.length === 0 && (
-          <div className="relative flex items-center justify-center w-full h-24 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 overflow-hidden gap-3">
-            {Array.from({ length: 5 }, (_, i) => (
-              <svg key={i} className="slot-silhouette w-7 h-9 text-slate-400 dark:text-slate-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="4" y="2" width="16" height="20" rx="2.5" />
-                <circle cx="12" cy="10" r="2.5" fill="currentColor" stroke="none" />
-                <path d="M12 12.5v3" />
-              </svg>
-            ))}
-            <span className="absolute text-xs text-slate-400 dark:text-slate-500 font-mono bg-slate-950/70 px-2 py-0.5 rounded">
-              Henüz aktif tılsımın yok
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );

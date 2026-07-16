@@ -117,7 +117,17 @@ export class GameState {
   /** True if at least one item in hand could be legally placed on the board right now. */
   hasAnyLegalMove(): boolean {
     const stoneOk = this.hand.some((s) => this.board.getLegalStoneTargets(s).length > 0);
-    const operatorOk = this.operatorHand.length > 0 && this.board.getOpenOperatorTargets().length > 0;
+    
+    // If the board has a pending operator, the chain is broken/incomplete.
+    // Placing operators on other branches does not resolve the pending state, so only stones can save us.
+    if (this.board.hasPendingOperator()) {
+      return stoneOk;
+    }
+
+    // Solitaire operator check: can place if we have an active operator OR if we can draw a new one!
+    const canDrawOperator = this.operatorDeck.remaining > 0 || (this.operatorDiscardPile.length > 0 && this.operatorDeckCycles < this.maxOperatorDeckCycles);
+    const operatorOk = (this.operatorHand.length > 0 || canDrawOperator) && this.board.getOpenOperatorTargets().length > 0;
+    
     return stoneOk || operatorOk;
   }
 
@@ -190,6 +200,12 @@ export class GameState {
     if (removed.type === 'STONE') {
       this.hand.push(removed.data);
     } else {
+      // Solitaire active operator: if we already have an active operator in hand,
+      // move it back to the operator draw deck (so the undone card takes the active slot)
+      if (this.operatorHand.length > 0) {
+        this.operatorDeck.discard(this.operatorHand);
+        this.operatorHand = [];
+      }
       this.operatorHand.push(removed.data);
     }
     this.checkStuck();
