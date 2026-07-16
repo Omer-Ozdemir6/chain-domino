@@ -8,7 +8,7 @@ const stone = (id: string, l: number, r: number): DominoStone => ({ id, leftVal:
 const baseConfig = { targetScore: 100, maxTurns: 5, stonesPerTurn: 3, operatorsPerTurn: 2 };
 
 describe('GameState', () => {
-  it('drawForTurn moves stones/operators from the decks into hand', () => {
+  it('drawForTurn moves stones/operators from the decks into hand, filling all operator slots', () => {
     const game = new GameState(baseConfig);
     const initialStoneDeck = game.stoneDeck.remaining;
     const initialOpDeck = game.operatorDeck.remaining;
@@ -16,21 +16,24 @@ describe('GameState', () => {
     game.drawForTurn();
 
     expect(game.hand).toHaveLength(3);
-    expect(game.operatorHand).toHaveLength(1);
+    expect(game.operatorHand).toHaveLength(2); // baseConfig.operatorsPerTurn
     expect(game.stoneDeck.remaining).toBe(initialStoneDeck - 3);
-    expect(game.operatorDeck.remaining).toBe(initialOpDeck - 1);
+    expect(game.operatorDeck.remaining).toBe(initialOpDeck - 2);
   });
 
-  it('cycleOperatorCard moves active operator to discard and draws a new one', () => {
+  it('playing an operator immediately refills its slot from the deck', () => {
     const game = new GameState(baseConfig);
-    game.drawForTurn();
-    const activeOp = game.operatorHand[0];
-    expect(activeOp).toBeDefined();
+    game.hand = [stone('s1', 3, 4)];
+    game.operatorHand = [createOperatorCard('ADD'), createOperatorCard('SUBTRACT')];
+    const deckBefore = game.operatorDeck.remaining;
 
-    const result = game.cycleOperatorCard();
-    expect(result.ok).toBe(true);
-    expect(game.operatorHand[0]).not.toBe(activeOp);
-    expect(game.operatorDiscardPile).toContain(activeOp);
+    game.playStone('s1');
+    const playedId = game.operatorHand[0].id;
+    game.playOperator(playedId);
+
+    expect(game.operatorHand).toHaveLength(2); // stays full: the played slot was topped back up
+    expect(game.operatorHand.some((o) => o.id === playedId)).toBe(false);
+    expect(game.operatorDeck.remaining).toBe(deckBefore - 1);
   });
 
   it('playStone places the first stone at ROOT by default', () => {

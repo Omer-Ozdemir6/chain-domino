@@ -1,4 +1,4 @@
-import type { ChainElement, DominoStone, OperatorCard } from './types.js';
+import type { ChainElement, DominoStone, OperatorCard, TileModifier } from './types.js';
 
 export type BoardError =
   | 'CHAIN_MUST_START_WITH_STONE'
@@ -33,6 +33,8 @@ export interface GraphNode {
   isDouble: boolean;
   frozen: boolean;
   isGolden?: boolean;
+  modifier?: TileModifier;
+  tags?: string[];
 }
 
 export interface GraphEdge {
@@ -66,6 +68,8 @@ interface InternalNode {
   frozen: boolean;
   slots: BoardSlot[];
   isGolden?: boolean;
+  modifier?: TileModifier;
+  tags?: string[];
 }
 
 type Move =
@@ -100,6 +104,8 @@ export class Board {
       isDouble: n.isDouble,
       frozen: n.frozen,
       isGolden: n.isGolden,
+      modifier: n.modifier,
+      tags: n.tags,
     }));
   }
 
@@ -139,7 +145,17 @@ export class Board {
           { slotId: `${nodeId}#0`, value: stone.leftVal, state: 'OPEN' as const },
           { slotId: `${nodeId}#1`, value: stone.rightVal, state: 'OPEN' as const },
         ];
-    return { nodeId, leftVal: stone.leftVal, rightVal: stone.rightVal, isDouble, frozen: false, slots, isGolden: stone.isGolden };
+    return {
+      nodeId,
+      leftVal: stone.leftVal,
+      rightVal: stone.rightVal,
+      isDouble,
+      frozen: false,
+      slots,
+      isGolden: stone.isGolden,
+      modifier: stone.modifier,
+      tags: stone.tags,
+    };
   }
 
   /** `oriented.leftVal` is the attach (closed) side by convention; slot #0 is always that side. */
@@ -156,7 +172,17 @@ export class Board {
           { slotId: `${nodeId}#0`, value: oriented.leftVal, state: 'CLOSED' as const },
           { slotId: `${nodeId}#1`, value: oriented.rightVal, state: 'OPEN' as const },
         ];
-    return { nodeId, leftVal: oriented.leftVal, rightVal: oriented.rightVal, isDouble, frozen: false, slots, isGolden: oriented.isGolden };
+    return {
+      nodeId,
+      leftVal: oriented.leftVal,
+      rightVal: oriented.rightVal,
+      isDouble,
+      frozen: false,
+      slots,
+      isGolden: oriented.isGolden,
+      modifier: oriented.modifier,
+      tags: oriented.tags,
+    };
   }
 
   getOpenOperatorTargets(): SlotId[] {
@@ -385,6 +411,40 @@ export class Board {
     this.edges = [];
     this.rootNodeId = null;
     this.unfrozenMoves = [];
+  }
+
+  applyAmberMagnet(nodeId: string): void {
+    const node = this.nodes.get(nodeId);
+    if (!node || node.modifier !== 'AMBER') return;
+
+    // Find parent node connection and align its exposed values to match child's leftVal (touching side)
+    const edge = this.edges.find((e) => e.childNodeId === nodeId);
+    if (edge) {
+      const parentNode = this.nodes.get(edge.parentNodeId);
+      if (parentNode && !parentNode.frozen) {
+        parentNode.rightVal = node.leftVal;
+        parentNode.leftVal = node.leftVal;
+        parentNode.slots.forEach((s) => {
+          if (s.state !== 'CLOSED') s.value = node.leftVal;
+        });
+        edge.parentBase = parentNode.leftVal + parentNode.rightVal;
+      }
+    }
+
+    // Find any child nodes connected to this node and align their attaching sides
+    this.edges.forEach((e) => {
+      if (e.parentNodeId === nodeId) {
+        const childNode = this.nodes.get(e.childNodeId);
+        if (childNode && !childNode.frozen) {
+          childNode.leftVal = node.rightVal;
+          childNode.rightVal = node.rightVal;
+          childNode.slots.forEach((s) => {
+            if (s.state !== 'CLOSED') s.value = node.rightVal;
+          });
+          e.childExposedValue = childNode.rightVal;
+        }
+      }
+    });
   }
 
   /** Marks everything currently on the board as permanently committed; undo/skip can no longer reach it. */

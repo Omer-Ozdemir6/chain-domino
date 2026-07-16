@@ -198,11 +198,11 @@ export default function ChainBoard({
     const showRootSlot = selectionKind === 'STONE';
     const rootSlotState: SlotState = showRootSlot ? (legalSlotIds.has('ROOT') ? 'legal' : 'illegal') : 'none';
     return (
-      <div className="flex h-full w-full items-center justify-center rounded-xl bg-white/60 p-4 shadow-inner dark:bg-slate-900/40">
+      <div className="flex h-full w-full items-center justify-center rounded-xl bg-slate-950/20 p-4 shadow-inner">
         {showRootSlot ? (
           <SlotButton state={rootSlotState} onClick={() => onCommit('ROOT')} />
         ) : (
-          <span className="text-sm text-slate-400 dark:text-slate-500">Masa boş — bir taş seç.</span>
+          <span className="text-sm text-slate-300/70">Masa boş — bir taş seç.</span>
         )}
       </div>
     );
@@ -333,6 +333,7 @@ export default function ChainBoard({
                 frozen={node.frozen}
                 isDouble={node.isDouble}
                 isGolden={node.isGolden}
+                modifier={(node as any).modifier}
                 highlighted={highlightedNodeId === nodeId || isMagnetTarget}
                 onClick={isMagnetTarget && onSelectNode ? () => onSelectNode(nodeId) : undefined}
                 spellEffect={spellEffect?.id === nodeId && spellEffect.type === 'MAGNET' ? 'MAGNET' : null}

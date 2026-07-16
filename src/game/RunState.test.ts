@@ -136,8 +136,8 @@ describe('RunState', () => {
     const result = run.rerollShop();
     expect(result.ok).toBe(true);
     expect(run.money).toBe(8);
-    // shopSize (2 charms + 1 upgrade) plus 1 permanent Voucher slot, since none are owned yet.
-    expect(run.shopOffers).toHaveLength(run.config.shopSize + 1);
+    // shopSize (2 charms + 1 upgrade) plus 1 permanent Voucher slot and 1 Booster Pack slot, since none are owned yet.
+    expect(run.shopOffers).toHaveLength(run.config.shopSize + 2);
   });
 
   it('purchased Cosmic Upgrade increases operator levels and adds score bonus', () => {

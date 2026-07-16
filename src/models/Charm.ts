@@ -1,5 +1,6 @@
 import type { GraphNode } from './Board.js';
-import type { OperatorType } from './types.js';
+import type { DominoStone, OperatorType } from './types.js';
+import type { PlayState } from '../engine/scoreCalculator.js';
 
 export type CharmRarity = 'COMMON' | 'UNCOMMON' | 'RARE' | 'LEGENDARY';
 
@@ -29,6 +30,8 @@ export interface CharmHooks {
   onEvaluationEnd?: (totalGain: number) => number;
   /** Bonus money granted when the round is won, on top of the base payout. */
   onRoundEnd?: (ctx: RoundEndContext) => number;
+  /** Custom onCalculate modifier for Chips & Mult base math engine. */
+  onCalculate?: (state: PlayState, playedChain: DominoStone[]) => PlayState;
 }
 
 export interface CharmDef {

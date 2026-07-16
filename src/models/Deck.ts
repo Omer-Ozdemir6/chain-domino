@@ -36,4 +36,12 @@ export class Deck {
   discard(stones: DominoStone[]): void {
     this.stones.push(...stones);
   }
+
+  removeStoneById(id: string): void {
+    this.stones = this.stones.filter((s) => s.id !== id);
+  }
+
+  getStones(): DominoStone[] {
+    return this.stones;
+  }
 }

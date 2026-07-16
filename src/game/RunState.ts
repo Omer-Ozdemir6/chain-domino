@@ -1,7 +1,7 @@
 import { GameState, type GameConfig } from './GameState.js';
 import { CHARMS } from '../models/CharmRegistry.js';
 import type { CharmDef, CharmHooks, RoundEndContext } from '../models/Charm.js';
-import type { OperatorType } from '../models/types.js';
+import type { DominoStone, OperatorType, TileModifier } from '../models/types.js';
 
 export type RunStatus = 'IN_PROGRESS' | 'WON' | 'LOST';
 export type RunPhase =
@@ -61,7 +61,10 @@ export type ShopUpgradeId =
   | 'cosmic_div'
   | 'consumable_magnet'
   | 'consumable_breaker'
-  | 'consumable_gild';
+  | 'consumable_gild'
+  | 'consumable_ivory'
+  | 'consumable_obsidian'
+  | 'consumable_amber';
 
 export interface ShopUpgradeDef {
   id: ShopUpgradeId;
@@ -80,6 +83,9 @@ export const SHOP_UPGRADES: readonly ShopUpgradeDef[] = [
   { id: 'consumable_magnet', name: 'Mıknatıs', description: 'Tahtadaki dondurulmuş bir yaprak (uçta kalan) domino taşını söküp elinize geri alır.', cost: 3, type: 'CONSUMABLE' },
   { id: 'consumable_breaker', name: 'Kırıcı', description: 'Tahtadaki dondurulmuş bir operatör taşını kırıp yok eder ve o yolu açar.', cost: 3, type: 'CONSUMABLE' },
   { id: 'consumable_gild', name: 'Yaldız', description: 'Elinizdeki bir taşı Altın Taş yapar. Altın taşlar oynandığında +$3 kazandırır.', cost: 4, type: 'CONSUMABLE' },
+  { id: 'consumable_ivory', name: 'Fildişi Rünü', description: 'Elinizdeki bir taşı kalıcı olarak Fildişi yapar (+15 Taban Puan).', cost: 4, type: 'CONSUMABLE' },
+  { id: 'consumable_obsidian', name: 'Obsidyen Rünü', description: 'Elinizdeki bir taşı kalıcı olarak Obsidyen yapar (Çarpan x2, %25 kırılma şansı).', cost: 5, type: 'CONSUMABLE' },
+  { id: 'consumable_amber', name: 'Kehribar Rünü', description: 'Elinizdeki bir taşı kalıcı olarak Kehribar yapar (Bağlandığı komşu taş sayılarını eşitler).', cost: 4, type: 'CONSUMABLE' },
 ];
 
 export type VoucherId =
@@ -146,10 +152,206 @@ export const VOUCHERS: readonly VoucherDef[] = [
   },
 ];
 
+export interface BoosterPackDef {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  modifier: TileModifier;
+}
+
+export const BOOSTER_PACKS: readonly BoosterPackDef[] = [
+  { id: 'booster_standard', name: 'Standart Taş Paketi', description: '3 adet rastgele normal domino taşı üretir, 1 tanesini destenize seçersiniz.', cost: 4, modifier: 'NORMAL' },
+  { id: 'booster_obsidian', name: 'Obsidyen Paketi', description: '3 adet Obsidyen taş üretir, 1 tanesini destenize seçersiniz.', cost: 8, modifier: 'OBSIDIAN' },
+  { id: 'booster_ivory', name: 'Fildişi Paketi', description: '3 adet Fildişi taş üretir, 1 tanesini destenize seçersiniz.', cost: 7, modifier: 'IVORY' },
+  { id: 'booster_amber', name: 'Kehribar Paketi', description: '3 adet Kehribar taş üretir, 1 tanesini destenize seçersiniz.', cost: 6, modifier: 'AMBER' },
+];
+
 export type ShopOffer =
   | { type: 'CHARM'; item: CharmDef }
   | { type: 'UPGRADE'; item: ShopUpgradeDef }
-  | { type: 'VOUCHER'; item: VoucherDef };
+  | { type: 'VOUCHER'; item: VoucherDef }
+  | { type: 'BOOSTER'; item: BoosterPackDef };
+
+// ─────────────────────────────────────────────────────────────
+// BOSS BLINDS
+// ─────────────────────────────────────────────────────────────
+
+export interface BossBlindDef {
+  id: string;
+  /** Short display name shown in BlindSelectScreen */
+  name: string;
+  /** One-sentence thematic flavor text */
+  flavorText: string;
+  /** Brief rule reminder shown in-game HUD (≤40 chars) */
+  ruleLabel: string;
+  /** Threat tier — drives color coding in UI */
+  tier: 'MODERATE' | 'DANGEROUS' | 'LETHAL';
+  /** Emoji / symbol for the boss card */
+  icon: string;
+}
+
+export const BOSS_BLINDS: readonly BossBlindDef[] = [
+  {
+    id: 'boss_blind_judge',
+    name: 'Kör Kadı',
+    flavorText: '"Adalet kördür — ve bölme göze görünmez."',
+    ruleLabel: 'Bölme (÷) operatörü yasak!',
+    tier: 'MODERATE',
+    icon: '⚖️',
+  },
+  {
+    id: 'boss_blind_mirror',
+    name: 'Aynalı Kule',
+    flavorText: '"Her yansıma hakikatin yarısını söyler."',
+    ruleLabel: 'Tüm taban puanlar yarıya iner.',
+    tier: 'MODERATE',
+    icon: '🪞',
+  },
+  {
+    id: 'boss_blind_gate',
+    name: 'Demirli Kapı',
+    flavorText: '"Toplama kolaydır — kolayı yasakla."',
+    ruleLabel: 'Toplama (+) operatörü yasak!',
+    tier: 'DANGEROUS',
+    icon: '🔒',
+  },
+  {
+    id: 'boss_blind_glassbreaker',
+    name: 'Cam Kırıcı',
+    flavorText: '"Güçlünü kırmak… zevklidir."',
+    ruleLabel: 'Obsidyen taşlar %100 kırılır!',
+    tier: 'DANGEROUS',
+    icon: '💀',
+  },
+  {
+    id: 'boss_blind_chainbreaker',
+    name: 'Zincir Koparıcı',
+    flavorText: '"Uzun zincirler kalın kelepçeler taşır."',
+    ruleLabel: 'Elde en fazla 3 taş!',
+    tier: 'DANGEROUS',
+    icon: '⛓️',
+  },
+  {
+    id: 'boss_blind_precision',
+    name: 'Hassas Terazi',
+    flavorText: '"Fazlası da noksanlık sayılır."',
+    ruleLabel: 'Hedefi en fazla +15 aşabilirsin.',
+    tier: 'DANGEROUS',
+    icon: '🎯',
+  },
+  {
+    id: 'boss_blind_watcher',
+    name: 'Gözetleyen Göz',
+    flavorText: '"Her tekrar bir zayıflıktır."',
+    ruleLabel: 'Aynı operatör üst üste kullanılamaz!',
+    tier: 'LETHAL',
+    icon: '👁️',
+  },
+  {
+    id: 'boss_blind_pressure',
+    name: 'Büyük Baskı',
+    flavorText: '"Kötüleri iki katla, iyileri bir kat."',
+    ruleLabel: 'Çıkarma negatifleri ×2 ceza!',
+    tier: 'LETHAL',
+    icon: '🌑',
+  },
+];
+
+// ─────────────────────────────────────────────────────────────
+// STARTING CHESTS
+// ─────────────────────────────────────────────────────────────
+
+export type ChestId =
+  | 'chest_collectors_safe'
+  | 'chest_alchemists_jar'
+  | 'chest_warriors_kit'
+  | 'chest_merchants_purse';
+
+export interface ChestDef {
+  id: ChestId;
+  name: string;
+  description: string;
+  icon: string;
+  /** Applied once when the run starts, after initializeRun(). */
+  apply: (run: RunState) => void;
+}
+
+export const STARTING_CHESTS: readonly ChestDef[] = [
+  {
+    id: 'chest_collectors_safe',
+    name: "Koleksiyoncunun Kasası",
+    description: '+1 Tılsım slotu ve başlangıçta 1 ücretsiz UNCOMMON tılsım.',
+    icon: '🏛️',
+    apply: (run) => {
+      (run.config as any).maxCharmSlots += 1;
+      const uncommons = CHARMS.filter((c) => c.rarity === 'UNCOMMON' && !run.ownedCharmIds.includes(c.id));
+      if (uncommons.length > 0) {
+        const picked = uncommons[Math.floor(Math.random() * uncommons.length)];
+        run.ownedCharmIds.push(picked.id);
+      }
+    },
+  },
+  {
+    id: 'chest_alchemists_jar',
+    name: "Simyacının Kavanozu",
+    description: 'Destenizden rastgele 2 taş kalıcı olarak Fildişi yapılır.',
+    icon: '⚗️',
+    apply: (run) => {
+      if (run.customDeck.length < 2) return;
+      const shuffled = [...run.customDeck].sort(() => Math.random() - 0.5);
+      shuffled.slice(0, 2).forEach((stone) => {
+        const s = run.customDeck.find((x) => x.id === stone.id);
+        if (s) s.modifier = 'IVORY';
+      });
+    },
+  },
+  {
+    id: 'chest_warriors_kit',
+    name: "Savaşçının Sandığı",
+    description: '+3 ıskarta hakkı ve +$2 başlangıç parası.',
+    icon: '⚔️',
+    apply: (run) => {
+      run.discardsLeft += 3;
+      run.money += 2;
+    },
+  },
+  {
+    id: 'chest_merchants_purse',
+    name: "Tüccarın Kesesi",
+    description: '+$6 başlangıç parası ve her tur sonunda +$1 faiz bonusu.',
+    icon: '💰',
+    apply: (run) => {
+      run.money += 6;
+      run.hasMerchantsBonus = true;
+    },
+  },
+];
+
+// ─────────────────────────────────────────────────────────────
+// CHARM FUSION RECIPES
+// ─────────────────────────────────────────────────────────────
+
+export interface FusionRecipe {
+  /** ID of the first source charm (order-independent) */
+  sourceA: string;
+  /** ID of the second source charm */
+  sourceB: string;
+  /** ID of the resulting hybrid charm — must exist in CHARMS */
+  resultId: string;
+  /** Gold cost to perform the fusion */
+  cost: number;
+}
+
+export const FUSION_RECIPES: readonly FusionRecipe[] = [
+  { sourceA: 'cosmic_pendulum',    sourceB: 'heart_matryoshka',  resultId: 'fusion_grand_resonance',   cost: 3 },
+  { sourceA: 'double_oracle',      sourceB: 'binary_mirror',     resultId: 'fusion_twin_oracle',        cost: 3 },
+  { sourceA: 'golden_abacus',      sourceB: 'thrifty_phantom',   resultId: 'fusion_lucky_ledger',       cost: 4 },
+  { sourceA: 'chain_weaver',       sourceB: 'echo_chamber',      resultId: 'fusion_resonant_chain',     cost: 4 },
+  { sourceA: 'obsidian_eye',       sourceB: 'ivory_veil',        resultId: 'fusion_prism_eye',          cost: 5 },
+];
+
+
 
 /**
  * Orchestrates a full run: a fixed sequence of Antes (each consisting of Small, Big, and Boss blinds),
@@ -166,6 +368,9 @@ export class RunState {
   game!: GameState;
   shopOffers: ShopOffer[] = [];
   history: RoundRecord[] = [];
+  customDeck: DominoStone[] = [];
+  draftOffers: DominoStone[] = [];
+  activeBoosterId: string | null = null;
 
   // Consumables & Operator Levels
   operatorLevels: Record<OperatorType, number> = { ADD: 1, SUBTRACT: 1, MULTIPLY: 1, DIVIDE: 1 };
@@ -182,6 +387,15 @@ export class RunState {
   selectedDeck: 'RED' | 'BLUE' | 'YELLOW' = 'RED';
   selectedStake: 'WHITE' | 'RED' = 'WHITE';
   activeBlind: 'SMALL' | 'BIG' | 'BOSS' | null = null;
+
+  // Phase 3: Boss / Chest / Fusion
+  activeBossId: string | null = null;
+  selectedChestId: ChestId | null = null;
+  hasMerchantsBonus = false;
+  /** Track which fused charms we own (sub-IDs of hybrid charms). */
+  fusedCharmIds: string[] = [];
+  /** Last operator type played this turn (for Gözetleyen Göz boss rule). */
+  lastOperatorType: OperatorType | null = null;
 
   // Statistics tracker
   bestHandScore = 0;
@@ -214,6 +428,29 @@ export class RunState {
     this.ownedVoucherIds = [];
     this.maxConsumableSlots = 2;
     this.nextShopBonusCharm = false;
+    this.activeBossId = null;
+    this.selectedChestId = null;
+    this.hasMerchantsBonus = false;
+    this.fusedCharmIds = [];
+    this.lastOperatorType = null;
+
+    // Generate persistent customDeck
+    const initialStones: DominoStone[] = [];
+    const maxPips = this.config.maxPips ?? 6;
+    for (let left = 0; left <= maxPips; left++) {
+      for (let right = left; right <= maxPips; right++) {
+        const randId = Math.random().toString(36).substring(2, 6);
+        initialStones.push({
+          id: `domino_${left}_${right}_${randId}`,
+          leftVal: left,
+          rightVal: right,
+          modifier: 'NORMAL',
+        });
+      }
+    }
+    this.customDeck = initialStones;
+    this.draftOffers = [];
+    this.activeBoosterId = null;
     this.history = [];
     this.bestHandScore = 0;
     this.totalCardsPlayed = 0;
@@ -269,12 +506,12 @@ export class RunState {
     if (this.phase === 'PLAYING') {
       if (this.game.status === 'WON') {
         const blindTarget = this.getBlindTarget(this.activeBlind!);
-        // Enforce Precision Limit on Boss 6
-        if (this.round === 6 && this.activeBlind === 'BOSS' && this.game.score > blindTarget + 15) {
+        // Boss 6 – Hassas Terazi: cannot exceed target by more than 15
+        if (this.activeBossId === 'boss_blind_precision' && this.game.score > blindTarget + 15) {
           this.game.status = 'LOST';
           this.game.lossReason = null;
           this.status = 'LOST';
-          this.defeatedBy = 'Hassas Denge';
+          this.defeatedBy = '🎯 Hassas Terazi — Hedefi fazla aştın!';
         } else {
           this.completeRound();
         }
@@ -307,6 +544,10 @@ export class RunState {
       this.money -= offer.item.cost;
       this.ownedVoucherIds.push(offer.item.id);
       offer.item.apply(this);
+    } else if (offer.type === 'BOOSTER') {
+      this.money -= offer.item.cost;
+      this.activeBoosterId = offer.item.id;
+      this.generateDraftOffers(offer.item.modifier);
     } else {
       const upgrade = offer.item;
       if (upgrade.type === 'COSMIC') {
@@ -327,6 +568,39 @@ export class RunState {
     return { ok: true };
   }
 
+  private generateDraftOffers(modifier: TileModifier): void {
+    this.draftOffers = [];
+    const maxPips = this.config.maxPips ?? 6;
+    for (let i = 0; i < 3; i++) {
+      const left = Math.floor(Math.random() * (maxPips + 1));
+      const right = Math.floor(Math.random() * (maxPips + 1 - left)) + left;
+      const randId = Math.random().toString(36).substring(2, 6);
+      this.draftOffers.push({
+        id: `draft_${left}_${right}_${randId}`,
+        leftVal: left,
+        rightVal: right,
+        modifier: modifier,
+      });
+    }
+  }
+
+  draftStone(stoneId: string): ShopActionResult {
+    const selected = this.draftOffers.find((s) => s.id === stoneId);
+    if (!selected) return { ok: false, error: 'Seçilen taş bulunamadı.' };
+
+    const permanentStone: DominoStone = {
+      id: `domino_${selected.leftVal}_${selected.rightVal}_${Math.random().toString(36).substring(2, 6)}`,
+      leftVal: selected.leftVal,
+      rightVal: selected.rightVal,
+      modifier: selected.modifier,
+    };
+
+    this.customDeck.push(permanentStone);
+    this.draftOffers = [];
+    this.activeBoosterId = null;
+    return { ok: true };
+  }
+
   sellCharm(charmId: string): ShopActionResult {
     if (this.phase !== 'SHOP') return { ok: false, error: 'Mağazada değilsin.' };
     const index = this.ownedCharmIds.indexOf(charmId);
@@ -337,6 +611,45 @@ export class RunState {
     this.ownedCharmIds.splice(index, 1);
     this.money += refund;
     return { ok: true, refund };
+  }
+
+  /** Apply a starting chest bonus right after initializeRun(). */
+  selectChest(chestId: ChestId): ShopActionResult {
+    const def = STARTING_CHESTS.find((c) => c.id === chestId);
+    if (!def) return { ok: false, error: 'Bilinmeyen sandık.' };
+    this.selectedChestId = chestId;
+    def.apply(this);
+    return { ok: true };
+  }
+
+  /** Fuse two owned charms into a single hybrid charm. */
+  attemptFusion(charmAId: string, charmBId: string): ShopActionResult {
+    if (this.phase !== 'SHOP') return { ok: false, error: 'Füzyon sadece mağazada yapılabilir.' };
+
+    // Find matching recipe (order-independent)
+    const recipe = FUSION_RECIPES.find(
+      (r) =>
+        (r.sourceA === charmAId && r.sourceB === charmBId) ||
+        (r.sourceA === charmBId && r.sourceB === charmAId)
+    );
+    if (!recipe) return { ok: false, error: 'Bu iki tılsım birleştirilemiyor.' };
+    if (this.money < recipe.cost) return { ok: false, error: `Füzyon için $${recipe.cost} gerekiyor.` };
+
+    const idxA = this.ownedCharmIds.indexOf(charmAId);
+    const idxB = this.ownedCharmIds.indexOf(charmBId);
+    if (idxA === -1 || idxB === -1) return { ok: false, error: 'Her iki tılsıma da sahip olmalısın.' };
+
+    // Check result charm exists
+    const resultDef = CHARMS.find((c) => c.id === recipe.resultId);
+    if (!resultDef) return { ok: false, error: 'Hibrit tılsım tanımı bulunamadı.' };
+
+    // Remove both sources
+    this.ownedCharmIds = this.ownedCharmIds.filter((id) => id !== charmAId && id !== charmBId);
+    // Add hybrid (takes 1 slot instead of 2)
+    this.ownedCharmIds.push(recipe.resultId);
+    this.fusedCharmIds.push(recipe.resultId);
+    this.money -= recipe.cost;
+    return { ok: true };
   }
 
   rerollShop(): ShopActionResult {
@@ -366,6 +679,24 @@ export class RunState {
       const stone = this.game.hand.find((s) => s.id === targetId);
       if (!stone) return { ok: false, error: 'Taş elinizde bulunamadı.' };
       stone.isGolden = true;
+    } else if (item === 'consumable_ivory') {
+      const stone = this.game.hand.find((s) => s.id === targetId);
+      if (!stone) return { ok: false, error: 'Taş elinizde bulunamadı.' };
+      stone.modifier = 'IVORY';
+      const deckStone = this.customDeck.find((s) => s.id === targetId);
+      if (deckStone) deckStone.modifier = 'IVORY';
+    } else if (item === 'consumable_obsidian') {
+      const stone = this.game.hand.find((s) => s.id === targetId);
+      if (!stone) return { ok: false, error: 'Taş elinizde bulunamadı.' };
+      stone.modifier = 'OBSIDIAN';
+      const deckStone = this.customDeck.find((s) => s.id === targetId);
+      if (deckStone) deckStone.modifier = 'OBSIDIAN';
+    } else if (item === 'consumable_amber') {
+      const stone = this.game.hand.find((s) => s.id === targetId);
+      if (!stone) return { ok: false, error: 'Taş elinizde bulunamadı.' };
+      stone.modifier = 'AMBER';
+      const deckStone = this.customDeck.find((s) => s.id === targetId);
+      if (deckStone) deckStone.modifier = 'AMBER';
     } else {
       return { ok: false, error: 'Bilinmeyen büyü türü.' };
     }
@@ -450,7 +781,7 @@ export class RunState {
       0
     );
 
-    const totalPayout = blindReward + turnsLeft * 1 + interest + charmBonus;
+    const totalPayout = blindReward + turnsLeft * 1 + interest + charmBonus + (this.hasMerchantsBonus ? 1 : 0);
 
     this.money += totalPayout;
 
@@ -471,47 +802,114 @@ export class RunState {
     const blindTarget = this.getBlindTarget(this.activeBlind!);
     const maxTurnsVal = this.selectedDeck === 'BLUE' ? 7 : 6;
 
+    // Determine active boss (index = round-1 mapped to BOSS_BLINDS)
+    if (this.activeBlind === 'BOSS') {
+      const bossIndex = Math.min(this.round - 1, BOSS_BLINDS.length - 1);
+      this.activeBossId = BOSS_BLINDS[bossIndex].id;
+    } else {
+      this.activeBossId = null;
+    }
+
+    // Boss 5 (Zincir Koparıcı): reduce hand size to 3 stones per turn
+    const bossReducesHand = this.activeBossId === 'boss_blind_chainbreaker';
+    const effectiveStonesPerTurn = bossReducesHand ? 3 : this.config.stonesPerTurn;
+
     const gameConfig: GameConfig = {
       targetScore: blindTarget,
       maxTurns: maxTurnsVal,
-      stonesPerTurn: this.config.stonesPerTurn,
+      stonesPerTurn: effectiveStonesPerTurn,
       operatorsPerTurn: this.config.operatorsPerTurn,
       maxPips: this.config.maxPips,
     };
     this.game = new GameState(gameConfig);
+    if (this.customDeck.length > 0) {
+      this.game.stoneDeck.getStones().length = 0;
+      this.game.stoneDeck.discard(JSON.parse(JSON.stringify(this.customDeck)));
+    }
+    this.game.stoneDeck.shuffle();
     this.roundHooks = this.wireCharms();
     this.discardsLeft = this.selectedDeck === 'RED' ? 3 : 2;
+    this.lastOperatorType = null;
 
-    // Golden stones, stats, and Boss 3 logic injection
+    // ─── Boss Blind submit override ────────────────────────────
     const originalSubmit = this.game.submitChain.bind(this.game);
     this.game.submitChain = () => {
-      // Round 3 Boss check: block divide
-      if (this.round === 3 && this.activeBlind === 'BOSS') {
-        const hasDivide = this.game.board.getUnfrozenEdges().some((e) => e.operator.type === 'DIVIDE');
-        if (hasDivide) {
-          return { ok: false, error: 'Bu Boss aşamasında bölme operatörü kullanılamaz!' };
+      const boss = this.activeBossId;
+      const unfrozenEdges = this.game.board.getUnfrozenEdges();
+
+      // Boss 1 – Kör Kadı: block DIVIDE
+      if (boss === 'boss_blind_judge') {
+        if (unfrozenEdges.some((e) => e.operator.type === 'DIVIDE')) {
+          return { ok: false, error: '⚖️ Kör Kadı: Bölme (÷) operatörü bu aşamada yasaktır!', steps: [] };
         }
       }
 
-      // Find any golden stones placed this turn (unfrozen before submit)
+      // Boss 3 – Demirli Kapı: block ADD
+      if (boss === 'boss_blind_gate') {
+        if (unfrozenEdges.some((e) => e.operator.type === 'ADD')) {
+          return { ok: false, error: '🔒 Demirli Kapı: Toplama (+) operatörü bu aşamada yasaktır!', steps: [] };
+        }
+      }
+
+      // Boss 7 – Gözetleyen Göz: block same operator used consecutively
+      if (boss === 'boss_blind_watcher' && this.lastOperatorType !== null) {
+        const firstOpType = unfrozenEdges[0]?.operator?.type ?? null;
+        if (firstOpType && firstOpType === this.lastOperatorType) {
+          return {
+            ok: false,
+            error: `👁️ Gözetleyen Göz: ${firstOpType} operatörünü üst üste kullanamazsın!`,
+            steps: [],
+          };
+        }
+      }
+
+      // Find any golden / special stones placed this turn
       const unscoredNodes = this.game.board.getNodes().filter((n) => !n.frozen);
       const unscoredGoldenCount = unscoredNodes.filter((n) => (n as any).isGolden).length;
-      const unscoredEdgesCount = this.game.board.getUnfrozenEdges().length;
+      const unscoredEdgesCount = unfrozenEdges.length;
 
-      const res = originalSubmit();
+      // Construct activeCharms array for the score engine
+      const activeCharms = this.ownedCharmIds.map((id, idx) => {
+        const def = CHARMS.find((c) => c.id === id);
+        return { id, name: def?.name ?? '', hooks: this.roundHooks[idx] };
+      });
+
+      const res = originalSubmit(activeCharms, this.operatorLevels);
+
       if (res.ok && res.scoreGained !== undefined) {
-        // Update stats
         this.totalCardsPlayed += unscoredEdgesCount;
         this.bestHandScore = Math.max(this.bestHandScore, res.scoreGained);
 
-        // Award $3 per golden stone submitted!
+        // Award $3 per golden stone submitted
         this.money += unscoredGoldenCount * 3;
+
+        // Apply permanent Obsidian breakage to customDeck
+        if (res.brokenTileIds && res.brokenTileIds.length > 0) {
+          this.customDeck = this.customDeck.filter((s) => !res.brokenTileIds!.includes(s.id));
+        }
+
+        // Boss 4 – Cam Kırıcı: 100% obsidian break (override normal 25%)
+        if (this.activeBossId === 'boss_blind_glassbreaker') {
+          const obsidianIds = unscoredNodes
+            .filter((n) => (n as any).modifier === 'OBSIDIAN')
+            .map((n) => n.nodeId);
+          if (obsidianIds.length > 0) {
+            obsidianIds.forEach((id) => this.game.stoneDeck.removeStoneById(id));
+            this.customDeck = this.customDeck.filter((s) => !obsidianIds.includes(s.id));
+          }
+        }
+
+        // Track last operator used (for Gözetleyen Göz)
+        if (unfrozenEdges.length > 0) {
+          this.lastOperatorType = unfrozenEdges[unfrozenEdges.length - 1].operator.type;
+        }
       }
       return res;
     };
 
     this.game.drawForTurn();
   }
+
 
   /** Instantiates fresh hook closures for every owned charm and composes them onto the evaluator. */
   private wireCharms(): CharmHooks[] {
@@ -532,9 +930,14 @@ export class RunState {
         else if (operator === 'DIVIDE') val += (lvl - 1) * 4;
       }
 
-      // Boss 8: Negatives from subtraction are doubled
-      if (this.round === 8 && this.activeBlind === 'BOSS' && operator === 'SUBTRACT' && val < 0) {
+      // Boss 8 – Büyük Baskı: Negatives from subtraction are doubled
+      if (this.activeBossId === 'boss_blind_pressure' && operator === 'SUBTRACT' && val < 0) {
         val *= 2;
+      }
+
+      // Boss 2 – Aynalı Kule: chips halved (simulate by halving every edge value)
+      if (this.activeBossId === 'boss_blind_mirror') {
+        val = Math.round(val / 2);
       }
 
       return hooks.reduce(
@@ -581,6 +984,12 @@ export class RunState {
     if (availableVouchers.length > 0) {
       const voucher = availableVouchers[Math.floor(Math.random() * availableVouchers.length)];
       offers.push({ type: 'VOUCHER', item: voucher });
+    }
+
+    // 1 Booster Pack
+    const shuffledBoosters = [...BOOSTER_PACKS].sort(() => Math.random() - 0.5);
+    if (shuffledBoosters[0]) {
+      offers.push({ type: 'BOOSTER', item: shuffledBoosters[0] });
     }
 
     return offers;

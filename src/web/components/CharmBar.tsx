@@ -118,7 +118,7 @@ export default function CharmBar({ charms, maxCharmSlots = 5, highlightedCharmId
                 )}
 
                 {/* Visual Icon Art — Massive Balatro Joker graphics, fills the card body */}
-                <div className="flex-1 flex items-center justify-center transform scale-[2.1] origin-center my-auto">
+                <div className="flex-1 flex items-center justify-center transform scale-[2.1] origin-center my-auto pointer-events-none">
                   {renderCharmIcon(charm.id)}
                 </div>
 

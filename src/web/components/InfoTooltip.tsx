@@ -23,13 +23,13 @@ const ALIGN_CLASS: Record<NonNullable<InfoTooltipProps['align']>, string> = {
 export default function InfoTooltip({ children, text, side = 'top', align = 'center', className, widthClass = 'w-48' }: InfoTooltipProps) {
   const sideClass = side === 'top' ? 'bottom-full mb-2' : 'top-full mt-2';
   return (
-    <span className={`group relative inline-flex ${className ?? ''}`}>
+    <div className={`group relative inline-block ${className ?? ''}`}>
       {children}
-      <span
+      <div
         className={`pointer-events-none absolute ${ALIGN_CLASS[align]} ${sideClass} ${widthClass} rounded-lg border border-amber-700/50 bg-slate-950/95 px-2.5 py-1.5 text-[10px] leading-snug text-amber-100 shadow-md opacity-0 scale-95 transition duration-150 group-hover:opacity-100 group-hover:scale-100 z-50`}
       >
         {text}
-      </span>
-    </span>
+      </div>
+    </div>
   );
 }

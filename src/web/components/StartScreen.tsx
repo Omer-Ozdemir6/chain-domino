@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import Tile from './Tile.js';
+import { STARTING_CHESTS } from '../../game/RunState.js';
+import type { ChestId } from '../../game/RunState.js';
 
 interface StartScreenProps {
-  onStart: (deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED') => void;
+  onStart: (deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', chestId: ChestId | null) => void;
 }
 
 type TabState = 'MAIN' | 'DECK_SELECT' | 'STAKE_SELECT' | 'CHALLENGES' | 'SETUP';
@@ -11,6 +13,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
   const [deck, setDeck] = useState<'RED' | 'BLUE' | 'YELLOW'>('RED');
   const [stake, setStake] = useState<'WHITE' | 'RED'>('WHITE');
   const [tab, setTab] = useState<TabState>('MAIN');
+  const [selectedChest, setSelectedChest] = useState<ChestId | null>(null);
 
   // Decks helper details
   const DECK_NAMES = {
@@ -229,7 +232,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
       {/* SETUP & START CONFIRM TAB */}
       {tab === 'SETUP' && (
         <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-chain-place">
-          <div className="w-full max-w-sm bg-slate-900 border-4 border-slate-950 rounded-3xl p-5 shadow-2xl text-white crt flex flex-col">
+          <div className="w-full max-w-lg bg-slate-900 border-4 border-slate-950 rounded-3xl p-5 shadow-2xl text-white crt flex flex-col max-h-full overflow-y-auto">
             <h2 className="text-center text-xl font-bold font-pixel tracking-widest text-emerald-400 uppercase border-b border-slate-800 pb-2">
               SEFER KURULUMU
             </h2>
@@ -245,9 +248,44 @@ export default function StartScreen({ onStart }: StartScreenProps) {
               </div>
             </div>
 
+            {/* Chest Selection */}
+            <div className="mt-4">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">🏴 Başlangıç Sandığı Seç</p>
+              <div className="grid grid-cols-2 gap-2">
+                {STARTING_CHESTS.map((chest) => {
+                  const isSelected = selectedChest === chest.id;
+                  return (
+                    <button
+                      key={chest.id}
+                      type="button"
+                      onClick={() => setSelectedChest(isSelected ? null : chest.id)}
+                      className={[
+                        'flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition text-left',
+                        isSelected
+                          ? 'border-amber-400 bg-amber-950/20 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
+                          : 'border-slate-700 bg-slate-950/30 hover:border-slate-500',
+                      ].join(' ')}
+                    >
+                      <span className="text-3xl">{chest.icon}</span>
+                      <span className={`text-[11px] font-pixel font-bold text-center leading-tight ${isSelected ? 'text-amber-300' : 'text-slate-200'}`}>
+                        {chest.name}
+                      </span>
+                      <span className="text-[9px] text-slate-400 text-center leading-tight">
+                        {chest.description}
+                      </span>
+                      {isSelected && (
+                        <span className="text-[9px] font-bold text-amber-400 bg-amber-900/30 px-2 py-0.5 rounded">✓ SEÇİLDİ</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[9px] text-slate-500 mt-2 text-center">Sandık seçimi opsiyoneldir.</p>
+            </div>
+
             <button
               type="button"
-              onClick={() => onStart(deck, stake)}
+              onClick={() => onStart(deck, stake, selectedChest)}
               className="mt-5 w-full py-3.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 active:translate-y-0.5 text-xs font-bold text-white shadow border-b-4 border-red-800 transition cursor-pointer select-none uppercase font-pixel tracking-widest"
             >
               🚀 Macerayı Başlat (START RUN)

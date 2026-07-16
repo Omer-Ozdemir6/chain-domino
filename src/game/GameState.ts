@@ -2,8 +2,10 @@ import { Board } from '../models/Board.js';
 import type { SlotId } from '../models/Board.js';
 import { Deck } from '../models/Deck.js';
 import { OperatorDeck } from '../models/OperatorDeck.js';
-import type { DominoStone, OperatorCard } from '../models/types.js';
+import type { DominoStone, OperatorCard, OperatorType } from '../models/types.js';
 import { GraphEvaluator } from '../engine/GraphEvaluator.js';
+import { calculateScore } from '../engine/scoreCalculator.js';
+import type { CharmHooks } from '../models/Charm.js';
 
 export type { SlotId } from '../models/Board.js';
 export type GameStatus = 'PLAYING' | 'WON' | 'LOST';
@@ -29,6 +31,7 @@ export interface SubmitResult {
   steps?: string[];
   /** Extra flat bonus folded into scoreGained for fully playing out a turn's whole hand. */
   handEmptiedBonus?: number;
+  brokenTileIds?: string[];
 }
 
 /** Flat score bonus for placing every stone drawn this turn before submitting. */
@@ -65,53 +68,27 @@ export class GameState {
     this.operatorDeck.shuffle();
   }
 
-  /** Draws this turn's allotment of stones and solitaire active operators. */
-  drawForTurn(): void {
-    this.hand.push(...this.stoneDeck.draw(this.config.stonesPerTurn));
-    
-    // Auto-draw active operator if slot is empty and passes are available
-    if (this.operatorHand.length === 0) {
-      if (this.operatorDeck.remaining === 0 && this.operatorDiscardPile.length > 0 && this.operatorDeckCycles < this.maxOperatorDeckCycles) {
+  /** Tops the operator hand back up to its fixed slot count, respecting the reshuffle safety valve. */
+  private refillOperatorHand(): void {
+    while (this.operatorHand.length < this.config.operatorsPerTurn) {
+      if (this.operatorDeck.remaining === 0) {
+        if (this.operatorDiscardPile.length === 0 || this.operatorDeckCycles >= this.maxOperatorDeckCycles) break;
         this.operatorDeck.discard(this.operatorDiscardPile);
         this.operatorDiscardPile = [];
         this.operatorDeck.shuffle();
         this.operatorDeckCycles += 1;
       }
-      this.operatorHand.push(...this.operatorDeck.draw(1));
+      const [card] = this.operatorDeck.draw(1);
+      if (!card) break;
+      this.operatorHand.push(card);
     }
-    
-    this.checkStuck();
   }
 
-  /** Cycles the active operator card from the draw pile without consuming round discards. */
-  cycleOperatorCard(): PlayResult {
-    if (this.status !== 'PLAYING') return { ok: false, error: 'Oyun sona erdi.' };
-
-    // Move current active operator to discard pile
-    if (this.operatorHand.length > 0) {
-      this.operatorDiscardPile.push(...this.operatorHand);
-      this.operatorHand = [];
-    }
-
-    // Reset deck from discard pile if empty
-    if (this.operatorDeck.remaining === 0) {
-      if (this.operatorDeckCycles >= this.maxOperatorDeckCycles) {
-        return { ok: false, error: 'Tüm devir haklarınızı tükettiniz! Artık yeni operatör çekemezsiniz.' };
-      }
-      if (this.operatorDiscardPile.length === 0) {
-        return { ok: false, error: 'Çekilecek operatör kalmadı.' };
-      }
-      
-      this.operatorDeck.discard(this.operatorDiscardPile);
-      this.operatorDiscardPile = [];
-      this.operatorDeck.shuffle();
-      this.operatorDeckCycles += 1;
-    }
-
-    // Draw next operator card
-    this.operatorHand = this.operatorDeck.draw(1);
+  /** Draws this turn's allotment of stones and tops the operator hand up to its fixed slot count. */
+  drawForTurn(): void {
+    this.hand.push(...this.stoneDeck.draw(this.config.stonesPerTurn));
+    this.refillOperatorHand();
     this.checkStuck();
-    return { ok: true };
   }
 
   /** True if at least one item in hand could be legally placed on the board right now. */
@@ -168,6 +145,9 @@ export class GameState {
     const result = this.board.addStoneAt(this.hand[index], slotId);
     if (!result.ok) return { ok: false, error: result.error };
 
+    // Apply Amber magnet neighbor alignment effect
+    this.board.applyAmberMagnet(stoneId);
+
     this.hand.splice(index, 1);
     this.checkStuck();
     return { ok: true };
@@ -186,6 +166,9 @@ export class GameState {
     if (!result.ok) return { ok: false, error: result.error };
 
     this.operatorHand.splice(index, 1);
+    // The played slot refills immediately (if the deck still has cards) so the hand stays at a
+    // fixed count instead of the player having to draw again between placements.
+    this.refillOperatorHand();
     this.checkStuck();
     return { ok: true };
   }
@@ -200,12 +183,6 @@ export class GameState {
     if (removed.type === 'STONE') {
       this.hand.push(removed.data);
     } else {
-      // Solitaire active operator: if we already have an active operator in hand,
-      // move it back to the operator draw deck (so the undone card takes the active slot)
-      if (this.operatorHand.length > 0) {
-        this.operatorDeck.discard(this.operatorHand);
-        this.operatorHand = [];
-      }
       this.operatorHand.push(removed.data);
     }
     this.checkStuck();
@@ -241,23 +218,54 @@ export class GameState {
    * re-evaluated — a SUBTRACT/DIVIDE addition can only make this turn's own gain low or
    * negative, it can no longer retroactively worsen already-banked connections.
    */
-  submitChain(): SubmitResult {
+  submitChain(
+    activeCharms: { id: string; name: string; hooks: CharmHooks }[] = [],
+    operatorLevels: Record<OperatorType, number> = { ADD: 1, SUBTRACT: 1, MULTIPLY: 1, DIVIDE: 1 }
+  ): SubmitResult {
     if (this.status !== 'PLAYING') return { ok: false, error: 'Oyun sona erdi.' };
     if (this.board.hasPendingOperator()) {
       return { ok: false, error: 'Zincir operatör ile bitemez!', steps: [] };
     }
 
-    const result = this.evaluator.scoreEdges(this.board.getUnfrozenEdges());
-    if (!result.ok) {
-      return { ok: false, error: result.error, steps: result.steps };
-    }
+    // Map board unfrozen nodes to DominoStone records
+    const unfrozenStones: DominoStone[] = this.board.getNodes()
+      .filter((n) => !n.frozen)
+      .map((n) => ({
+        id: n.nodeId,
+        leftVal: n.leftVal,
+        rightVal: n.rightVal,
+        isGolden: n.isGolden,
+        modifier: (n as any).modifier,
+        tags: (n as any).tags,
+      }));
+
+    const unfrozenEdges = this.board.getUnfrozenEdges();
+
+    const result = calculateScore(
+      unfrozenStones,
+      unfrozenEdges,
+      activeCharms,
+      operatorLevels,
+      this.evaluator.onOperatorResolve?.bind(this.evaluator)
+    );
+
+    // Check for Obsidian breakage (25% chance of permanent destruction)
+    const brokenTileIds: string[] = [];
+    unfrozenStones.forEach((stone) => {
+      if (stone.modifier === 'OBSIDIAN') {
+        if (Math.random() <= 0.25) {
+          this.stoneDeck.removeStoneById(stone.id);
+          brokenTileIds.push(stone.id);
+        }
+      }
+    });
 
     // Reward fully playing out a turn's whole hand (not just a couple of leftover stones).
-    const newStonesThisTurn = this.board.getNodes().filter((n) => !n.frozen).length;
+    const newStonesThisTurn = unfrozenStones.length;
     const handEmptiedBonus =
       this.hand.length === 0 && newStonesThisTurn >= this.config.stonesPerTurn ? HAND_EMPTIED_BONUS : 0;
 
-    this.score += result.totalGain + handEmptiedBonus;
+    this.score += result.score + handEmptiedBonus;
     this.board.freeze();
     this.turn += 1;
 
@@ -265,9 +273,10 @@ export class GameState {
 
     return {
       ok: true,
-      scoreGained: result.totalGain + handEmptiedBonus,
+      scoreGained: result.score + handEmptiedBonus,
       handEmptiedBonus: handEmptiedBonus || undefined,
       steps: result.steps,
+      brokenTileIds: brokenTileIds.length > 0 ? brokenTileIds : undefined,
     };
   }
 

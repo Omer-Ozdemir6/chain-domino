@@ -39,8 +39,47 @@ body {
   position: relative;
 }
 
+@keyframes swirl-felt {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 50% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
 .swirl-bg {
-  background: radial-gradient(ellipse at top, #2b5136, #16321f 70%, #0f2417);
+  background-color: #061c0e;
+  background-image: 
+    radial-gradient(at 10% 20%, #163e24 0px, transparent 60%),
+    radial-gradient(at 90% 10%, #0a2d17 0px, transparent 60%),
+    radial-gradient(at 50% 80%, #226437 0px, transparent 65%),
+    radial-gradient(at 80% 90%, #0a2916 0px, transparent 60%);
+  background-size: 240% 240%;
+  animation: swirl-felt 22s ease-in-out infinite;
+}
+
+/* CRT Monitor scanlines, subpixels, and slight bezel glow overlay */
+.crt-screen {
+  position: relative;
+  overflow: hidden;
+}
+
+.crt-screen::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: 
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.18) 50%), 
+    linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  background-size: 100% 3px, 6px 100%;
+  z-index: 60;
+  pointer-events: none !important;
+  opacity: 0.12;
 }
 
 /* Balatro-style card layout */

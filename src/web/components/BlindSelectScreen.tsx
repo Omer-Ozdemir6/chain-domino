@@ -1,4 +1,5 @@
 import type { RoundRecord } from '../../game/RunState.js';
+import { BOSS_BLINDS } from '../../game/RunState.js';
 
 interface BlindSelectScreenProps {
   round: number; // Current Ante
@@ -7,6 +8,32 @@ interface BlindSelectScreenProps {
   onPlay: (blindType: 'SMALL' | 'BIG' | 'BOSS') => void;
   onSkip: (blindType: 'SMALL' | 'BIG') => void;
 }
+
+const TIER_COLORS = {
+  MODERATE: {
+    border: 'border-orange-500/80',
+    bg: 'bg-orange-950/10',
+    glow: 'shadow-[0_0_14px_rgba(249,115,22,0.25)]',
+    label: 'text-orange-400',
+    badge: 'bg-orange-700/30 text-orange-300',
+  },
+  DANGEROUS: {
+    border: 'border-red-500',
+    bg: 'bg-red-950/10',
+    glow: 'shadow-[0_0_18px_rgba(239,68,68,0.3)]',
+    label: 'text-red-500',
+    badge: 'bg-red-700/30 text-red-300',
+  },
+  LETHAL: {
+    border: 'border-fuchsia-600',
+    bg: 'bg-fuchsia-950/20',
+    glow: 'shadow-[0_0_22px_rgba(192,38,211,0.35)] animate-pulse',
+    label: 'text-fuchsia-400',
+    badge: 'bg-fuchsia-700/30 text-fuchsia-300',
+  },
+};
+
+const TIER_LABEL = { MODERATE: 'TEHLİKELİ', DANGEROUS: '⚠ ÖLÜMCÜL', LETHAL: '💀 LETALİTE' };
 
 export default function BlindSelectScreen({
   round,
@@ -27,13 +54,9 @@ export default function BlindSelectScreen({
   const bigTarget = getBlindTarget('BIG');
   const bossTarget = getBlindTarget('BOSS');
 
-  // Boss Rules descriptions
-  let bossRuleDesc = 'Sıfır Engeli: Bölme (÷) operatörünü kullanmak yasaktır.';
-  if (round === 3 || round === 6) {
-    bossRuleDesc = 'Hassas Denge: Kazandıktan sonra hedef skoru en fazla +15 aşabilirsiniz, yoksa kaybedersiniz.';
-  } else if (round === 8) {
-    bossRuleDesc = 'Büyük Baskı: Çıkarma işleminden gelen negatif puanlar ikiye katlanır.';
-  }
+  const bossIndex = Math.min(round - 1, BOSS_BLINDS.length - 1);
+  const boss = BOSS_BLINDS[bossIndex];
+  const tierColor = TIER_COLORS[boss.tier];
 
   return (
     <div className="w-full max-w-xl my-auto rounded-3xl bg-slate-900 border-4 border-slate-950 p-8 shadow-2xl text-white crt select-none">
@@ -133,38 +156,54 @@ export default function BlindSelectScreen({
           )}
         </div>
 
-        {/* BOSS BLIND CARD */}
+        {/* BOSS BLIND CARD — fully dynamic from BOSS_BLINDS array */}
         <div
           className={[
             'flex flex-col p-4 rounded-2xl border-2 transition',
             hasBoss
               ? 'border-slate-800 bg-slate-950/20 opacity-40'
               : currentActive === 'BOSS'
-                ? 'border-red-500 bg-red-950/10 shadow-[0_0_12px_rgba(239,68,68,0.2)]'
+                ? `${tierColor.border} ${tierColor.bg} ${tierColor.glow}`
                 : 'border-slate-800 bg-slate-950/20',
           ].join(' ')}
         >
-          <div className="flex items-center justify-between w-full">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-black text-red-500 font-pixel uppercase">Boss Blind</span>
+          <div className="flex items-start justify-between w-full gap-3">
+            {/* Boss icon */}
+            <div className="text-4xl shrink-0 mt-0.5 drop-shadow-lg">{boss.icon}</div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-sm font-black font-pixel uppercase ${tierColor.label}`}>
+                  {boss.name}
+                </span>
+                <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase ${tierColor.badge}`}>
+                  {TIER_LABEL[boss.tier]}
+                </span>
                 {hasBoss && <span className="text-[11px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-bold">TAMAMLANDI</span>}
               </div>
-              <p className="text-xs text-slate-350 mt-1">Hedef: <span className="font-pixel text-sm text-slate-200">{bossTarget}</span></p>
+              <p className="text-[10px] text-slate-400 italic mt-0.5 leading-tight">{boss.flavorText}</p>
+              <p className="text-xs text-slate-350 mt-1.5">
+                Hedef: <span className="font-pixel text-sm text-slate-200">{bossTarget}</span>
+              </p>
               <p className="text-xs text-slate-500 font-bold">ÖDÜL: <span className="text-amber-400 font-pixel">$5</span></p>
             </div>
+
             {!hasBoss && currentActive === 'BOSS' && (
               <button
                 onClick={() => onPlay('BOSS')}
-                className="px-6 py-2.5 bg-red-600 hover:bg-red-500 active:translate-y-0.5 text-xs font-pixel font-bold text-white rounded-xl shadow border-b-2 border-red-800 transition"
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-500 active:translate-y-0.5 text-xs font-pixel font-bold text-white rounded-xl shadow border-b-2 border-red-800 transition shrink-0"
               >
-                OYNA (BOSS)
+                OYNA
               </button>
             )}
           </div>
+
           {!hasBoss && (
-            <div className="mt-3 border-t border-slate-800/60 pt-2 text-xs font-medium font-outfit text-red-400/90 leading-tight">
-              ⚠️ {bossRuleDesc}
+            <div className={`mt-3 border-t border-slate-800/60 pt-2 flex items-center gap-2`}>
+              <span className="text-base">{boss.icon}</span>
+              <span className={`text-xs font-bold leading-tight ${tierColor.label}`}>
+                ⚠️ {boss.ruleLabel}
+              </span>
             </div>
           )}
         </div>

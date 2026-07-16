@@ -1,4 +1,5 @@
 import Pips from './Pips.js';
+import type { TileModifier } from '../../models/types.js';
 
 interface TileProps {
   /** Value shown on the west side (or north, if `vertical`). */
@@ -16,34 +17,67 @@ interface TileProps {
   vertical?: boolean;
   isGolden?: boolean;
   highlighted?: boolean;
-  spellEffect?: 'GILD' | 'MAGNET' | null;
+  spellEffect?: 'GILD' | 'MAGNET' | 'BLUE' | 'RED' | null;
+  modifier?: TileModifier;
 }
 
-export default function Tile({ left, right, selected, onClick, animateIn, frozen, isDouble, vertical, isGolden, highlighted, spellEffect }: TileProps) {
+/** Returns Tailwind border/shadow/bg classes for a tile based on its modifier. */
+function getModifierClasses(modifier?: TileModifier, isGolden?: boolean, isDouble?: boolean, selected?: boolean, highlighted?: boolean): string {
+  if (highlighted) return 'border-emerald-400 ring-4 ring-emerald-500 scale-105 z-50 shadow-[0_0_15px_5px_rgba(16,185,129,0.7)]';
+  if (selected) return 'border-teal-600 ring-2 ring-teal-500';
+
+  switch (modifier) {
+    case 'OBSIDIAN':
+      return 'border-purple-600 shadow-[0_0_14px_3px_rgba(147,51,234,0.55)] ring-1 ring-purple-500 bg-slate-950/90';
+    case 'IVORY':
+      return 'border-stone-300 shadow-[0_0_12px_3px_rgba(245,245,244,0.6)] ring-1 ring-stone-200 bg-stone-50/90';
+    case 'AMBER':
+      return 'border-amber-500 shadow-[0_0_14px_3px_rgba(245,158,11,0.55)] ring-1 ring-amber-400 bg-amber-950/30';
+    default:
+      if (isGolden) return 'border-amber-400 shadow-[0_0_15px_3px_rgba(251,191,36,0.65)] ring-2 ring-amber-400 bg-amber-500/10';
+      if (isDouble) return 'border-red-700 shadow-[0_0_10px_2px_rgba(185,28,28,0.35)] dark:border-red-600';
+      return 'border-slate-300 dark:border-slate-600';
+  }
+}
+
+/** Returns a small label/indicator shown in the corner of the tile for non-NORMAL modifiers. */
+function getModifierIndicator(modifier?: TileModifier, isGolden?: boolean): React.ReactNode {
+  if (isGolden && (!modifier || modifier === 'NORMAL')) {
+    return <span className="absolute top-0.5 right-0.5 text-[5px] font-pixel text-amber-400 leading-none font-bold">✦</span>;
+  }
+  switch (modifier) {
+    case 'OBSIDIAN':
+      return <span className="absolute top-0.5 right-0.5 text-[5px] font-pixel text-purple-400 leading-none font-bold">◆</span>;
+    case 'IVORY':
+      return <span className="absolute top-0.5 right-0.5 text-[5px] font-pixel text-stone-500 leading-none font-bold">◇</span>;
+    case 'AMBER':
+      return <span className="absolute top-0.5 right-0.5 text-[5px] font-pixel text-amber-400 leading-none font-bold">⬡</span>;
+    default:
+      return null;
+  }
+}
+
+export default function Tile({ left, right, selected, onClick, animateIn, frozen, isDouble, vertical, isGolden, highlighted, spellEffect, modifier }: TileProps) {
   const clickable = Boolean(onClick);
+  const modifierClasses = getModifierClasses(modifier, isGolden, isDouble, selected, highlighted);
+  const modifierIndicator = getModifierIndicator(modifier, isGolden);
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={!clickable}
       className={[
-        'flex items-center rounded-lg border-2 bg-white font-mono text-lg font-semibold text-slate-800 shadow-sm transition shrink-0 relative',
+        'flex items-center rounded-lg border-2 bg-white font-mono text-lg font-semibold text-slate-800 shadow-[0_3px_0_rgba(0,0,0,0.15),0_8px_14px_rgba(0,0,0,0.4)] transition shrink-0 relative',
         vertical ? 'flex-col' : 'flex-row',
         'dark:bg-slate-800 dark:text-slate-100',
-        clickable ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-md' : 'cursor-default',
-        highlighted
-          ? 'border-emerald-400 ring-4 ring-emerald-500 scale-105 z-50 shadow-[0_0_15px_5px_rgba(16,185,129,0.7)]'
-          : selected
-            ? 'border-teal-600 ring-2 ring-teal-500'
-            : isGolden
-              ? 'border-amber-400 shadow-[0_0_15px_3px_rgba(251,191,36,0.65)] ring-2 ring-amber-400 bg-amber-500/10'
-              : isDouble
-                ? 'border-red-700 shadow-[0_0_10px_2px_rgba(185,28,28,0.35)] dark:border-red-600'
-                : 'border-slate-300 dark:border-slate-600',
+        clickable ? 'cursor-pointer hover:-translate-y-1 hover:shadow-[0_5px_0_rgba(0,0,0,0.2),0_14px_20px_rgba(0,0,0,0.5)]' : 'cursor-default',
+        modifierClasses,
         frozen && !highlighted ? 'opacity-60 saturate-50' : '',
         animateIn ? 'animate-chain-place' : '',
       ].join(' ')}
     >
+      {modifierIndicator}
       <span className="flex h-18 w-13 flex-col items-center justify-center gap-1">
         <span className="text-sm font-pixel font-bold leading-none text-slate-100">{left}</span>
         <Pips value={left} large />
@@ -60,10 +94,10 @@ export default function Tile({ left, right, selected, onClick, animateIn, frozen
       </span>
       {spellEffect && (
         <div className={`absolute inset-0 z-50 pointer-events-none rounded-lg spell-particle-${spellEffect.toLowerCase()}`}>
-          <span className={`absolute top-1/4 left-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : 'bg-sky-350'} animate-[spark-1_0.8s_ease-out_forwards]`} />
-          <span className={`absolute top-1/4 right-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : 'bg-sky-350'} animate-[spark-2_0.8s_ease-out_forwards]`} />
-          <span className={`absolute bottom-1/4 left-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : 'bg-sky-350'} animate-[spark-3_0.8s_ease-out_forwards]`} />
-          <span className={`absolute bottom-1/4 right-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : 'bg-sky-350'} animate-[spark-4_0.8s_ease-out_forwards]`} />
+          <span className={`absolute top-1/4 left-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : spellEffect === 'RED' ? 'bg-purple-400' : 'bg-sky-350'} animate-[spark-1_0.8s_ease-out_forwards]`} />
+          <span className={`absolute top-1/4 right-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : spellEffect === 'RED' ? 'bg-purple-400' : 'bg-sky-350'} animate-[spark-2_0.8s_ease-out_forwards]`} />
+          <span className={`absolute bottom-1/4 left-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : spellEffect === 'RED' ? 'bg-purple-400' : 'bg-sky-350'} animate-[spark-3_0.8s_ease-out_forwards]`} />
+          <span className={`absolute bottom-1/4 right-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : spellEffect === 'RED' ? 'bg-purple-400' : 'bg-sky-350'} animate-[spark-4_0.8s_ease-out_forwards]`} />
           <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white opacity-85 animate-[ping_0.6s_ease-out_infinite]" />
         </div>
       )}

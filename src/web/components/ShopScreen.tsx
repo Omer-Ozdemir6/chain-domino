@@ -1,8 +1,26 @@
 import type { CharmDef } from '../../models/Charm.js';
-import type { ShopOffer } from '../../game/RunState.js';
+import type { ShopOffer, FusionRecipe } from '../../game/RunState.js';
+import { FUSION_RECIPES } from '../../game/RunState.js';
 import { renderCharmIcon } from './CharmBar.js';
 import { VOUCHER_ICON_MAP, CONSUMABLE_ICON_MAP } from './charmIconMap.js';
 import InfoTooltip from './InfoTooltip.js';
+import type { TileModifier } from '../../models/types.js';
+import { useState } from 'react';
+
+function renderBoosterIcon(id: string) {
+  let color = 'from-blue-500 to-indigo-700';
+  if (id === 'booster_obsidian') color = 'from-purple-800 to-slate-900 border-purple-600/50 shadow-[0_0_10px_rgba(147,51,234,0.4)]';
+  else if (id === 'booster_ivory') color = 'from-slate-100 to-stone-300 border-stone-400';
+  else if (id === 'booster_amber') color = 'from-amber-500 to-orange-700 border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.4)]';
+
+  return (
+    <div className={`w-14 h-20 rounded-xl bg-gradient-to-br ${color} flex flex-col items-center justify-between border-2 border-white/20 shadow-lg relative overflow-hidden select-none`}>
+      <div className="absolute inset-0 bg-opacity-20 bg-white swirl-felt pointer-events-none" />
+      <span className="font-pixel text-[8px] text-white font-extrabold rotate-12 drop-shadow-md mt-4">PAKET</span>
+      <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping mb-3" />
+    </div>
+  );
+}
 
 interface ShopScreenProps {
   money: number;
@@ -15,6 +33,10 @@ interface ShopScreenProps {
   onContinue: () => void;
   /** Stack the sign+buttons above the offer rack instead of beside it, for the narrow portrait canvas. */
   isPortrait?: boolean;
+  draftOffers: any[];
+  onDraftSelect: (stoneId: string) => void;
+  onFuse?: (charmAId: string, charmBId: string) => void;
+  fusedCharmIds?: string[];
 }
 
 const RARITY_BORDER: Record<CharmDef['rarity'], string> = {
@@ -172,6 +194,8 @@ export default function ShopScreen({
   onReroll,
   onContinue,
   isPortrait = false,
+  draftOffers,
+  onDraftSelect,
 }: ShopScreenProps) {
   const slotsFull = ownedCharms.length >= maxCharmSlots;
 
@@ -254,7 +278,7 @@ export default function ShopScreen({
                     <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-slate-950/40 z-10 ${gemClass}`} title={charm.curse ? 'Lanetli' : charm.rarity} />
 
                     {/* Massive visual card art */}
-                    <div className="flex-1 flex items-center justify-center transform scale-[2.1] origin-center my-auto">
+                    <div className="flex-1 flex items-center justify-center transform scale-[2.1] origin-center my-auto pointer-events-none">
                       {renderCharmIcon(charm.id)}
                     </div>
 
@@ -296,7 +320,7 @@ export default function ShopScreen({
                     <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-slate-950/40 z-10 bg-amber-500 shadow-[0_0_8px_#d97706]" title="Voucher" />
 
                     {/* Massive visual card art */}
-                    <div className="flex-1 flex items-center justify-center transform scale-[2.1] origin-center my-auto">
+                    <div className="flex-1 flex items-center justify-center transform scale-[2.1] origin-center my-auto pointer-events-none">
                       {renderVoucherIcon(voucher.id)}
                     </div>
 
@@ -307,6 +331,53 @@ export default function ShopScreen({
                       className="w-full py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-30 disabled:pointer-events-none text-[9.5px] md:text-[11px] font-bold font-pixel text-white shadow border-b-2 border-amber-800 transition"
                     >
                       SATIN AL ${voucher.cost}
+                    </button>
+                  </div>
+                </InfoTooltip>
+              );
+            }
+
+            if (offer.type === 'BOOSTER') {
+              const pack = offer.item;
+              const disabled = money < pack.cost;
+
+              const tooltipContent = (
+                <div className="flex flex-col gap-1.5 p-1 select-none text-left leading-normal font-sans">
+                  <div className="flex items-center justify-between border-b border-amber-800/40 pb-1">
+                    <span className="font-bold text-xs text-amber-200">{pack.name}</span>
+                    <span className="text-[8.5px] uppercase font-extrabold text-indigo-400 font-pixel">PAKET</span>
+                  </div>
+                  <p className="text-[10px] text-slate-200 leading-relaxed font-sans">
+                    {pack.description}
+                  </p>
+                </div>
+              );
+
+              let boosterBorder = 'border-indigo-600/80 bg-indigo-950/20';
+              if (pack.id === 'booster_obsidian') boosterBorder = 'border-purple-600/80 bg-purple-950/20';
+              else if (pack.id === 'booster_ivory') boosterBorder = 'border-stone-400/80 bg-stone-900/40';
+              else if (pack.id === 'booster_amber') boosterBorder = 'border-amber-500/80 bg-amber-950/20';
+
+              return (
+                <InfoTooltip key={pack.id} text={tooltipContent} widthClass="w-56" side="top">
+                  <div
+                    className={`balatro-card relative flex flex-col justify-between w-30 h-46 md:w-36 md:h-56 p-2.5 rounded-xl border-2 ${boosterBorder} transition shrink-0`}
+                  >
+                    {/* Rarity Gem indicator (Booster indigo gem) */}
+                    <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-slate-950/40 z-10 bg-indigo-500 shadow-[0_0_8px_#6366f1]" title="Booster" />
+
+                    {/* Massive visual card art */}
+                    <div className="flex-1 flex items-center justify-center transform scale-[1.3] origin-center my-auto pointer-events-none">
+                      {renderBoosterIcon(pack.id)}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onBuy(pack.id)}
+                      disabled={disabled}
+                      className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:pointer-events-none text-[9.5px] md:text-[11px] font-bold font-pixel text-white shadow border-b-2 border-indigo-850 transition"
+                    >
+                      SATIN AL ${pack.cost}
                     </button>
                   </div>
                 </InfoTooltip>
@@ -346,7 +417,7 @@ export default function ShopScreen({
                   <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-slate-950/40 z-10 ${gemColor}`} title={upgrade.type === 'COSMIC' ? 'Kozmik' : 'Büyü'} />
 
                   {/* Massive visual card art */}
-                  <div className="flex-1 flex items-center justify-center transform scale-[2.1] origin-center my-auto">
+                  <div className="flex-1 flex items-center justify-center transform scale-[2.1] origin-center my-auto pointer-events-none">
                     {renderUpgradeIcon(upgrade.id)}
                   </div>
 
@@ -369,6 +440,53 @@ export default function ShopScreen({
           )}
         </div>
       </div>
+
+      {draftOffers && draftOffers.length > 0 && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
+          <h2 className="text-xl md:text-2xl text-amber-300 mb-2 drop-shadow-[0_0_10px_#fbbf24] animate-pulse">PAKET AÇILIYOR</h2>
+          <p className="text-xs text-slate-400 mb-8 font-sans">Destenize kalıcı olarak eklemek için 1 adet taş seçin.</p>
+          
+          <div className="flex gap-4 justify-center items-center mb-8">
+            {draftOffers.map((stone) => {
+              let modifierBorder = 'border-stone-700 bg-stone-900/60';
+              let modifierLabel = 'STANDART';
+              if (stone.modifier === 'OBSIDIAN') {
+                modifierBorder = 'border-purple-600 bg-purple-950/40 shadow-[0_0_15px_rgba(147,51,234,0.4)] text-purple-200';
+                modifierLabel = 'OBSİDYEN';
+              } else if (stone.modifier === 'IVORY') {
+                modifierBorder = 'border-stone-400 bg-stone-100/10 shadow-[0_0_15px_rgba(245,245,244,0.4)] text-stone-200';
+                modifierLabel = 'FİLDİŞİ';
+              } else if (stone.modifier === 'AMBER') {
+                modifierBorder = 'border-amber-500 bg-amber-950/40 shadow-[0_0_15px_rgba(245,158,11,0.4)] text-amber-300';
+                modifierLabel = 'KEHRİBAR';
+              }
+
+              return (
+                <div
+                  key={stone.id}
+                  onClick={() => onDraftSelect(stone.id)}
+                  className={`flex flex-col items-center justify-between p-3.5 w-24 h-36 md:w-30 md:h-44 rounded-2xl border-2 cursor-pointer transform hover:scale-105 active:scale-95 transition ${modifierBorder}`}
+                >
+                  <span className="text-[7.5px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-slate-950/80 mb-2 text-white">
+                    {modifierLabel}
+                  </span>
+                  
+                  {/* Domino stone representation */}
+                  <div className="flex-1 flex flex-col justify-center items-center gap-1.5">
+                    <div className="flex gap-1.5 items-center justify-center">
+                      <span className="text-base md:text-xl font-bold bg-slate-950/50 px-2 py-0.5 rounded">{stone.leftVal}</span>
+                      <span className="text-slate-400">|</span>
+                      <span className="text-base md:text-xl font-bold bg-slate-950/50 px-2 py-0.5 rounded">{stone.rightVal}</span>
+                    </div>
+                  </div>
+                  
+                  <span className="text-[9px] text-emerald-400 font-bold mt-2">SEÇ</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

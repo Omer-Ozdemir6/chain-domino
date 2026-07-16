@@ -110,10 +110,17 @@ export default function App() {
   // Contextual guidance bubble shown near the Büyüler panel while a consumable spell is armed
   // and waiting for a target, replacing the old generic bottom message bar for this purpose.
   const activeSpellDef = activeSpellIndex !== null ? SHOP_UPGRADES.find((u) => u.id === run.consumables[activeSpellIndex]) : null;
+  const isHandStoneTarget = activeSpellDef && [
+    'consumable_gild',
+    'consumable_ivory',
+    'consumable_obsidian',
+    'consumable_amber'
+  ].includes(activeSpellDef.id);
+
   const spellGuidance = activeSpellDef
     ? `${activeSpellDef.name}: ${
-        activeSpellDef.id === 'consumable_gild'
-          ? 'yaldızlamak istediğiniz elinizdeki taşı seçin.'
+        isHandStoneTarget
+          ? 'güncellemek veya rün işlemek istediğiniz elinizdeki taşı seçin.'
           : activeSpellDef.id === 'consumable_magnet'
             ? 'tahtadan geri sökmek istediğiniz uçtaki taşı seçin.'
             : 'kırmak istediğiniz dondurulmuş operatörü seçin.'
@@ -121,18 +128,43 @@ export default function App() {
     : null;
 
   function selectStone(id: string): void {
-    if (activeSpellIndex !== null && run.consumables[activeSpellIndex] === 'consumable_gild') {
-      const res = shop((r) => r.useConsumable(activeSpellIndex, id));
-      if (res.ok) {
-        playPlaceSound();
-        setSpellCastEffect({ id, type: 'GILD' });
-        setTimeout(() => setSpellCastEffect(null), 1000);
-        setMessage('Taş yaldızlandı (Altın Taş yapıldı)! Artık oynandığında +$3 kazandıracak.');
-      } else {
-        setMessage('Hata: ' + res.error);
+    if (activeSpellIndex !== null) {
+      const activeConsumable = run.consumables[activeSpellIndex];
+      const isTargetingSpell = [
+        'consumable_gild',
+        'consumable_ivory',
+        'consumable_obsidian',
+        'consumable_amber'
+      ].includes(activeConsumable);
+
+      if (isTargetingSpell) {
+        const res = shop((r) => r.useConsumable(activeSpellIndex, id));
+        if (res.ok) {
+          playPlaceSound();
+          let effectType: 'GILD' | 'BLUE' | 'RED' | 'GOLDEN' = 'GILD';
+          let desc = 'Büyü uygulandı!';
+          if (activeConsumable === 'consumable_ivory') {
+            effectType = 'BLUE';
+            desc = 'Taş Fildişi yapıldı (+15 Taban Puan)!';
+          } else if (activeConsumable === 'consumable_obsidian') {
+            effectType = 'RED';
+            desc = 'Taş Obsidyen yapıldı (Çarpan x2, %25 kırılma şansı)!';
+          } else if (activeConsumable === 'consumable_amber') {
+            effectType = 'GOLDEN' as any;
+            desc = 'Taş Kehribar yapıldı (Komşu sayıları mıknatıs gibi eşitler)!';
+          } else {
+            desc = 'Taş yaldızlandı (Altın Taş yapıldı)! Artık oynandığında +$3 kazandıracak.';
+          }
+
+          setSpellCastEffect({ id, type: effectType as any });
+          setTimeout(() => setSpellCastEffect(null), 1000);
+          setMessage(desc);
+        } else {
+          setMessage('Hata: ' + res.error);
+        }
+        setActiveSpellIndex(null);
+        return;
       }
-      setActiveSpellIndex(null);
-      return;
     }
 
     setSelection((prev) => (prev?.kind === 'STONE' && prev.id === id ? null : { kind: 'STONE', id }));
@@ -369,9 +401,10 @@ export default function App() {
     setActiveSpellIndex(null);
   }
 
-  function handleStartRun(deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED'): void {
-    act((g) => {
+  function handleStartRun(deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', chestId: import('../game/RunState.js').ChestId | null = null): void {
+    act((_g) => {
       run.initializeRun(deck, stake);
+      if (chestId) run.selectChest(chestId);
       return null;
     });
     setSelection(null);
@@ -403,6 +436,16 @@ export default function App() {
     }
   }
 
+  function handleDraftSelect(stoneId: string): void {
+    const res = shop((r) => r.draftStone(stoneId));
+    if (res.ok) {
+      playPlaceSound();
+      setMessage('Taş destenize kalıcı olarak eklendi!');
+    } else {
+      setMessage('Hata: ' + res.error);
+    }
+  }
+
   function handleSell(charmId: string): void {
     shop((r) => r.sellCharm(charmId));
   }
@@ -419,17 +462,6 @@ export default function App() {
   function handleContinueShop(): void {
     shop((r) => r.leaveShop());
     setMessage(null);
-  }
-
-  function handleDrawCycleOperator(): void {
-    const res = act((g) => g.cycleOperatorCard());
-    if (res.ok) {
-      playPlaceSound();
-      setMessage('Yeni operatör çekildi / deste dolanıldı.');
-    } else {
-      setMessage('Hata: ' + res.error);
-    }
-    setSelection(null);
   }
 
   const legalSlotIds =
@@ -451,7 +483,7 @@ export default function App() {
   let activeSpellType: 'MAGNET' | 'BREAKER' | 'GILD' | null = null;
   if (activeSpell === 'consumable_magnet') activeSpellType = 'MAGNET';
   else if (activeSpell === 'consumable_breaker') activeSpellType = 'BREAKER';
-  else if (activeSpell === 'consumable_gild') activeSpellType = 'GILD';
+  else if (activeSpell && ['consumable_gild', 'consumable_ivory', 'consumable_obsidian', 'consumable_amber'].includes(activeSpell)) activeSpellType = 'GILD';
 
   // Rendering screens based on phase — every branch below fills exactly one fixed-size
   // canvas (see the wrapper at the bottom of this function), so layout never reflows per device.
@@ -539,6 +571,7 @@ export default function App() {
           onDiscard={handleDiscard}
           onSkip={handleSkip}
           message={message}
+          activeBossId={run.activeBossId}
         />
 
         <main className="flex-1 flex flex-col p-3 gap-2.5 min-w-0 h-full overflow-hidden">
@@ -624,6 +657,8 @@ export default function App() {
                 onReroll={handleReroll}
                 onContinue={handleContinueShop}
                 isPortrait={isPortrait}
+                draftOffers={run.draftOffers}
+                onDraftSelect={handleDraftSelect}
               />
             ) : (
               <ChainBoard
@@ -673,6 +708,7 @@ export default function App() {
                   selectedId={selection?.kind === 'STONE' ? selection.id : null}
                   onSelect={selectStone}
                   spellEffect={spellCastEffect}
+                  isSpellTargeting={activeSpellType === 'GILD'}
                 />
               </div>
 
@@ -689,16 +725,13 @@ export default function App() {
                 </span>
               </div>
 
-              {/* Operator Hand (Solitaire Draw/Cycle) */}
-              <div className="w-40 shrink-0 border-l border-slate-800/40 pl-3">
+              {/* Operator Hand: a fixed set of always-full slots, refilled the instant one is played. */}
+              <div className="shrink-0 border-l border-slate-800/40 pl-3 max-w-xs overflow-x-auto scrollbar-none">
                 <OperatorHand
                   operators={game.operatorHand}
                   selectedId={selection?.kind === 'OPERATOR' ? selection.id : null}
                   onSelect={selectOperator}
                   deckRemaining={game.operatorDeck.remaining}
-                  onDrawCycle={handleDrawCycleOperator}
-                  cycles={game.operatorDeckCycles}
-                  maxCycles={game.maxOperatorDeckCycles}
                 />
               </div>
             </div>
@@ -758,7 +791,7 @@ export default function App() {
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden select-none">
       <div
-        className="relative shrink-0"
+        className="relative shrink-0 crt-screen"
         style={{
           width: canvasWidth,
           height: canvasHeight,

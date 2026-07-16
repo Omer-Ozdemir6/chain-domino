@@ -28,8 +28,8 @@ export default function OperatorTile({ symbol, selected, onClick, animateIn, fro
       disabled={!clickable}
       className={[
         compact
-          ? `flex h-11 w-11 items-center justify-center rounded-full border-[3px] bg-amber-50 text-xl font-black shadow-md transition shrink-0 leading-none relative ${SYMBOL_COLOR[symbol] ?? 'text-amber-800'}`
-          : `flex h-18 w-18 items-center justify-center rounded-lg border-2 bg-amber-50 text-3xl font-bold shadow-sm transition shrink-0 relative ${SYMBOL_COLOR[symbol] ?? 'text-amber-700'}`,
+          ? `flex h-11 w-11 items-center justify-center rounded-full border-[3px] bg-amber-50 text-xl font-black shadow-[0_4px_8px_rgba(0,0,0,0.45)] transition shrink-0 leading-none relative ${SYMBOL_COLOR[symbol] ?? 'text-amber-800'}`
+          : `flex h-18 w-18 items-center justify-center rounded-lg border-2 bg-amber-50 text-3xl font-bold shadow-[0_4px_10px_rgba(0,0,0,0.45)] transition shrink-0 relative ${SYMBOL_COLOR[symbol] ?? 'text-amber-700'}`,
         'dark:bg-amber-900/30',
         clickable ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-md' : 'cursor-default',
         highlighted

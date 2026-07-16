@@ -326,6 +326,43 @@ const CORE_CHARMS: readonly CharmDef[] = [
         parentBase === childExposed ? edgeValue + 15 : edgeValue,
     }),
   },
+  {
+    id: 'cosmic_pendulum',
+    name: 'Galaksili Büyük Saat',
+    description: 'Eğer oynanan zincirde 4 veya daha fazla taş varsa Çarpanı +4 artırır.',
+    cost: 8,
+    rarity: 'UNCOMMON',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        if (chain.length >= 4) {
+          return {
+            ...state,
+            mult: state.mult + 4,
+          };
+        }
+        return state;
+      },
+    }),
+  },
+  {
+    id: 'heart_matryoshka',
+    name: 'Anatomik Matruşka',
+    description: 'Eğer zincirdeki tüm taşlar çift sayıysa (simetri varsa) Çarpanı x1.5 katlar.',
+    cost: 8,
+    rarity: 'RARE',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const isAllEven = chain.every((tile) => (tile.leftVal + tile.rightVal) % 2 === 0);
+        if (isAllEven && chain.length > 0) {
+          return {
+            ...state,
+            mult: state.mult * 1.5,
+          };
+        }
+        return state;
+      },
+    }),
+  },
 ];
 
 // --- G: per-operator parity charms (rewards odd/even exposed values) ---
@@ -1094,6 +1131,83 @@ const NUMBER_CHARMS: readonly CharmDef[] = [
   },
 ];
 
+/** Hybrid charms created by fusing two owned charms in the shop. Each takes only 1 slot. */
+const FUSION_CHARMS: readonly CharmDef[] = [
+  {
+    id: 'fusion_grand_resonance',
+    name: '⚡ Büyük Rezonans',
+    description: '[FÜZ] cosmic_pendulum + heart_matryoshka: Her ÇARPMA işlemi +8 ekler VE çift taşlar çarpanı +0.5 artırır.',
+    cost: 0,
+    rarity: 'LEGENDARY',
+    createHooks: () => ({
+      onOperatorResolve: (operator, _p, _c, edgeValue) =>
+        operator === 'MULTIPLY' ? edgeValue + 8 : edgeValue,
+      onCalculate: (state, chain) => {
+        const doubleCount = chain.filter((s) => s.leftVal === s.rightVal).length;
+        return { ...state, mult: state.mult + doubleCount * 0.5 };
+      },
+    }),
+  },
+  {
+    id: 'fusion_twin_oracle',
+    name: '🔮 İkiz Kehanet',
+    description: '[FÜZ] double_oracle + binary_mirror: Çift taşlardan gelen puan 2 katına çıkar ve her zincir +10 taban puan kazandırır.',
+    cost: 0,
+    rarity: 'LEGENDARY',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const doubles = chain.filter((s) => s.leftVal === s.rightVal).length;
+        return { ...state, chips: state.chips + doubles * 10 + 10 };
+      },
+    }),
+  },
+  {
+    id: 'fusion_lucky_ledger',
+    name: '📒 Şanslı Defter',
+    description: '[FÜZ] golden_abacus + thrifty_phantom: Her Altın Taş +$5 ve her tur sonu +$2 ekstra ödül kazandırır.',
+    cost: 0,
+    rarity: 'LEGENDARY',
+    createHooks: () => ({
+      onRoundEnd: () => 2,
+      onCalculate: (state, chain) => {
+        const goldenCount = chain.filter((s) => s.isGolden).length;
+        return { ...state, chips: state.chips + goldenCount * 5 };
+      },
+    }),
+  },
+  {
+    id: 'fusion_resonant_chain',
+    name: '🔗 Rezonans Zinciri',
+    description: '[FÜZ] chain_weaver + echo_chamber: 4+ taş zincirlerde Çarpan ×2 ve her işlem başına +3 puan.',
+    cost: 0,
+    rarity: 'LEGENDARY',
+    createHooks: () => ({
+      onOperatorResolve: (_op, _p, _c, edgeValue) => edgeValue + 3,
+      onCalculate: (state, chain) => {
+        if (chain.length >= 4) return { ...state, mult: state.mult * 2 };
+        return state;
+      },
+    }),
+  },
+  {
+    id: 'fusion_prism_eye',
+    name: '🌈 Prizma Gözü',
+    description: '[FÜZ] obsidian_eye + ivory_veil: Her Obsidyen taş +8 Çarpan, her Fildişi taş +20 Taban Puan ekler.',
+    cost: 0,
+    rarity: 'LEGENDARY',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const obsidianCount = chain.filter((s) => s.modifier === 'OBSIDIAN').length;
+        const ivoryCount = chain.filter((s) => s.modifier === 'IVORY').length;
+        return {
+          chips: state.chips + ivoryCount * 20,
+          mult: state.mult + obsidianCount * 8,
+        };
+      },
+    }),
+  },
+];
+
 export const CHARMS: readonly CharmDef[] = [
   ...CORE_CHARMS,
   ...PARITY_CHARMS,
@@ -1106,4 +1220,5 @@ export const CHARMS: readonly CharmDef[] = [
   ...SYNERGY_CHARMS,
   ...LEGENDARY_CHARMS,
   ...NUMBER_CHARMS,
+  ...FUSION_CHARMS,
 ];

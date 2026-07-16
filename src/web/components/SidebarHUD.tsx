@@ -1,5 +1,6 @@
 import type { GameStatus } from '../../game/GameState.js';
 import InfoTooltip from './InfoTooltip.js';
+import { BOSS_BLINDS } from '../../game/RunState.js';
 
 interface SidebarHUDProps {
   round: number;
@@ -31,6 +32,8 @@ interface SidebarHUDProps {
   onSkip: () => void;
   onDiscard: () => void;
   message: string | null;
+  /** ID of active boss blind, or null if not a boss round. */
+  activeBossId?: string | null;
   /** 'sidebar' (default): tall left column for the landscape canvas. 'topbar': compact
    *  horizontal strip with no action buttons, for the portrait canvas (buttons render
    *  separately at the bottom of the screen there, closer to the thumbs). */
@@ -67,15 +70,15 @@ export default function SidebarHUD({
   onSkip,
   onDiscard,
   layout = 'sidebar',
+  activeBossId = null,
 }: SidebarHUDProps) {
-  let bossWarning: string | null = null;
-  if (round === 3) {
-    bossWarning = 'Bölme Yasak';
-  } else if (round === 6) {
-    bossWarning = 'Hassas Denge';
-  } else if (round === 8) {
-    bossWarning = 'Büyük Baskı';
-  }
+  const activeBoss = activeBossId ? BOSS_BLINDS.find((b) => b.id === activeBossId) ?? null : null;
+  const bossWarning = activeBoss ? activeBoss.ruleLabel : null;
+  const bossTierColor = activeBoss?.tier === 'LETHAL'
+    ? 'text-fuchsia-400 bg-fuchsia-950/30 border-fuchsia-700/50'
+    : activeBoss?.tier === 'DANGEROUS'
+      ? 'text-red-400 bg-red-950/30 border-red-700/50'
+      : 'text-orange-400 bg-orange-950/30 border-orange-700/50';
 
   const opLevelsStrip = (
     <div className="flex items-center gap-2 text-[11px] font-mono">
@@ -111,9 +114,9 @@ export default function SidebarHUD({
             <span className="font-pixel text-sm text-amber-500">${money}</span>
           </div>
         </div>
-        {bossWarning && (
-          <div className="bg-rose-950/40 border border-rose-500/20 text-[8px] font-bold text-rose-400 uppercase py-0.5 px-1 rounded animate-pulse shrink-0">
-            ⚠️{bossWarning}
+        {bossWarning && activeBoss && (
+          <div className={`border text-[8px] font-bold uppercase py-0.5 px-1.5 rounded animate-pulse shrink-0 ${bossTierColor}`}>
+            {activeBoss.icon} {bossWarning}
           </div>
         )}
         {opLevelsStrip}
@@ -126,26 +129,27 @@ export default function SidebarHUD({
       {/* Unified Score Card (Combines Current Score, Target Score, Ante, and Status) */}
       <div
         className={[
-          'bg-slate-950 border-2 border-slate-800 rounded-xl p-2.5 text-center shadow-inner relative overflow-hidden crt flex flex-col gap-1 shrink-0 transition',
+          'bg-slate-950 border-2 border-amber-500/20 rounded-xl p-2.5 text-center shadow-[inset_0_2px_12px_rgba(0,0,0,0.9),0_0_15px_rgba(245,158,11,0.08)] relative overflow-hidden crt flex flex-col gap-1 shrink-0 transition',
           scoring ? 'animate-score-pulse' : '',
         ].join(' ')}
       >
         <div className="flex justify-between items-center text-xs text-slate-400 font-bold uppercase tracking-wider px-1">
           <span>Mevcut Skor</span>
-          <span className="text-amber-500 font-pixel text-base font-bold">Hedef: {targetScore}</span>
+          <span className="text-amber-400 font-pixel text-sm font-bold drop-shadow-[0_0_5px_rgba(245,158,11,0.6)]">Hedef: {targetScore}</span>
         </div>
 
-        <div className="font-pixel text-4xl text-emerald-400 tracking-wider drop-shadow-[0_0_8px_rgba(52,211,153,0.35)] leading-tight">
+        <div className="font-pixel text-4xl text-emerald-400 tracking-wider drop-shadow-[0_0_10px_rgba(52,211,153,0.7)] leading-tight my-0.5">
           {score}
         </div>
 
-        {bossWarning && (
-          <div className="bg-rose-950/40 border border-rose-500/20 text-[10px] font-bold text-rose-400 uppercase py-0.5 px-1.5 rounded inline-block mx-auto mb-1 animate-pulse">
-            ⚠️ BOSS: {bossWarning}
+        {bossWarning && activeBoss && (
+          <div className={`border text-[10px] font-bold uppercase py-1 px-2 rounded-lg inline-flex items-center gap-1.5 mx-auto mb-1 animate-pulse ${bossTierColor}`}>
+            <span>{activeBoss.icon}</span>
+            <span>BOSS: {bossWarning}</span>
           </div>
         )}
 
-        <div className="flex justify-between items-center text-[10px] text-slate-500 uppercase tracking-widest border-t border-slate-900/60 pt-1 px-1">
+        <div className="flex justify-between items-center text-[10px] text-slate-500 uppercase tracking-widest border-t border-slate-900/60 pt-1.5 px-1">
           <span>Ante {round}/{totalRounds}</span>
           <span className={status === 'PLAYING' ? 'text-amber-400' : status === 'WON' ? 'text-emerald-400' : 'text-rose-400 font-bold'}>
             {STATUS_LABEL[status]}
@@ -155,17 +159,17 @@ export default function SidebarHUD({
 
       {/* Mini Stats Grid */}
       <div className="grid grid-cols-3 gap-1.5 shrink-0">
-        <div className="bg-slate-950/50 border border-slate-850 rounded-lg py-1.5 text-center">
-          <span className="block text-[10px] text-slate-400 uppercase font-bold leading-none">Tur</span>
-          <span className="font-pixel text-lg text-amber-400">{turn}/{maxTurns}</span>
+        <div className="bg-slate-950/70 border border-slate-850 rounded-lg py-1.5 text-center shadow-inner">
+          <span className="block text-[9px] text-slate-400 uppercase font-bold leading-none">Tur</span>
+          <span className="font-pixel text-lg text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.65)]">{turn}/{maxTurns}</span>
         </div>
-        <div className="bg-slate-950/50 border border-slate-850 rounded-lg py-1.5 text-center">
-          <span className="block text-[10px] text-slate-400 uppercase font-bold leading-none">Iskarta</span>
-          <span className="font-pixel text-lg text-rose-400">{discardsLeft}</span>
+        <div className="bg-slate-950/70 border border-slate-850 rounded-lg py-1.5 text-center shadow-inner">
+          <span className="block text-[9px] text-slate-400 uppercase font-bold leading-none">Iskarta</span>
+          <span className="font-pixel text-lg text-rose-500 drop-shadow-[0_0_5px_rgba(244,63,94,0.65)]">{discardsLeft}</span>
         </div>
-        <div className="bg-slate-950/50 border border-slate-850 rounded-lg py-1.5 text-center">
-          <span className="block text-[10px] text-slate-400 uppercase font-bold leading-none">Para</span>
-          <span className="font-pixel text-lg text-amber-500">${money}</span>
+        <div className="bg-slate-950/70 border border-slate-850 rounded-lg py-1.5 text-center shadow-inner">
+          <span className="block text-[9px] text-slate-400 uppercase font-bold leading-none">Para</span>
+          <span className="font-pixel text-lg text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.65)]">${money}</span>
         </div>
       </div>
 
