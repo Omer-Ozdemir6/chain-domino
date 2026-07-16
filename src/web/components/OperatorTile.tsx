@@ -26,7 +26,7 @@ export default function OperatorTile({ symbol, selected, onClick, animateIn, fro
         highlighted
           ? 'border-emerald-400 ring-4 ring-emerald-500 scale-105 z-50 shadow-[0_0_15px_5px_rgba(16,185,129,0.7)]'
           : selected
-            ? 'border-sky-500 ring-2 ring-sky-400'
+            ? 'border-teal-600 ring-2 ring-teal-500'
             : frozen
               ? 'border-amber-300 dark:border-amber-700'
               : 'border-amber-400 shadow-[0_0_10px_2px_rgba(251,191,36,0.45)] dark:border-amber-500 dark:shadow-[0_0_12px_3px_rgba(251,191,36,0.35)]',

@@ -38,7 +38,7 @@ interface PipsProps {
   large?: boolean;
 }
 
-/** Small or large glowing domino-pip grid (0-6 only; higher values render nothing). */
+/** Small or large classic domino-pip grid (0-6 only; higher values render nothing). */
 export default function Pips({ value, large }: PipsProps) {
   const positions = LAYOUTS[value];
   if (!positions) return null;
@@ -54,9 +54,7 @@ export default function Pips({ value, large }: PipsProps) {
           <span
             key={i}
             className={[
-              active
-                ? 'bg-sky-500 shadow-[0_0_6px_2px_rgba(56,189,248,0.95)] dark:bg-sky-400'
-                : '',
+              active ? 'bg-slate-800 dark:bg-slate-100' : '',
               dotSize,
             ].join(' ')}
           />

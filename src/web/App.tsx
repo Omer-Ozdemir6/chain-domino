@@ -538,7 +538,7 @@ export default function App() {
               </div>
               {spellGuidance && (
                 <div className="relative -mt-0.5 mb-0.5">
-                  <div className="rounded-md bg-cyan-950/80 border border-cyan-500/40 text-cyan-200 text-[8px] leading-tight px-1.5 py-1 shadow-[0_0_8px_rgba(6,182,212,0.3)] animate-fade-in">
+                  <div className="rounded-md bg-amber-950/80 border border-amber-600/40 text-amber-200 text-[8px] leading-tight px-1.5 py-1 shadow-md animate-fade-in">
                     {spellGuidance}
                   </div>
                 </div>
@@ -565,7 +565,7 @@ export default function App() {
                       className={[
                         'w-16 h-16 rounded-xl border-2 transition select-none flex items-center justify-center relative',
                         isActive
-                          ? 'border-cyan-400 bg-cyan-950/40 ring-1 ring-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.5)] animate-pulse'
+                          ? 'border-amber-500 bg-amber-950/40 ring-1 ring-amber-500 shadow-md animate-pulse'
                           : 'border-slate-800 bg-slate-950/30 hover:border-slate-700',
                       ].join(' ')}
                     >

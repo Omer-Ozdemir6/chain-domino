@@ -33,11 +33,11 @@ export default function Tile({ left, right, selected, onClick, animateIn, frozen
         highlighted
           ? 'border-emerald-400 ring-4 ring-emerald-500 scale-105 z-50 shadow-[0_0_15px_5px_rgba(16,185,129,0.7)]'
           : selected
-            ? 'border-sky-500 ring-2 ring-sky-400'
+            ? 'border-teal-600 ring-2 ring-teal-500'
             : isGolden
               ? 'border-amber-400 shadow-[0_0_15px_3px_rgba(251,191,36,0.65)] ring-2 ring-amber-400 bg-amber-500/10'
               : isDouble
-                ? 'border-fuchsia-400 shadow-[0_0_10px_2px_rgba(217,70,239,0.4)] dark:border-fuchsia-500'
+                ? 'border-red-700 shadow-[0_0_10px_2px_rgba(185,28,28,0.35)] dark:border-red-600'
                 : 'border-slate-300 dark:border-slate-600',
         frozen && !highlighted ? 'opacity-60 saturate-50' : '',
         animateIn ? 'animate-chain-place' : '',
@@ -50,7 +50,7 @@ export default function Tile({ left, right, selected, onClick, animateIn, frozen
       <span
         className={[
           vertical ? 'h-px w-13' : 'h-13 w-px',
-          isDouble ? 'bg-fuchsia-400 dark:bg-fuchsia-500' : 'bg-slate-300 dark:bg-slate-600',
+          isDouble ? 'bg-red-700 dark:bg-red-600' : 'bg-slate-300 dark:bg-slate-600',
         ].join(' ')}
       />
       <span className="flex h-18 w-13 flex-col items-center justify-center gap-1">

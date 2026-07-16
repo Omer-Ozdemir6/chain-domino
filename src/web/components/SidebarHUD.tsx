@@ -98,7 +98,7 @@ export default function SidebarHUD({
 
         <div className="flex justify-between items-center text-[10px] text-slate-500 uppercase tracking-widest border-t border-slate-900/60 pt-1 px-1">
           <span>Ante {round}/{totalRounds}</span>
-          <span className={status === 'PLAYING' ? 'text-sky-400' : status === 'WON' ? 'text-emerald-400' : 'text-rose-400 font-bold'}>
+          <span className={status === 'PLAYING' ? 'text-amber-400' : status === 'WON' ? 'text-emerald-400' : 'text-rose-400 font-bold'}>
             {STATUS_LABEL[status]}
           </span>
         </div>
@@ -108,11 +108,11 @@ export default function SidebarHUD({
       <div className="grid grid-cols-3 gap-1.5 shrink-0">
         <div className="bg-slate-950/50 border border-slate-850 rounded-lg py-1.5 text-center">
           <span className="block text-[10px] text-slate-400 uppercase font-bold leading-none">Tur</span>
-          <span className="font-pixel text-lg text-sky-400">{turn}/{maxTurns}</span>
+          <span className="font-pixel text-lg text-amber-400">{turn}/{maxTurns}</span>
         </div>
         <div className="bg-slate-950/50 border border-slate-850 rounded-lg py-1.5 text-center">
           <span className="block text-[10px] text-slate-400 uppercase font-bold leading-none">Iskarta</span>
-          <span className="font-pixel text-lg text-fuchsia-400">{discardsLeft}</span>
+          <span className="font-pixel text-lg text-rose-400">{discardsLeft}</span>
         </div>
         <div className="bg-slate-950/50 border border-slate-850 rounded-lg py-1.5 text-center">
           <span className="block text-[10px] text-slate-400 uppercase font-bold leading-none">Para</span>
@@ -152,7 +152,7 @@ export default function SidebarHUD({
             <span className="font-pixel text-amber-400 text-sm mt-0.5">L.{operatorLevels.MULTIPLY ?? 1}</span>
           </div>
           <div className="flex flex-col border-l border-slate-900/60">
-            <span className="font-bold text-cyan-400 leading-none">÷</span>
+            <span className="font-bold text-teal-400 leading-none">÷</span>
             <span className="font-pixel text-amber-400 text-sm mt-0.5">L.{operatorLevels.DIVIDE ?? 1}</span>
           </div>
         </div>
@@ -179,7 +179,7 @@ export default function SidebarHUD({
           type="button"
           onClick={onDiscard}
           disabled={!canRecover || discardsLeft <= 0}
-          className="w-full py-1.5 rounded-lg bg-fuchsia-700 hover:bg-fuchsia-600 active:translate-y-0.5 text-[11px] font-bold text-white shadow border-b-2 border-fuchsia-900 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase"
+          className="w-full py-1.5 rounded-lg bg-rose-800 hover:bg-rose-700 active:translate-y-0.5 text-[11px] font-bold text-white shadow border-b-2 border-rose-950 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase"
         >
           ELİ ISKARTA ET
         </button>

@@ -60,13 +60,13 @@ export default function BlindSelectScreen({
             hasSmall
               ? 'border-slate-800 bg-slate-950/20 opacity-40'
               : currentActive === 'SMALL'
-                ? 'border-sky-500 bg-sky-950/10 shadow-[0_0_12px_rgba(56,189,248,0.2)]'
+                ? 'border-teal-600 bg-teal-950/10 shadow-[0_0_12px_rgba(45,157,150,0.2)]'
                 : 'border-slate-800 bg-slate-950/20',
           ].join(' ')}
         >
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-black text-sky-400 font-pixel uppercase">Küçük Blind</span>
+              <span className="text-sm font-black text-teal-400 font-pixel uppercase">Küçük Blind</span>
               {hasSmall && <span className="text-[11px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-bold">TAMAMLANDI</span>}
             </div>
             <p className="text-xs text-slate-350 mt-1">Hedef: <span className="font-pixel text-sm text-slate-200">{smallTarget}</span></p>
@@ -112,7 +112,7 @@ export default function BlindSelectScreen({
             <p className="text-xs text-slate-350 mt-1">Hedef: <span className="font-pixel text-sm text-slate-200">{bigTarget}</span></p>
             <p className="text-xs text-slate-500 font-bold">ÖDÜL: <span className="text-amber-400 font-pixel">$4</span></p>
             {!hasBig && currentActive === 'BIG' && (
-              <p className="text-[11px] text-sky-400 font-semibold mt-1">Geç Etiketi: +1 İşlem Seviyesi Artışı</p>
+              <p className="text-[11px] text-teal-400 font-semibold mt-1">Geç Etiketi: +1 İşlem Seviyesi Artışı</p>
             )}
           </div>
           {!hasBig && currentActive === 'BIG' && (

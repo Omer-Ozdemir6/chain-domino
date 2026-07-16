@@ -1,133 +1,40 @@
 import type { CharmDef, CharmRarity } from '../../models/Charm.js';
 import InfoTooltip from './InfoTooltip.js';
+import { CHARM_ICON_MAP } from './charmIconMap.js';
 
 const RARITY_CARD_CLASS: Record<CharmRarity, string> = {
-  COMMON: 'border-slate-400 bg-slate-50/95 text-slate-800 dark:border-slate-600 dark:bg-slate-900/90 dark:text-slate-200 shadow-sm',
-  UNCOMMON: 'border-sky-400 bg-sky-50/95 text-sky-900 shadow-[0_0_12px_rgba(56,189,248,0.4)] dark:border-sky-500 dark:bg-sky-950/90 dark:text-sky-100',
-  RARE: 'border-fuchsia-400 bg-fuchsia-50/95 text-fuchsia-900 shadow-[0_0_15px_rgba(217,70,239,0.5)] dark:border-fuchsia-500 dark:bg-fuchsia-950/90 dark:text-fuchsia-100',
-  LEGENDARY: 'border-amber-400 bg-amber-50/95 text-amber-900 shadow-[0_0_18px_rgba(251,191,36,0.6)] dark:border-amber-400 dark:bg-amber-950/90 dark:text-amber-100 animate-shine',
+  COMMON: 'border-stone-400 bg-stone-50/95 text-stone-800 dark:border-stone-600 dark:bg-stone-900/90 dark:text-stone-200 shadow-sm',
+  UNCOMMON: 'border-teal-600 bg-teal-50/95 text-teal-900 shadow-md dark:border-teal-500 dark:bg-teal-950/80 dark:text-teal-100',
+  RARE: 'border-red-800 bg-red-50/95 text-red-950 shadow-md dark:border-red-700 dark:bg-red-950/80 dark:text-red-100',
+  LEGENDARY: 'border-amber-500 bg-amber-50/95 text-amber-900 shadow-[0_0_10px_rgba(217,119,6,0.35)] dark:border-amber-400 dark:bg-amber-950/80 dark:text-amber-100 animate-shine',
 };
 
 const CURSE_CARD_CLASS =
-  'border-rose-500 bg-rose-50/95 text-rose-950 shadow-[0_0_15px_rgba(244,63,94,0.5)] dark:border-rose-500 dark:bg-rose-950/90 dark:text-rose-100';
+  'border-rose-800 bg-rose-50/95 text-rose-950 shadow-md dark:border-rose-700 dark:bg-rose-950/80 dark:text-rose-100';
 
 const RARITY_LABEL_COLOR: Record<CharmRarity, string> = {
-  COMMON: 'text-slate-400 dark:text-slate-500',
-  UNCOMMON: 'text-sky-500 dark:text-sky-400',
-  RARE: 'text-fuchsia-500 dark:text-fuchsia-400',
-  LEGENDARY: 'text-amber-500 dark:text-amber-400',
+  COMMON: 'text-stone-400 dark:text-stone-500',
+  UNCOMMON: 'text-teal-600 dark:text-teal-400',
+  RARE: 'text-red-700 dark:text-red-400',
+  LEGENDARY: 'text-amber-600 dark:text-amber-400',
 };
 
+/** Generic engraved-seal glyph for charms without dedicated artwork (the per-operator generated variants). */
+function genericCharmGlyph() {
+  return (
+    <svg className="w-8 h-8 text-stone-500 dark:text-stone-400 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function renderCharmIcon(id: string) {
-  switch (id) {
-    case 'division_master':
-      return (
-        <svg className="w-8 h-8 text-amber-500 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <circle cx="12" cy="12" r="9" className="stroke-amber-600/20" />
-          <line x1="8" y1="12" x2="16" y2="12" />
-          <circle cx="12" cy="7" r="1.5" fill="currentColor" />
-          <circle cx="12" cy="17" r="1.5" fill="currentColor" />
-        </svg>
-      );
-    case 'add_master':
-      return (
-        <svg className="w-8 h-8 text-emerald-500 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <circle cx="12" cy="12" r="9" className="stroke-emerald-600/20" />
-          <line x1="12" y1="7" x2="12" y2="17" />
-          <line x1="7" y1="12" x2="17" y2="12" />
-        </svg>
-      );
-    case 'subtract_master':
-      return (
-        <svg className="w-8 h-8 text-rose-500 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <circle cx="12" cy="12" r="9" className="stroke-rose-600/20" />
-          <line x1="7" y1="12" x2="17" y2="12" />
-        </svg>
-      );
-    case 'multiplier_frenzy':
-      return (
-        <svg className="w-8 h-8 text-fuchsia-500 mx-auto animate-bounce" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" className="fill-fuchsia-500/20" />
-        </svg>
-      );
-    case 'symmetry_bonus':
-    case 'legendary_symmetry':
-      return (
-        <svg className="w-8 h-8 text-sky-500 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <rect x="3" y="6" width="7" height="12" rx="1.5" />
-          <rect x="14" y="6" width="7" height="12" rx="1.5" />
-          <line x1="12" y1="4" x2="12" y2="20" strokeDasharray="2 2" stroke="currentColor" className="opacity-45" />
-          <circle cx="6.5" cy="12" r="1" fill="currentColor" />
-          <circle cx="17.5" cy="12" r="1" fill="currentColor" />
-        </svg>
-      );
-    case 'chain_end_interest':
-      return (
-        <svg className="w-8 h-8 text-emerald-500 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
-        </svg>
-      );
-    case 'loss_insurance':
-      return (
-        <svg className="w-8 h-8 text-rose-500 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="currentColor" className="fill-rose-500/10" />
-          <path d="M12 8v8M8 12h8" strokeWidth="2.5" />
-        </svg>
-      );
-    case 'generous_trader':
-      return (
-        <svg className="w-8 h-8 text-yellow-500 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="8" cy="16" r="3" />
-          <circle cx="16" cy="16" r="3" />
-          <circle cx="12" cy="10" r="3" fill="currentColor" className="fill-yellow-500/10" />
-          <path d="M12 2v5" />
-        </svg>
-      );
-    case 'early_finisher':
-    case 'clutch_finisher':
-      return (
-        <svg className="w-8 h-8 text-indigo-400 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="8" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-      );
-    case 'double_hunter':
-      return (
-        <svg className="w-8 h-8 text-red-500 mx-auto animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <circle cx="12" cy="12" r="9" className="stroke-red-500/30" />
-          <line x1="12" y1="1" x2="12" y2="23" />
-          <line x1="1" y1="12" x2="23" y2="12" />
-          <circle cx="12" cy="12" r="3" fill="currentColor" />
-        </svg>
-      );
-    case 'twin_souls':
-    case 'multiplier_resonance':
-      return (
-        <svg className="w-8 h-8 text-violet-500 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <circle cx="8" cy="12" r="5" />
-          <circle cx="16" cy="12" r="5" className="opacity-60" />
-        </svg>
-      );
-    case 'gamblers_spirit':
-    case 'mad_scholar':
-    case 'sacrificial_heart':
-    case 'loan_shark':
-    case 'fragile_victory':
-      return (
-        <svg className="w-8 h-8 text-rose-600 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3l9 16H3z" fill="currentColor" className="fill-rose-600/15" />
-          <line x1="12" y1="9" x2="12" y2="14" />
-          <circle cx="12" cy="17" r="0.8" fill="currentColor" />
-        </svg>
-      );
-    default:
-      return (
-        <svg className="w-8 h-8 text-slate-400 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <circle cx="12" cy="12" r="8" />
-          <circle cx="12" cy="12" r="2.5" fill="currentColor" />
-        </svg>
-      );
+  const artwork = CHARM_ICON_MAP[id];
+  if (artwork) {
+    return <img src={artwork} alt="" className="w-10 h-10 object-contain mx-auto drop-shadow" />;
   }
+  return genericCharmGlyph();
 }
 
 interface CharmBarProps {

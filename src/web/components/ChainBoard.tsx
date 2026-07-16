@@ -306,7 +306,7 @@ export default function ChainBoard({
                     ? 'rgba(52,211,153,0.95)'
                     : edge.frozen
                       ? 'rgba(100,116,139,0.35)'
-                      : 'rgba(56,189,248,0.75)'
+                      : 'rgba(217,158,74,0.8)'
                 }
                 strokeWidth={isHighlighted ? 6 : edge.frozen ? 3 : 4.5}
                 strokeDasharray={edge.frozen ? undefined : '9 7'}

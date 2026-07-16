@@ -1,6 +1,7 @@
 import type { CharmDef } from '../../models/Charm.js';
 import type { ShopOffer } from '../../game/RunState.js';
 import { renderCharmIcon } from './CharmBar.js';
+import { VOUCHER_ICON_MAP, CONSUMABLE_ICON_MAP } from './charmIconMap.js';
 
 interface ShopScreenProps {
   money: number;
@@ -14,22 +15,26 @@ interface ShopScreenProps {
 }
 
 const RARITY_BORDER: Record<CharmDef['rarity'], string> = {
-  COMMON: 'border-slate-700 bg-slate-950/60 shadow-[inset_0_1px_3px_rgba(255,255,255,0.05)]',
-  UNCOMMON: 'border-sky-500/80 bg-sky-950/40 shadow-[0_0_10px_rgba(56,189,248,0.2)]',
-  RARE: 'border-fuchsia-500/80 bg-fuchsia-950/40 shadow-[0_0_12px_rgba(217,70,239,0.25)]',
-  LEGENDARY: 'border-amber-400 bg-amber-950/40 shadow-[0_0_16px_rgba(251,191,36,0.4)] animate-shine',
+  COMMON: 'border-stone-700 bg-stone-950/60 shadow-[inset_0_1px_3px_rgba(255,255,255,0.05)]',
+  UNCOMMON: 'border-teal-700/80 bg-teal-950/30',
+  RARE: 'border-red-800/80 bg-red-950/30',
+  LEGENDARY: 'border-amber-500 bg-amber-950/40 animate-shine',
 };
 
-const CURSE_BORDER = 'border-rose-500 bg-rose-950/40 shadow-[0_0_14px_rgba(244,63,94,0.4)]';
+const CURSE_BORDER = 'border-rose-800 bg-rose-950/30';
 
 const RARITY_LABEL_CLASS: Record<CharmDef['rarity'], string> = {
-  COMMON: 'text-slate-500',
-  UNCOMMON: 'text-sky-400 font-semibold',
-  RARE: 'text-fuchsia-400 font-bold animate-pulse',
+  COMMON: 'text-stone-500',
+  UNCOMMON: 'text-teal-500 font-semibold',
+  RARE: 'text-red-500 font-bold',
   LEGENDARY: 'text-amber-400 font-bold animate-pulse',
 };
 
-function renderVoucherIcon() {
+function renderVoucherIcon(id: string) {
+  const artwork = VOUCHER_ICON_MAP[id];
+  if (artwork) {
+    return <img src={artwork} alt="" className="w-14 h-14 object-contain mx-auto drop-shadow" />;
+  }
   return (
     <svg className="w-10 h-14" viewBox="0 0 100 130">
       <rect x="15" y="35" width="70" height="60" rx="6" fill="#78350F" stroke="#D97706" strokeWidth="4" />
@@ -41,6 +46,10 @@ function renderVoucherIcon() {
 }
 
 export function renderUpgradeIcon(id: string) {
+  const consumableArt = CONSUMABLE_ICON_MAP[id];
+  if (consumableArt) {
+    return <img src={consumableArt} alt="" className="w-14 h-14 object-contain mx-auto drop-shadow" />;
+  }
   if (id === 'cosmic_add') {
     return (
       <svg className="w-10 h-14 animate-pulse" viewBox="0 0 100 130">
@@ -155,13 +164,13 @@ export default function ShopScreen({
   const slotsFull = ownedCharms.length >= maxCharmSlots;
 
   return (
-    <div className="w-full h-full flex flex-row bg-slate-900 border-2 border-slate-950 p-4 gap-4 crt select-none overflow-y-auto">
+    <div className="w-full h-full flex flex-row bg-stone-900 border-2 border-stone-950 p-4 gap-4 select-none overflow-y-auto">
       {/* Left Column Controls */}
       <div className="flex flex-col gap-4 w-36 shrink-0 justify-center">
-        {/* Flashing Neon Marquee SHOP Sign */}
-        <div className="rounded-xl border-4 border-red-600 bg-red-950 p-3 text-center shadow-[0_0_15px_rgba(220,38,38,0.5)]">
-          <h2 className="text-3xl font-black text-red-500 font-pixel tracking-widest uppercase shop-neon">
-            SHOP
+        {/* Carved wooden shop sign */}
+        <div className="rounded-xl border-4 border-amber-800 bg-linear-to-b from-amber-700 to-amber-900 p-3 text-center shadow-md">
+          <h2 className="text-3xl font-black text-amber-50 font-pixel tracking-widest uppercase shop-neon">
+            MAĞAZA
           </h2>
         </div>
 
@@ -254,7 +263,7 @@ export default function ShopScreen({
                     </h4>
                   </div>
 
-                  <div className="my-1 flex items-center justify-center transform scale-90">{renderVoucherIcon()}</div>
+                  <div className="my-1 flex items-center justify-center transform scale-90">{renderVoucherIcon(voucher.id)}</div>
 
                   <p className="text-[10px] text-slate-300 leading-normal text-center mb-1.5 line-clamp-4">
                     {voucher.description}
@@ -276,9 +285,9 @@ export default function ShopScreen({
             const disabled = money < upgrade.cost;
             const borderClass =
               upgrade.type === 'COSMIC'
-                ? 'border-amber-500/80 bg-amber-950/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
-                : 'border-cyan-500/80 bg-cyan-950/20 shadow-[0_0_10px_rgba(6,182,212,0.2)]';
-            const labelColor = upgrade.type === 'COSMIC' ? 'text-amber-400' : 'text-cyan-400';
+                ? 'border-amber-600/80 bg-amber-950/20'
+                : 'border-teal-700/80 bg-teal-950/20';
+            const labelColor = upgrade.type === 'COSMIC' ? 'text-amber-400' : 'text-teal-400';
 
             return (
               <div

@@ -38,7 +38,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
         <div className="relative flex flex-col items-center select-none transform hover:scale-105 transition duration-300">
 
           {/* Neon Ring Behind the Logo */}
-          <div className="absolute w-64 h-64 rounded-full border-4 border-dashed border-cyan-500/30 animate-spin [animation-duration:20s] z-0" />
+          <div className="absolute w-64 h-64 rounded-full border-4 border-dashed border-amber-600/30 animate-spin [animation-duration:20s] z-0" />
           <div className="absolute w-56 h-56 rounded-full border-2 border-emerald-500/25 animate-pulse z-0" />
 
           {/* CHAIN Text (Upper Title) */}
@@ -56,7 +56,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
 
           {/* DOMINO Text (Lower Title) */}
           <h1 className="text-8xl font-black tracking-widest text-white font-pixel drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)] z-10 leading-none">
-            <span className="text-transparent bg-clip-text bg-gradient-to-b from-cyan-400 via-sky-500 to-indigo-600">
+            <span className="text-transparent bg-clip-text bg-gradient-to-b from-amber-400 via-orange-500 to-red-600">
               DOMINO
             </span>
           </h1>
@@ -125,10 +125,10 @@ export default function StartScreen({ onStart }: StartScreenProps) {
 
               <button
                 onClick={() => setDeck('BLUE')}
-                className={`flex flex-col justify-between p-3 rounded-xl border-2 text-center h-36 transition cursor-pointer select-none ${deck === 'BLUE' ? 'border-sky-500 bg-sky-950/30 shadow-[0_0_12px_rgba(56,189,248,0.35)]' : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}
+                className={`flex flex-col justify-between p-3 rounded-xl border-2 text-center h-36 transition cursor-pointer select-none ${deck === 'BLUE' ? 'border-teal-600 bg-teal-950/30 shadow-[0_0_12px_rgba(45,157,150,0.35)]' : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}
               >
-                <span className="text-xs font-bold text-sky-400 leading-none">Mavi Deste</span>
-                <div className="w-7 h-9 bg-sky-600 rounded border border-sky-500/50 mx-auto shadow flex items-center justify-center font-bold text-[11px] text-white">BLUE</div>
+                <span className="text-xs font-bold text-teal-400 leading-none">Mavi Deste</span>
+                <div className="w-7 h-9 bg-teal-700 rounded border border-teal-600/50 mx-auto shadow flex items-center justify-center font-bold text-[11px] text-white">BLUE</div>
                 <span className="text-[11px] text-slate-300 leading-tight">Her tur fazladan +1 Hamle (Turn) hakkı verir.</span>
               </button>
 
