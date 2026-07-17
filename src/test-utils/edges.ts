@@ -1,20 +1,24 @@
-import { createOperatorCard } from '../models/OperatorDeck.js';
+import type { DominoStone, TileModifier } from '../models/types.js';
 import type { GraphEdge } from '../models/Board.js';
-import type { OperatorType } from '../models/types.js';
 
-let edgeCounter = 0;
+let counter = 0;
 
-/** Builds a synthetic GraphEdge literal for evaluator/charm unit tests. */
-export function E(parentBase: number, op: OperatorType, childExposedValue: number): GraphEdge {
-  edgeCounter += 1;
+/** Builds a synthetic DominoStone for scoring/charm unit tests. */
+export function S(leftVal: number, rightVal: number, modifier?: TileModifier): DominoStone {
+  counter += 1;
+  return { id: `s${counter}`, leftVal, rightVal, modifier };
+}
+
+/** Builds a synthetic GraphEdge literal (pure topology, no operator) for board/scoring unit tests. */
+export function E(parentNodeId: string, parentBase: number, childNodeId: string, childExposedValue: number): GraphEdge {
+  counter += 1;
   return {
-    edgeId: `e${edgeCounter}`,
-    operator: createOperatorCard(op),
-    parentNodeId: 'p',
-    parentSlotId: `p#0`,
+    edgeId: `e${counter}`,
+    parentNodeId,
+    parentSlotId: `${parentNodeId}#0`,
     parentBase,
-    childNodeId: `c${edgeCounter}`,
-    childSlotId: `c${edgeCounter}#0`,
+    childNodeId,
+    childSlotId: `${childNodeId}#0`,
     childExposedValue,
     frozen: false,
   };

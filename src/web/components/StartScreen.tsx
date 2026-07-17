@@ -9,230 +9,414 @@ interface StartScreenProps {
 
 type TabState = 'MAIN' | 'DECK_SELECT' | 'STAKE_SELECT' | 'CHALLENGES' | 'SETUP';
 
+// ── Floating domino background particles ──────────────────────
+const FLOATING_DOMINOES = [
+  { emoji: '🁣', x: '8%',  dur: '22s', delay: '0s',   size: '2.2rem' },
+  { emoji: '🁫', x: '18%', dur: '26s', delay: '4s',   size: '1.8rem' },
+  { emoji: '🁳', x: '32%', dur: '20s', delay: '2s',   size: '2.5rem' },
+  { emoji: '🁤', x: '50%', dur: '28s', delay: '7s',   size: '2rem' },
+  { emoji: '🁩', x: '65%', dur: '24s', delay: '1s',   size: '2.3rem' },
+  { emoji: '🁶', x: '78%', dur: '19s', delay: '5s',   size: '1.9rem' },
+  { emoji: '🁡', x: '90%', dur: '25s', delay: '3s',   size: '2.1rem' },
+  { emoji: '🁮', x: '42%', dur: '30s', delay: '9s',   size: '1.7rem' },
+];
+
+// ── Challenge definitions ─────────────────────────────────────
+interface ChallengeDef {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  rule: string;
+  difficulty: 'Kolay' | 'Orta' | 'Zor' | 'Efsanevi';
+  diffColor: string;
+  unlocked: boolean;
+}
+
+const CHALLENGES: ChallengeDef[] = [
+  {
+    id: 'ch_no_charms',
+    name: 'Tılsımsız Sefer',
+    icon: '🚫',
+    description: 'Hiçbir tılsım olmadan seferi tamamla. Saf strateji ve zincir becerisi.',
+    rule: 'Tılsım slotları devre dışı bırakılır.',
+    difficulty: 'Orta',
+    diffColor: 'text-amber-400',
+    unlocked: true,
+  },
+  {
+    id: 'ch_doubles_only',
+    name: 'Çiftler Festivali',
+    icon: '🎭',
+    description: 'Sadece çift (double/spinner) taşlarla oyna. Dallanma ustası ol!',
+    rule: 'Elde sadece çift taşlar gelir.',
+    difficulty: 'Zor',
+    diffColor: 'text-red-400',
+    unlocked: true,
+  },
+  {
+    id: 'ch_golden_rush',
+    name: 'Altın Ateş',
+    icon: '🔥',
+    description: 'Tüm taşlar altın başlar ama hedef puanlar 2 katına çıkar!',
+    rule: 'Tüm taşlar golden, hedefler x2.',
+    difficulty: 'Zor',
+    diffColor: 'text-red-400',
+    unlocked: true,
+  },
+  {
+    id: 'ch_speed_chain',
+    name: 'Tek Zincir',
+    icon: '⛓️',
+    description: 'Dallanma yapılamaz — yalnızca düz bir zincir kurabilirsin.',
+    rule: 'Sadece düz zincir, dallanma yok.',
+    difficulty: 'Efsanevi',
+    diffColor: 'text-fuchsia-400',
+    unlocked: true,
+  },
+];
+
+// ── Deck and Stake metadata ───────────────────────────────────
+const DECK_INFO: Record<'RED' | 'BLUE' | 'YELLOW', { name: string; color: string; borderActive: string; desc: string; icon: string }> = {
+  RED: {
+    name: 'Kırmızı Deste',
+    color: 'text-red-400',
+    borderActive: 'border-red-500 bg-red-950/30 shadow-[0_0_15px_rgba(239,68,68,0.3)]',
+    desc: 'Her tur fazladan +1 Iskarta hakkı verir.',
+    icon: '♦',
+  },
+  BLUE: {
+    name: 'Mavi Deste',
+    color: 'text-teal-400',
+    borderActive: 'border-teal-500 bg-teal-950/30 shadow-[0_0_15px_rgba(45,157,150,0.3)]',
+    desc: 'Her tur fazladan +1 Hamle hakkı verir.',
+    icon: '♠',
+  },
+  YELLOW: {
+    name: 'Sarı Deste',
+    color: 'text-amber-400',
+    borderActive: 'border-amber-500 bg-amber-950/30 shadow-[0_0_15px_rgba(245,158,11,0.3)]',
+    desc: 'Oyuna fazladan +$4 bakiye ile başlar.',
+    icon: '♣',
+  },
+};
+
+const STAKE_INFO: Record<'WHITE' | 'RED', { name: string; desc: string; color: string; borderActive: string }> = {
+  WHITE: {
+    name: 'Beyaz Pul',
+    desc: 'Standart hedefler ve temel zorluk.',
+    color: 'text-slate-200',
+    borderActive: 'border-slate-300 bg-slate-900/40 shadow-[0_0_10px_rgba(255,255,255,0.1)]',
+  },
+  RED: {
+    name: 'Kırmızı Pul',
+    desc: 'Hedef skorlar %25 daha yüksek.',
+    color: 'text-red-400',
+    borderActive: 'border-red-500 bg-red-950/30 shadow-[0_0_12px_rgba(239,68,68,0.25)]',
+  },
+};
+
 export default function StartScreen({ onStart }: StartScreenProps) {
   const [deck, setDeck] = useState<'RED' | 'BLUE' | 'YELLOW'>('RED');
   const [stake, setStake] = useState<'WHITE' | 'RED'>('WHITE');
   const [tab, setTab] = useState<TabState>('MAIN');
   const [selectedChest, setSelectedChest] = useState<ChestId | null>(null);
 
-  // Decks helper details
-  const DECK_NAMES = {
-    RED: 'Kırmızı Deste',
-    BLUE: 'Mavi Deste',
-    YELLOW: 'Sarı Deste',
-  };
-
-  const STAKE_NAMES = {
-    WHITE: 'Beyaz Pul (White Stake)',
-    RED: 'Kırmızı Pul (Red Stake)',
-  };
-
   return (
-    <div className="absolute inset-0 w-full h-full flex flex-col justify-between p-6 select-none overflow-hidden swirl-red-blue-bg">
+    <div className="absolute inset-0 w-full h-full flex flex-col justify-between p-6 md:p-10 select-none overflow-hidden swirl-red-blue-bg">
 
-      {/* Top watermark info */}
-      <div className="flex justify-between items-center text-xs text-slate-400 font-bold uppercase tracking-widest opacity-60">
-        <span>Google DeepMind Antigravity Edition</span>
-        <span>v1.2.0-FULL</span>
+      {/* ── Animated felt texture overlay ── */}
+      <div className="absolute inset-0 pointer-events-none z-0" style={{
+        backgroundImage: 'radial-gradient(circle at 50% 50%, transparent 0%, rgba(0,0,0,0.15) 100%), repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.015) 2px, rgba(255,255,255,0.015) 4px)',
+        backgroundSize: '100% 100%, 4px 4px',
+      }} />
+
+      {/* ── Floating Domino Particles ── */}
+      {FLOATING_DOMINOES.map((d, i) => (
+        <span
+          key={i}
+          className="floating-domino"
+          style={{
+            '--x': d.x,
+            '--dur': d.dur,
+            '--delay': d.delay,
+            '--size': d.size,
+          } as React.CSSProperties}
+        >
+          {d.emoji}
+        </span>
+      ))}
+
+      {/* ── Top watermark ── */}
+      <div className="flex justify-between items-center text-[10px] text-emerald-700/50 font-bold uppercase tracking-[0.25em] z-10">
+        <span>Chain Domino</span>
+        <span>v1.2.0</span>
       </div>
 
-      {/* Main Centered Balatro-Style Logo */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 my-auto">
-        <div className="relative flex flex-col items-center select-none transform hover:scale-105 transition duration-300">
+      {/* ══════════════════════════════════════
+           MAIN LOGO — Centered hero section
+         ══════════════════════════════════════ */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 my-auto z-10">
+        <div className="relative flex flex-col items-center select-none">
 
-          {/* Neon Ring Behind the Logo */}
-          <div className="absolute w-64 h-64 rounded-full border-4 border-dashed border-amber-600/30 animate-spin [animation-duration:20s] z-0" />
-          <div className="absolute w-56 h-56 rounded-full border-2 border-emerald-500/25 animate-pulse z-0" />
+          {/* Ambient glow rings */}
+          <div className="absolute w-72 h-72 rounded-full border border-emerald-500/10 animate-pulse z-0" />
+          <div className="absolute w-80 h-80 rounded-full border border-dashed border-amber-600/15 animate-spin [animation-duration:30s] z-0" />
+          <div className="absolute w-64 h-64 rounded-full bg-emerald-500/5 blur-3xl z-0" />
 
-          {/* CHAIN Text (Upper Title) */}
-          <h1 className="text-8xl font-black tracking-widest text-white font-pixel drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)] z-10 leading-none">
-            <span className="text-transparent bg-clip-text bg-gradient-to-b from-red-400 via-red-500 to-amber-600">
+          {/* CHAIN */}
+          <h1 className="text-7xl md:text-9xl font-black tracking-[0.15em] font-pixel z-10 leading-none animate-charm-in-rare" style={{ animationDelay: '0ms' }}>
+            <span
+              className="text-transparent bg-clip-text bg-gradient-to-b from-emerald-300 via-emerald-500 to-teal-700"
+              style={{ textShadow: '0 0 40px rgba(16,185,129,0.4)' }}
+            >
               CHAIN
             </span>
           </h1>
 
-          {/* Spinning / Glowing Golden Domino in the middle */}
-          <div className="my-4 z-10 transform rotate-12 scale-125 shadow-2xl relative">
-            <div className="absolute inset-0 bg-amber-400/25 rounded-xl blur-md animate-pulse" />
+          {/* Golden Domino centerpiece */}
+          <div className="my-3 z-10 transform rotate-12 scale-[1.4] relative animate-charm-in-legendary" style={{ animationDelay: '200ms' }}>
+            <div className="absolute -inset-3 bg-amber-400/20 rounded-2xl blur-xl animate-pulse" />
+            <div className="absolute -inset-1 bg-gradient-to-br from-amber-400/30 to-transparent rounded-xl" />
             <Tile left={1} right={6} vertical={false} isGolden={true} />
           </div>
 
-          {/* DOMINO Text (Lower Title) */}
-          <h1 className="text-8xl font-black tracking-widest text-white font-pixel drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)] z-10 leading-none">
-            <span className="text-transparent bg-clip-text bg-gradient-to-b from-amber-400 via-orange-500 to-red-600">
+          {/* DOMINO */}
+          <h1 className="text-7xl md:text-9xl font-black tracking-[0.15em] font-pixel z-10 leading-none animate-charm-in-rare" style={{ animationDelay: '120ms' }}>
+            <span
+              className="text-transparent bg-clip-text bg-gradient-to-b from-amber-300 via-amber-500 to-orange-700"
+              style={{ textShadow: '0 0 40px rgba(245,158,11,0.4)' }}
+            >
               DOMINO
             </span>
           </h1>
+
+          {/* Tagline */}
+          <p className="mt-4 text-[11px] md:text-xs text-emerald-500/60 font-medium tracking-[0.3em] uppercase font-pixel animate-fade-in" style={{ animationDelay: '600ms' }}>
+            Zincirini Kur · Puanını Yükselt
+          </p>
         </div>
       </div>
 
-      {/* Bottom Horizontal Balatro Menu Buttons */}
-      <div className="w-full max-w-3xl mx-auto flex flex-wrap gap-3 justify-center items-center pb-4 z-10">
-        
-        {/* PLAY Button */}
+      {/* ══════════════════════════════════════
+           MENU CARDS — Bottom row
+         ══════════════════════════════════════ */}
+      <div className="w-full max-w-4xl mx-auto flex flex-wrap gap-4 justify-center items-stretch pb-2 z-10">
+
+        {/* BAŞLAT Card */}
         <button
           type="button"
           onClick={() => setTab('SETUP')}
-          className="px-7 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 hover:scale-105 active:translate-y-0.5 text-sm font-bold text-white shadow-lg border-b-4 border-emerald-800 transition cursor-pointer select-none font-pixel tracking-wider"
+          className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-emerald-600/60 bg-gradient-to-b from-emerald-900/50 to-emerald-950/80 cursor-pointer select-none"
+          style={{ animationDelay: '400ms', '--glow': 'rgba(16,185,129,0.4)' } as React.CSSProperties}
         >
-          🎮 BAŞLAT (PLAY)
+          <span className="text-3xl">🎮</span>
+          <span className="font-pixel text-sm font-black text-emerald-300 tracking-wider">BAŞLAT</span>
+          <span className="text-[9px] text-emerald-500/70 leading-tight text-center">Yeni bir maceraya başla</span>
         </button>
 
-        {/* DECKS Button */}
+        {/* DESTE Card */}
         <button
           type="button"
           onClick={() => setTab('DECK_SELECT')}
-          className="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 hover:scale-105 active:translate-y-0.5 text-sm font-bold text-slate-100 shadow border-b-4 border-slate-950 transition cursor-pointer select-none"
+          className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-sky-700/50 bg-gradient-to-b from-sky-950/50 to-slate-950/80 cursor-pointer select-none"
+          style={{ animationDelay: '480ms', '--glow': 'rgba(14,165,233,0.3)' } as React.CSSProperties}
         >
-          🃏 DESTE: <span className="text-amber-400 font-semibold">{DECK_NAMES[deck]}</span>
+          <span className="text-3xl">🃏</span>
+          <span className="font-pixel text-sm font-black text-sky-300 tracking-wider">DESTE</span>
+          <span className={`text-[9px] ${DECK_INFO[deck].color} font-bold leading-tight text-center`}>{DECK_INFO[deck].name}</span>
         </button>
 
-        {/* STAKES Button */}
+        {/* ZORLUK Card */}
         <button
           type="button"
           onClick={() => setTab('STAKE_SELECT')}
-          className="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 hover:scale-105 active:translate-y-0.5 text-sm font-bold text-slate-100 shadow border-b-4 border-slate-950 transition cursor-pointer select-none"
+          className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-rose-700/50 bg-gradient-to-b from-rose-950/50 to-slate-950/80 cursor-pointer select-none"
+          style={{ animationDelay: '560ms', '--glow': 'rgba(244,63,94,0.3)' } as React.CSSProperties}
         >
-          🏆 ZORLUK: <span className="text-red-400 font-semibold">{stake === 'WHITE' ? 'Beyaz Pul' : 'Kırmızı Pul'}</span>
+          <span className="text-3xl">🏆</span>
+          <span className="font-pixel text-sm font-black text-rose-300 tracking-wider">ZORLUK</span>
+          <span className={`text-[9px] ${STAKE_INFO[stake].color} font-bold leading-tight text-center`}>{STAKE_INFO[stake].name}</span>
         </button>
 
-        {/* CHALLENGES Button */}
+        {/* MÜCADELE Card */}
         <button
           type="button"
           onClick={() => setTab('CHALLENGES')}
-          className="px-6 py-3 rounded-xl bg-slate-850 hover:bg-slate-800 hover:scale-105 active:translate-y-0.5 text-sm font-bold text-slate-400 border-b-4 border-slate-950 transition cursor-pointer select-none"
+          className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-fuchsia-700/50 bg-gradient-to-b from-fuchsia-950/50 to-slate-950/80 cursor-pointer select-none"
+          style={{ animationDelay: '640ms', '--glow': 'rgba(192,38,211,0.3)' } as React.CSSProperties}
         >
-          🔒 MÜCADELELER
+          <span className="text-3xl">⚔️</span>
+          <span className="font-pixel text-sm font-black text-fuchsia-300 tracking-wider">MÜCADELE</span>
+          <span className="text-[9px] text-fuchsia-500/70 font-bold leading-tight text-center">4 Mücadele Aktif</span>
         </button>
       </div>
 
-      {/* OVERLAY DIALOGS (Centered modally on top of the menu with pointer z-index protection) */}
-      
-      {/* DECK SELECT TAB */}
+      {/* ══════════════════════════════════════
+           OVERLAY DIALOGS
+         ══════════════════════════════════════ */}
+
+      {/* ── DECK SELECT ── */}
       {tab === 'DECK_SELECT' && (
-        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-40">
-          <div className="w-full max-w-xl bg-slate-900 border-4 border-slate-950 rounded-3xl p-6 shadow-2xl text-white crt flex flex-col">
+        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-fade-in">
+          <div className="w-full max-w-xl bg-slate-900 border-4 border-slate-950 rounded-3xl p-6 shadow-2xl text-white flex flex-col">
             <h2 className="text-center text-xl font-bold font-pixel tracking-widest text-amber-400 uppercase border-b border-slate-800 pb-2">
-              DESTE SEÇİMİ (CHOOSE DECK)
+              DESTE SEÇİMİ
             </h2>
             
             <div className="grid grid-cols-3 gap-3 mt-4">
-              <button
-                onClick={() => setDeck('RED')}
-                className={`flex flex-col justify-between p-3 rounded-xl border-2 text-center h-36 transition cursor-pointer select-none ${deck === 'RED' ? 'border-red-500 bg-red-950/30 shadow-[0_0_12px_rgba(239,68,68,0.35)]' : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}
-              >
-                <span className="text-xs font-bold text-red-400 leading-none">Kırmızı Deste</span>
-                <div className="w-7 h-9 bg-red-600 rounded border border-red-500/50 mx-auto shadow flex items-center justify-center font-bold text-[11px] text-white">RED</div>
-                <span className="text-[11px] text-slate-300 leading-tight">Her tur fazladan +1 Iskarta hakkı verir.</span>
-              </button>
-
-              <button
-                onClick={() => setDeck('BLUE')}
-                className={`flex flex-col justify-between p-3 rounded-xl border-2 text-center h-36 transition cursor-pointer select-none ${deck === 'BLUE' ? 'border-teal-600 bg-teal-950/30 shadow-[0_0_12px_rgba(45,157,150,0.35)]' : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}
-              >
-                <span className="text-xs font-bold text-teal-400 leading-none">Mavi Deste</span>
-                <div className="w-7 h-9 bg-teal-700 rounded border border-teal-600/50 mx-auto shadow flex items-center justify-center font-bold text-[11px] text-white">BLUE</div>
-                <span className="text-[11px] text-slate-300 leading-tight">Her tur fazladan +1 Hamle (Turn) hakkı verir.</span>
-              </button>
-
-              <button
-                onClick={() => setDeck('YELLOW')}
-                className={`flex flex-col justify-between p-3 rounded-xl border-2 text-center h-36 transition cursor-pointer select-none ${deck === 'YELLOW' ? 'border-amber-500 bg-amber-950/30 shadow-[0_0_12px_rgba(245,158,11,0.35)]' : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}
-              >
-                <span className="text-xs font-bold text-amber-400 leading-none">Sarı Deste</span>
-                <div className="w-7 h-9 bg-amber-500 rounded border border-amber-400/50 mx-auto shadow flex items-center justify-center font-bold text-[11px] text-white">GOLD</div>
-                <span className="text-[11px] text-slate-300 leading-tight">Oyuna fazladan +$4 bakiye ile başlar.</span>
-              </button>
+              {(['RED', 'BLUE', 'YELLOW'] as const).map((d) => {
+                const info = DECK_INFO[d];
+                const isActive = deck === d;
+                return (
+                  <button
+                    key={d}
+                    onClick={() => setDeck(d)}
+                    className={`menu-card flex flex-col justify-between p-3 rounded-xl border-2 text-center h-40 cursor-pointer select-none ${isActive ? info.borderActive : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}
+                    style={{ '--glow': 'transparent' } as React.CSSProperties}
+                  >
+                    <span className={`text-3xl font-bold ${info.color}`}>{info.icon}</span>
+                    <span className={`text-xs font-bold ${info.color} leading-none`}>{info.name}</span>
+                    <span className="text-[10px] text-slate-300 leading-tight">{info.desc}</span>
+                    {isActive && <span className="text-[9px] font-bold text-emerald-400 bg-emerald-900/30 px-2 py-0.5 rounded">✓ SEÇİLİ</span>}
+                  </button>
+                );
+              })}
             </div>
 
             <button
               type="button"
               onClick={() => setTab('MAIN')}
-              className="mt-5 w-full py-2 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-xs transition cursor-pointer select-none"
+              className="mt-5 w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-xs transition cursor-pointer select-none"
             >
-              TAMAM (CLOSE)
+              TAMAM
             </button>
           </div>
         </div>
       )}
 
-      {/* STAKE SELECT TAB */}
+      {/* ── STAKE SELECT ── */}
       {tab === 'STAKE_SELECT' && (
-        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-40">
-          <div className="w-full max-w-lg bg-slate-900 border-4 border-slate-950 rounded-3xl p-6 shadow-2xl text-white crt flex flex-col">
+        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-fade-in">
+          <div className="w-full max-w-lg bg-slate-900 border-4 border-slate-950 rounded-3xl p-6 shadow-2xl text-white flex flex-col">
             <h2 className="text-center text-xl font-bold font-pixel tracking-widest text-red-400 uppercase border-b border-slate-800 pb-2">
-              ZORLUK SEÇİMİ (STAKES)
+              ZORLUK SEÇİMİ
             </h2>
 
             <div className="grid grid-cols-2 gap-3 mt-4">
-              <button
-                onClick={() => setStake('WHITE')}
-                className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition cursor-pointer select-none ${stake === 'WHITE' ? 'border-slate-300 bg-slate-950/40 shadow-[0_0_8px_rgba(255,255,255,0.15)]' : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}
-              >
-                <div className="w-8 h-8 rounded-full border-4 border-slate-400 bg-white flex items-center justify-center text-slate-800 font-pixel text-xs font-black shadow shrink-0">W</div>
-                <div>
-                  <span className="text-xs font-bold block text-slate-100">Beyaz Pul (White Stake)</span>
-                  <span className="text-[11px] text-slate-450 leading-none">Standart hedefler ve temel zorluk derecesi.</span>
-                </div>
-              </button>
-
-              <button
-                onClick={() => setStake('RED')}
-                className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition cursor-pointer select-none ${stake === 'RED' ? 'border-red-500 bg-slate-950/40 shadow-[0_0_10px_rgba(239,68,68,0.25)]' : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}
-              >
-                <div className="w-8 h-8 rounded-full border-4 border-red-700 bg-red-500 flex items-center justify-center text-white font-pixel text-xs font-black shadow shrink-0 animate-pulse">R</div>
-                <div>
-                  <span className="text-xs font-bold block text-red-400">Kırmızı Pul (Red Stake)</span>
-                  <span className="text-[11px] text-slate-450 leading-none">Hedef skorlar %25 daha yüksektir.</span>
-                </div>
-              </button>
+              {(['WHITE', 'RED'] as const).map((s) => {
+                const info = STAKE_INFO[s];
+                const isActive = stake === s;
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setStake(s)}
+                    className={`menu-card flex flex-col items-center gap-2 p-4 rounded-xl border-2 text-center transition cursor-pointer select-none ${isActive ? info.borderActive : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}
+                    style={{ '--glow': 'transparent' } as React.CSSProperties}
+                  >
+                    <div className={`w-10 h-10 rounded-full border-4 flex items-center justify-center font-pixel text-sm font-black shadow ${
+                      s === 'WHITE' ? 'border-slate-400 bg-white text-slate-800' : 'border-red-700 bg-red-500 text-white animate-pulse'
+                    }`}>
+                      {s === 'WHITE' ? 'W' : 'R'}
+                    </div>
+                    <span className={`text-xs font-bold ${info.color}`}>{info.name}</span>
+                    <span className="text-[10px] text-slate-400 leading-tight">{info.desc}</span>
+                    {isActive && <span className="text-[9px] font-bold text-emerald-400 bg-emerald-900/30 px-2 py-0.5 rounded">✓ SEÇİLİ</span>}
+                  </button>
+                );
+              })}
             </div>
 
             <button
               type="button"
               onClick={() => setTab('MAIN')}
-              className="mt-5 w-full py-2 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-xs transition cursor-pointer select-none"
+              className="mt-5 w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-xs transition cursor-pointer select-none"
             >
-              TAMAM (CLOSE)
+              TAMAM
             </button>
           </div>
         </div>
       )}
 
-      {/* CHALLENGES TAB */}
+      {/* ── CHALLENGES ── */}
       {tab === 'CHALLENGES' && (
-        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-40">
-          <div className="w-full max-w-md bg-slate-900 border-4 border-slate-950 rounded-3xl p-5 shadow-2xl text-white crt flex flex-col">
-            <h2 className="text-center text-xl font-bold font-pixel tracking-widest text-slate-400 uppercase border-b border-slate-800 pb-2">
-              MÜCADELELER (CHALLENGES)
+        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-fade-in">
+          <div className="w-full max-w-2xl bg-slate-900 border-4 border-slate-950 rounded-3xl p-6 shadow-2xl text-white flex flex-col max-h-[90vh] overflow-y-auto">
+            <h2 className="text-center text-xl font-bold font-pixel tracking-widest text-fuchsia-400 uppercase border-b border-slate-800 pb-2">
+              MÜCADELELER
             </h2>
+            <p className="text-center text-[10px] text-slate-500 mt-1.5 mb-4">
+              Özel kurallarla oyna, becerinle sınırlarını zorla!
+            </p>
 
-            <div className="flex flex-col gap-2.5 mt-4 opacity-50 select-none">
-              <div className="border border-dashed border-slate-800 bg-slate-950/20 p-3 rounded-lg flex items-center gap-2">
-                <span className="text-slate-500 font-pixel text-xs">🔒</span>
-                <span className="text-xs text-slate-400 font-mono">1. Mücadele: ??? (Kilitli)</span>
-              </div>
-              <div className="border border-dashed border-slate-800 bg-slate-950/20 p-3 rounded-lg flex items-center gap-2">
-                <span className="text-slate-500 font-pixel text-xs">🔒</span>
-                <span className="text-xs text-slate-400 font-mono">2. Mücadele: ??? (Kilitli)</span>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {CHALLENGES.map((ch) => (
+                <div
+                  key={ch.id}
+                  className={`relative flex flex-col gap-2 p-4 rounded-xl border-2 transition select-none ${
+                    ch.unlocked
+                      ? 'border-slate-700 bg-slate-950/50 hover:border-fuchsia-700/50 hover:bg-fuchsia-950/10 cursor-pointer'
+                      : 'border-slate-800 bg-slate-950/20 opacity-40 cursor-not-allowed'
+                  }`}
+                >
+                  {/* Header */}
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl">{ch.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-pixel text-xs font-black text-slate-100 truncate">{ch.name}</span>
+                        <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border ${ch.diffColor} border-current/30 bg-current/5`}>
+                          {ch.difficulty}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-[10px] text-slate-400 leading-relaxed">{ch.description}</p>
+
+                  {/* Rule badge */}
+                  <div className="flex items-center gap-1.5 bg-slate-950/60 border border-slate-800 rounded-lg px-2.5 py-1.5">
+                    <span className="text-[9px] text-amber-500 font-bold">KURAL:</span>
+                    <span className="text-[9px] text-slate-300">{ch.rule}</span>
+                  </div>
+
+                  {/* Play button */}
+                  {ch.unlocked && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // For now, start a normal run — challenge modifiers can be integrated later
+                        onStart(deck, stake, selectedChest);
+                      }}
+                      className="w-full py-2 rounded-lg bg-fuchsia-700 hover:bg-fuchsia-600 text-[10px] font-bold font-pixel text-white uppercase tracking-wider shadow border-b-2 border-fuchsia-900 transition cursor-pointer"
+                    >
+                      MÜCADELEYE BAŞLA
+                    </button>
+                  )}
+
+                  {!ch.unlocked && (
+                    <div className="text-center text-[10px] text-slate-600 font-pixel">🔒 Kilitli</div>
+                  )}
+                </div>
+              ))}
             </div>
 
             <button
               type="button"
               onClick={() => setTab('MAIN')}
-              className="mt-5 w-full py-2 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-xs transition cursor-pointer select-none"
+              className="mt-5 w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-xs transition cursor-pointer select-none"
             >
-              KAPAT (CLOSE)
+              KAPAT
             </button>
           </div>
         </div>
       )}
 
-      {/* SETUP & START CONFIRM TAB */}
+      {/* ── SETUP & START CONFIRM ── */}
       {tab === 'SETUP' && (
-        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-chain-place">
-          <div className="w-full max-w-lg bg-slate-900 border-4 border-slate-950 rounded-3xl p-5 shadow-2xl text-white crt flex flex-col max-h-full overflow-y-auto">
+        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-chain-place">
+          <div className="w-full max-w-lg bg-slate-900 border-4 border-slate-950 rounded-3xl p-5 shadow-2xl text-white flex flex-col max-h-full overflow-y-auto">
             <h2 className="text-center text-xl font-bold font-pixel tracking-widest text-emerald-400 uppercase border-b border-slate-800 pb-2">
               SEFER KURULUMU
             </h2>
@@ -240,11 +424,11 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             <div className="mt-4 flex flex-col gap-3">
               <div className="flex justify-between items-center bg-slate-950/40 p-2.5 rounded-lg border border-slate-850">
                 <span className="text-xs text-slate-400 font-medium">Seçili Deste:</span>
-                <span className="text-xs font-bold text-amber-400">{DECK_NAMES[deck]}</span>
+                <span className={`text-xs font-bold ${DECK_INFO[deck].color}`}>{DECK_INFO[deck].name}</span>
               </div>
               <div className="flex justify-between items-center bg-slate-950/40 p-2.5 rounded-lg border border-slate-850">
                 <span className="text-xs text-slate-400 font-medium">Zorluk Seviyesi:</span>
-                <span className="text-xs font-bold text-red-400">{stake === 'WHITE' ? 'Beyaz Pul' : 'Kırmızı Pul'}</span>
+                <span className={`text-xs font-bold ${STAKE_INFO[stake].color}`}>{STAKE_INFO[stake].name}</span>
               </div>
             </div>
 
@@ -260,11 +444,12 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                       type="button"
                       onClick={() => setSelectedChest(isSelected ? null : chest.id)}
                       className={[
-                        'flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition text-left',
+                        'menu-card flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition text-left cursor-pointer',
                         isSelected
                           ? 'border-amber-400 bg-amber-950/20 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
                           : 'border-slate-700 bg-slate-950/30 hover:border-slate-500',
                       ].join(' ')}
+                      style={{ '--glow': 'rgba(251,191,36,0.3)' } as React.CSSProperties}
                     >
                       <span className="text-3xl">{chest.icon}</span>
                       <span className={`text-[11px] font-pixel font-bold text-center leading-tight ${isSelected ? 'text-amber-300' : 'text-slate-200'}`}>
@@ -286,9 +471,9 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             <button
               type="button"
               onClick={() => onStart(deck, stake, selectedChest)}
-              className="mt-5 w-full py-3.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 active:translate-y-0.5 text-xs font-bold text-white shadow border-b-4 border-red-800 transition cursor-pointer select-none uppercase font-pixel tracking-widest"
+              className="mt-5 w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:translate-y-0.5 text-xs font-bold text-white shadow border-b-4 border-emerald-800 transition cursor-pointer select-none uppercase font-pixel tracking-widest"
             >
-              🚀 Macerayı Başlat (START RUN)
+              🚀 Macerayı Başlat
             </button>
 
             <button
@@ -296,7 +481,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
               onClick={() => setTab('MAIN')}
               className="mt-3.5 w-full py-2 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-xs transition cursor-pointer select-none"
             >
-              GERİ DÖN (BACK)
+              GERİ DÖN
             </button>
           </div>
         </div>

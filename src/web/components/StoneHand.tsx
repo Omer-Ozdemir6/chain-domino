@@ -6,15 +6,28 @@ interface StoneHandProps {
   selectedId: string | null;
   onSelect: (id: string) => void;
   spellEffect?: { id: string; type: 'GILD' | 'MAGNET' | 'BREAKER' | 'BLUE' | 'RED' | 'GOLDEN' } | null;
-  /** When a rune spell is active, highlight all stones as clickable targets. */
   isSpellTargeting?: boolean;
+  isGathering?: boolean;
+  /** A tılsım is armed (Küratörün Çekici / Simyacı Aynası) and waiting for a hand stone to click. */
+  isCharmTargeting?: boolean;
+  /** The stone just clicked to activate an interactive charm — plays a crack/flip animation. */
+  activationEffect?: { stoneId: string; kind: 'SPLIT' | 'SWAP' } | null;
 }
 
-export default function StoneHand({ stones, selectedId, onSelect, spellEffect, isSpellTargeting }: StoneHandProps) {
+export default function StoneHand({
+  stones,
+  selectedId,
+  onSelect,
+  spellEffect,
+  isSpellTargeting,
+  isGathering = false,
+  isCharmTargeting,
+  activationEffect,
+}: StoneHandProps) {
   return (
     <div>
-      <h2 className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-1">Taşlar</h2>
-      <div className="flex flex-nowrap overflow-x-auto gap-2 pb-1 scrollbar-none items-end">
+      <h2 className="text-[8px] md:text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-0.5 md:mb-1">Taşlar</h2>
+      <div className="flex flex-nowrap overflow-x-auto gap-1 md:gap-1.5 lg:gap-2 pb-1 scrollbar-none items-end">
         {stones.length === 0 && <span className="text-[10px] text-slate-450 italic">(yok)</span>}
         {stones.map((s, index) => {
           let tileSpellEffect: 'GILD' | 'MAGNET' | 'BLUE' | 'RED' | null = null;
@@ -24,22 +37,26 @@ export default function StoneHand({ stones, selectedId, onSelect, spellEffect, i
             else if (spellEffect.type === 'RED') tileSpellEffect = 'RED';
           }
 
-          // A gentle hand-of-cards fan: alternating tilt/lift around the center card.
-          const mid = (stones.length - 1) / 2;
-          const offset = index - mid;
-          const rotate = Math.max(-6, Math.min(6, offset * 3));
-          const lift = Math.abs(offset) * 2;
+          // Deal from right stagger. If gathering, stagger flyback delay to deck box.
+          const dealDelay = isGathering ? undefined : `${index * 80}ms`;
+          const gatherDelay = isGathering ? `${index * 60}ms` : undefined;
+          const animationClass = isGathering ? 'animate-gather-hand' : 'animate-card-deal';
+          const activationClass = activationEffect?.stoneId === s.id
+            ? activationEffect.kind === 'SPLIT' ? 'animate-charm-crack' : 'animate-charm-mirror-flip'
+            : '';
 
           return (
             <div
               key={s.id}
               className={[
-                'animate-card-deal shrink-0 relative transition-transform duration-150 hover:-translate-y-2 hover:z-20',
-                isSpellTargeting ? 'ring-2 ring-violet-400/70 rounded-lg cursor-pointer' : '',
+                animationClass,
+                activationClass,
+                'shrink-0 relative transition-transform duration-150 hover:-translate-y-2 hover:z-20',
+                isSpellTargeting || isCharmTargeting ? 'ring-2 ring-violet-400/70 rounded-lg cursor-pointer' : '',
               ].join(' ')}
               style={{
-                animationDelay: `${index * 80}ms`,
-                transform: `rotate(${rotate}deg) translateY(${lift}px)`,
+                animationDelay: isGathering ? gatherDelay : dealDelay,
+                animationFillMode: isGathering ? 'forwards' : undefined,
               }}
             >
               <Tile

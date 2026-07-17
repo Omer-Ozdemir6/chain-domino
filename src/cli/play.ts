@@ -5,7 +5,6 @@ const config = {
   targetScore: 50,
   maxTurns: 6,
   stonesPerTurn: 3,
-  operatorsPerTurn: 2,
 };
 
 const game = new GameState(config);
@@ -22,7 +21,7 @@ function formatBoard(game: GameState): string {
   const lines = [`(${rootNode.leftVal}|${rootNode.rightVal})`];
   for (const edge of game.board.getEdges()) {
     const child = game.board.getNodes().find((n) => n.nodeId === edge.childNodeId)!;
-    lines.push(`  ${edge.parentBase} ${edge.operator.symbol} (${child.leftVal}|${child.rightVal})`);
+    lines.push(`  -> (${child.leftVal}|${child.rightVal})`);
   }
   return lines.join('\n');
 }
@@ -33,10 +32,8 @@ function printState(): void {
   console.log('Masa:\n' + formatBoard(game));
   console.log('Elindeki taşlar:');
   game.hand.forEach((s, i) => console.log('  ' + formatStone(i, s.leftVal, s.rightVal)));
-  console.log('Elindeki operatörler:');
-  game.operatorHand.forEach((o, i) => console.log(`  [${i}] ${o.symbol}`));
   console.log('-'.repeat(50));
-  console.log('Komutlar: d(çek)  s <n>(taş oyna)  o <n>(operatör oyna)  u(geri al)  c(hesapla/submit)  k(turu atla)  q(çık)');
+  console.log('Komutlar: d(çek)  s <n>(taş oyna)  u(geri al)  c(hesapla/submit)  k(turu atla)  q(çık)');
 }
 
 function handleLine(input: string): void {
@@ -54,16 +51,6 @@ function handleLine(input: string): void {
         break;
       }
       const result = game.playStone(target.id);
-      if (!result.ok) console.log('Hata: ' + result.error);
-      break;
-    }
-    case 'o': {
-      const target = game.operatorHand[arg];
-      if (!target) {
-        console.log('Geçersiz operatör numarası.');
-        break;
-      }
-      const result = game.playOperator(target.id);
       if (!result.ok) console.log('Hata: ' + result.error);
       break;
     }

@@ -1,13 +1,11 @@
-import type { ChainElement, DominoStone, OperatorCard, TileModifier } from './types.js';
+import type { DominoStone, TileModifier, HandType } from './types.js';
 
 export type BoardError =
   | 'CHAIN_MUST_START_WITH_STONE'
-  | 'EXPECTED_OPERATOR'
   | 'EXPECTED_STONE'
   | 'STONE_MISMATCH'
   | 'SLOT_NOT_FOUND'
-  | 'SLOT_NOT_OPEN'
-  | 'SLOT_NOT_PENDING';
+  | 'SLOT_NOT_OPEN';
 
 export interface BoardActionResult {
   ok: boolean;
@@ -17,13 +15,12 @@ export interface BoardActionResult {
 /** `${nodeId}#${slotIndex}`, or the reserved sentinel `'ROOT'` for the very first stone. */
 export type SlotId = string;
 
-export type SlotState = 'OPEN' | 'PENDING' | 'CLOSED';
+export type SlotState = 'OPEN' | 'CLOSED';
 
 export interface BoardSlot {
   slotId: SlotId;
   value: number;
   state: SlotState;
-  pendingOperator?: OperatorCard;
 }
 
 export interface GraphNode {
@@ -37,9 +34,9 @@ export interface GraphNode {
   tags?: string[];
 }
 
+/** A single stone-to-stone domino connection — pure topology, no operator involved. */
 export interface GraphEdge {
   edgeId: string;
-  operator: OperatorCard;
   parentNodeId: string;
   parentSlotId: SlotId;
   parentBase: number;
@@ -60,6 +57,17 @@ function orientStone(stone: DominoStone, requiredValue: number): DominoStone | n
   return null;
 }
 
+/** "Kozmik Karadelik" mode: a slot's `value` is still "the number the next stone must present",
+ *  but the match test is ascending-by-one instead of equality — classic pip-matching is void. */
+function orientStoneSequence(stone: DominoStone, requiredValue: number): DominoStone | null {
+  const next = requiredValue + 1;
+  if (stone.leftVal === next) return stone;
+  if (stone.rightVal === next) return { ...stone, leftVal: stone.rightVal, rightVal: stone.leftVal, isGolden: stone.isGolden };
+  return null;
+}
+
+export type MatchMode = 'PIP' | 'SEQUENCE';
+
 interface InternalNode {
   nodeId: string;
   leftVal: number;
@@ -72,14 +80,15 @@ interface InternalNode {
   tags?: string[];
 }
 
-type Move =
-  | { kind: 'OPERATOR'; nodeId: string; slotIndex: number }
-  | { kind: 'STONE'; childNodeId: string; parentNodeId: string | null; parentSlotIndex: number | null };
+interface Move {
+  childNodeId: string;
+  parentNodeId: string | null;
+  parentSlotIndex: number | null;
+}
 
 /**
- * A branching domino board: stones are graph nodes connected by operator edges. A non-double
- * stone has 2 slots (one per pip side); a double stone (spinner) has 4, letting it branch in
- * up to 4 directions. Placing a stone auto-orients it (flips leftVal/rightVal) to fit if needed.
+ * A branching domino board: stones are graph nodes connected directly by classic end-matching
+ * (equal pip value on the touching sides) — no operator sits between them.
  */
 export class Board {
   private nodes = new Map<string, InternalNode>();
@@ -87,6 +96,17 @@ export class Board {
   private rootNodeId: string | null = null;
   /** Chronological log of moves since the last freeze(), for order-correct undo. */
   private unfrozenMoves: Move[] = [];
+  /** 'PIP' (classic end-matching) by default; 'SEQUENCE' while a rule-bending charm like Kozmik
+   *  Karadelik is owned. Set once per round by RunState.startRound(). */
+  private matchMode: MatchMode = 'PIP';
+
+  setMatchMode(mode: MatchMode): void {
+    this.matchMode = mode;
+  }
+
+  private orient(stone: DominoStone, requiredValue: number): DominoStone | null {
+    return this.matchMode === 'SEQUENCE' ? orientStoneSequence(stone, requiredValue) : orientStone(stone, requiredValue);
+  }
 
   get length(): number {
     return this.nodes.size + this.edges.length;
@@ -185,51 +205,18 @@ export class Board {
     };
   }
 
-  getOpenOperatorTargets(): SlotId[] {
-    const targets: SlotId[] = [];
-    for (const node of this.nodes.values()) {
-      node.slots.forEach((slot, i) => {
-        if (slot.state === 'OPEN') targets.push(`${node.nodeId}#${i}`);
-      });
-    }
-    return targets;
-  }
-
   /** Slots (possibly requiring a flip) this stone could legally close right now; `['ROOT']` on an empty board. */
   getLegalStoneTargets(stone: DominoStone): SlotId[] {
     if (this.rootNodeId === null) return ['ROOT'];
     const targets: SlotId[] = [];
     for (const node of this.nodes.values()) {
       node.slots.forEach((slot, i) => {
-        if (slot.state === 'PENDING' && orientStone(stone, slot.value)) {
+        if (slot.state === 'OPEN' && this.orient(stone, slot.value)) {
           targets.push(`${node.nodeId}#${i}`);
         }
       });
     }
     return targets;
-  }
-
-  canAddOperatorAt(slotId: SlotId): BoardActionResult {
-    if (slotId === 'ROOT') {
-      return this.rootNodeId === null
-        ? { ok: false, error: 'CHAIN_MUST_START_WITH_STONE' }
-        : { ok: false, error: 'SLOT_NOT_FOUND' };
-    }
-    const found = this.findSlot(slotId);
-    if (!found) return { ok: false, error: 'SLOT_NOT_FOUND' };
-    if (found.slot.state !== 'OPEN') return { ok: false, error: 'SLOT_NOT_OPEN' };
-    return { ok: true };
-  }
-
-  addOperatorAt(operator: OperatorCard, slotId: SlotId): BoardActionResult {
-    const check = this.canAddOperatorAt(slotId);
-    if (!check.ok) return check;
-
-    const found = this.findSlot(slotId)!;
-    found.slot.state = 'PENDING';
-    found.slot.pendingOperator = operator;
-    this.unfrozenMoves.push({ kind: 'OPERATOR', nodeId: found.node.nodeId, slotIndex: found.index });
-    return { ok: true };
   }
 
   canAddStoneAt(stone: DominoStone, slotId: SlotId): BoardActionResult {
@@ -238,8 +225,8 @@ export class Board {
     }
     const found = this.findSlot(slotId);
     if (!found) return { ok: false, error: 'SLOT_NOT_FOUND' };
-    if (found.slot.state !== 'PENDING') return { ok: false, error: 'SLOT_NOT_PENDING' };
-    return orientStone(stone, found.slot.value) ? { ok: true } : { ok: false, error: 'STONE_MISMATCH' };
+    if (found.slot.state !== 'OPEN') return { ok: false, error: 'SLOT_NOT_OPEN' };
+    return this.orient(stone, found.slot.value) ? { ok: true } : { ok: false, error: 'STONE_MISMATCH' };
   }
 
   addStoneAt(stone: DominoStone, slotId: SlotId): BoardActionResult {
@@ -250,19 +237,17 @@ export class Board {
       const node = this.createRootNode(stone);
       this.nodes.set(node.nodeId, node);
       this.rootNodeId = node.nodeId;
-      this.unfrozenMoves.push({ kind: 'STONE', childNodeId: node.nodeId, parentNodeId: null, parentSlotIndex: null });
+      this.unfrozenMoves.push({ childNodeId: node.nodeId, parentNodeId: null, parentSlotIndex: null });
       return { ok: true };
     }
 
     const found = this.findSlot(slotId)!;
-    const operator = found.slot.pendingOperator!;
-    const oriented = orientStone(stone, found.slot.value)!;
+    const oriented = this.orient(stone, found.slot.value)!;
     const childNode = this.createChildNode(oriented);
     this.nodes.set(childNode.nodeId, childNode);
 
     this.edges.push({
       edgeId: childNode.nodeId,
-      operator,
       parentNodeId: found.node.nodeId,
       parentSlotId: slotId,
       parentBase: found.node.leftVal + found.node.rightVal,
@@ -273,9 +258,7 @@ export class Board {
     });
 
     found.slot.state = 'CLOSED';
-    found.slot.pendingOperator = undefined;
     this.unfrozenMoves.push({
-      kind: 'STONE',
       childNodeId: childNode.nodeId,
       parentNodeId: found.node.nodeId,
       parentSlotIndex: found.index,
@@ -284,59 +267,47 @@ export class Board {
     return { ok: true };
   }
 
-  /** True when any slot anywhere in the graph holds an operator awaiting a closing stone. */
-  hasPendingOperator(): boolean {
-    for (const node of this.nodes.values()) {
-      if (node.slots.some((s) => s.state === 'PENDING')) return true;
-    }
-    return false;
-  }
-
-  /** Removes and returns the most recently placed element (stone or operator), if any. */
-  removeLast(): ChainElement | undefined {
+  /** Removes and returns the most recently placed stone, if any. */
+  removeLast(): DominoStone | undefined {
     const move = this.unfrozenMoves.pop();
     if (!move) return undefined;
 
-    if (move.kind === 'OPERATOR') {
-      const node = this.nodes.get(move.nodeId)!;
-      const slot = node.slots[move.slotIndex];
-      const operator = slot.pendingOperator!;
-      slot.state = 'OPEN';
-      slot.pendingOperator = undefined;
-      return { type: 'OPERATOR', data: operator };
-    }
-
     const childNode = this.nodes.get(move.childNodeId)!;
-    const stoneData: DominoStone = { id: childNode.nodeId, leftVal: childNode.leftVal, rightVal: childNode.rightVal };
+    const stoneData: DominoStone = {
+      id: childNode.nodeId,
+      leftVal: childNode.leftVal,
+      rightVal: childNode.rightVal,
+      isGolden: childNode.isGolden,
+      modifier: childNode.modifier,
+      tags: childNode.tags,
+    };
     this.nodes.delete(move.childNodeId);
 
     if (move.parentNodeId === null) {
       this.rootNodeId = null;
     } else {
       const edgeIndex = this.edges.findIndex((e) => e.childNodeId === move.childNodeId);
-      const [edge] = this.edges.splice(edgeIndex, 1);
+      this.edges.splice(edgeIndex, 1);
       const parentNode = this.nodes.get(move.parentNodeId)!;
       const parentSlot = parentNode.slots[move.parentSlotIndex!];
-      parentSlot.state = 'PENDING';
-      parentSlot.pendingOperator = edge.operator;
+      parentSlot.state = 'OPEN';
     }
 
-    return { type: 'STONE', data: stoneData };
+    return stoneData;
   }
 
-  /** Removes and returns every element currently on the board (stones and operators, placed or dangling). */
-  drainAll(): ChainElement[] {
-    const drained: ChainElement[] = [];
+  /** Removes and returns every stone currently on the board, placed or not. */
+  drainAll(): DominoStone[] {
+    const drained: DominoStone[] = [];
     for (const node of this.nodes.values()) {
-      drained.push({ type: 'STONE', data: { id: node.nodeId, leftVal: node.leftVal, rightVal: node.rightVal } });
-      for (const slot of node.slots) {
-        if (slot.state === 'PENDING' && slot.pendingOperator) {
-          drained.push({ type: 'OPERATOR', data: slot.pendingOperator });
-        }
-      }
-    }
-    for (const edge of this.edges) {
-      drained.push({ type: 'OPERATOR', data: edge.operator });
+      drained.push({
+        id: node.nodeId,
+        leftVal: node.leftVal,
+        rightVal: node.rightVal,
+        isGolden: node.isGolden,
+        modifier: node.modifier,
+        tags: node.tags,
+      });
     }
     this.nodes = new Map();
     this.edges = [];
@@ -345,21 +316,7 @@ export class Board {
     return drained;
   }
 
-  /** [Breaker consumable] Removes a pending operator from a slot, making it OPEN again. */
-  removeOperator(slotId: SlotId): OperatorCard | null {
-    const found = this.findSlot(slotId);
-    if (!found || found.slot.state !== 'PENDING') return null;
-    const operator = found.slot.pendingOperator!;
-    found.slot.state = 'OPEN';
-    found.slot.pendingOperator = undefined;
-    // Clean up move log if it was placed in the current turn
-    this.unfrozenMoves = this.unfrozenMoves.filter(
-      (m) => !(m.kind === 'OPERATOR' && m.nodeId === found.node.nodeId && m.slotIndex === found.index)
-    );
-    return operator;
-  }
-
-  /** [Magnet consumable] Removes a leaf node from the board, restoring its parent slot to PENDING. */
+  /** [Magnet consumable] Removes a leaf node from the board, restoring its parent slot to OPEN. */
   removeNode(nodeId: string): DominoStone | null {
     // Check if it is a parent of any edge (i.e. not a leaf)
     const isParent = this.edges.some((e) => e.parentNodeId === nodeId);
@@ -368,14 +325,13 @@ export class Board {
     const node = this.nodes.get(nodeId);
     if (!node) return null;
 
-    const stone: DominoStone = { id: node.nodeId, leftVal: node.leftVal, rightVal: node.rightVal, isGolden: node.slots[0]?.value === 999 /* dummy to check, keep type check simple */ };
-    // Fetch actual golden status if stored
-    const goldenState = (node as any).isGolden;
-    const resultStone: DominoStone & { isGolden?: boolean } = {
+    const resultStone: DominoStone = {
       id: node.nodeId,
       leftVal: node.leftVal,
       rightVal: node.rightVal,
-      isGolden: goldenState,
+      isGolden: node.isGolden,
+      modifier: node.modifier,
+      tags: node.tags,
     };
 
     this.nodes.delete(nodeId);
@@ -390,20 +346,44 @@ export class Board {
         if (parentNode) {
           const slotIndex = parentNode.slots.findIndex((s) => s.slotId === edge.parentSlotId);
           if (slotIndex !== -1) {
-            const slot = parentNode.slots[slotIndex];
-            slot.state = 'PENDING';
-            slot.pendingOperator = edge.operator;
+            parentNode.slots[slotIndex].state = 'OPEN';
           }
         }
       }
     }
 
     // Clean up move log if it was placed in the current turn
-    this.unfrozenMoves = this.unfrozenMoves.filter(
-      (m) => !(m.kind === 'STONE' && m.childNodeId === nodeId)
-    );
+    this.unfrozenMoves = this.unfrozenMoves.filter((m) => m.childNodeId !== nodeId);
 
     return resultStone;
+  }
+
+  removeEdgeById(edgeId: string): boolean {
+    const edgeIndex = this.edges.findIndex((e) => e.edgeId === edgeId);
+    if (edgeIndex === -1) return false;
+    const [edge] = this.edges.splice(edgeIndex, 1);
+    
+    // Open parent slot
+    const parentNode = this.nodes.get(edge.parentNodeId);
+    if (parentNode) {
+      const slot = parentNode.slots.find((s) => s.slotId === edge.parentSlotId);
+      if (slot) {
+        slot.state = 'OPEN';
+      }
+    }
+    
+    // Open child slot
+    const childNode = this.nodes.get(edge.childNodeId);
+    if (childNode) {
+      const slot = childNode.slots.find((s) => s.slotId === edge.childSlotId);
+      if (slot) {
+        slot.state = 'OPEN';
+      }
+    }
+
+    // Clean move log relation
+    this.unfrozenMoves = this.unfrozenMoves.filter((m) => m.childNodeId !== edge.childNodeId);
+    return true;
   }
 
   reset(): void {
@@ -455,12 +435,49 @@ export class Board {
   }
 
   /** Removes and returns only the elements placed since the last freeze, leaving committed elements in place. */
-  drainUnscored(): ChainElement[] {
-    const drained: ChainElement[] = [];
+  drainUnscored(): DominoStone[] {
+    const drained: DominoStone[] = [];
     while (this.unfrozenMoves.length > 0) {
       const el = this.removeLast();
       if (el) drained.push(el);
     }
     return drained;
+  }
+
+  /**
+   * Classifies the shape of the currently unfrozen chain — straight, branched, or loop.
+   */
+  detectHandType(): HandType {
+    if (this.rootNodeId === null) return 'STRAIGHT';
+
+    // Loop check: If the root's first slot (slot #0, which attaches to nothing) value
+    // matches the exposed value of any active leaf node, and chain size is >= 4
+    const rootNode = this.nodes.get(this.rootNodeId);
+    if (rootNode && this.nodes.size >= 4) {
+      const startSlot = rootNode.slots[0];
+      if (startSlot && startSlot.state === 'OPEN') {
+        const startVal = startSlot.value;
+        // Check all leaves
+        for (const node of this.nodes.values()) {
+          if (node.nodeId === this.rootNodeId) continue;
+          const childEdges = this.edges.filter((e) => e.parentNodeId === node.nodeId);
+          if (childEdges.length === 0) {
+            // Leaf node: check open slot value
+            const openSlot = node.slots.find((s) => s.state === 'OPEN');
+            if (openSlot && openSlot.value === startVal) {
+              return 'LOOP';
+            }
+          }
+        }
+      }
+    }
+
+    // Branched check: if any node has more than one child connected to it
+    for (const node of this.nodes.values()) {
+      const childCount = this.edges.filter((e) => e.parentNodeId === node.nodeId).length;
+      if (childCount > 1) return 'BRANCHED';
+    }
+
+    return 'STRAIGHT';
   }
 }

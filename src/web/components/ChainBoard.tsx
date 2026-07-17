@@ -1,10 +1,9 @@
-import { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import type { Board, SlotId } from '../../models/Board.js';
 import Tile from './Tile.js';
-import OperatorTile from './OperatorTile.js';
 
 export type SlotState = 'none' | 'legal' | 'illegal';
-export type SelectionKind = 'STONE' | 'OPERATOR' | null;
+export type SelectionKind = 'STONE' | null;
 
 interface ChainBoardProps {
   board: Board;
@@ -13,10 +12,12 @@ interface ChainBoardProps {
   onCommit: (slotId: SlotId) => void;
   highlightedEdgeId?: string | null;
   highlightedNodeId?: string | null;
-  activeSpellType?: 'MAGNET' | 'BREAKER' | 'GILD' | null;
+  activeSpellType?: 'MAGNET' | 'GILD' | null;
   onSelectNode?: (nodeId: string) => void;
-  onSelectOperatorSlot?: (slotId: SlotId) => void;
-  spellEffect?: { id: string; type: 'GILD' | 'MAGNET' | 'BREAKER' } | null;
+  spellEffect?: { id: string; type: 'GILD' | 'MAGNET' } | null;
+  isGathering?: boolean;
+  onSelectEdge?: (edgeId: string) => void;
+  activeConsumable?: string | null;
 }
 
 const SLOT_CLASS: Record<SlotState, string> = {
@@ -25,14 +26,14 @@ const SLOT_CLASS: Record<SlotState, string> = {
   illegal: 'cursor-not-allowed border-solid border-rose-400 bg-rose-50 text-rose-400 dark:bg-rose-900/20',
 };
 
-function SlotButton({ state, onClick, compact }: { state: SlotState; onClick: () => void; compact?: boolean }) {
+function SlotButton({ state, onClick }: { state: SlotState; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={state === 'legal' ? onClick : undefined}
       disabled={state !== 'legal'}
       className={[
-        compact ? 'flex h-11 w-11 rounded-full text-xl' : 'flex h-14 w-14 rounded-lg text-2xl',
+        'flex h-14 w-14 rounded-lg text-2xl',
         'items-center justify-center border-2 font-bold transition',
         SLOT_CLASS[state],
       ].join(' ')}
@@ -58,24 +59,23 @@ function assignDirections(isDouble: boolean, incoming: Dir | null): Dir[] {
   return isDouble ? [attach, ...ALL_DIRS.filter((d) => d !== attach)] : [attach, incoming];
 }
 
-interface SlotCell {
+interface OpenSlotCell {
   pos: Vec;
-  dir: Dir;
 }
 
 /**
- * Walks the graph and assigns every node a full grid coordinate and every slot a midpoint
- * coordinate (halfway between a node and where its neighbor sits), so operators render right
- * on the seam between two touching tiles instead of floating on a connector line.
+ * Walks the graph and assigns every node a full grid coordinate, plus a target cell for every
+ * still-OPEN slot (one step over in its direction — classic domino end-to-end, tiles touch
+ * directly with no seam element between them now that there's no operator).
  */
 function layoutGraph(
   board: Board
-): { positions: Map<string, Vec>; slotCells: Map<SlotId, SlotCell>; nodeDirs: Map<string, Dir[]> } {
+): { positions: Map<string, Vec>; openSlotCells: Map<SlotId, OpenSlotCell>; nodeDirs: Map<string, Dir[]> } {
   const positions = new Map<string, Vec>();
-  const slotCells = new Map<SlotId, SlotCell>();
+  const openSlotCells = new Map<SlotId, OpenSlotCell>();
   const nodeDirs = new Map<string, Dir[]>();
   const rootId = board.getRootNodeId();
-  if (rootId === null) return { positions, slotCells, nodeDirs };
+  if (rootId === null) return { positions, openSlotCells, nodeDirs };
 
   const nodesById = new Map(board.getNodes().map((n) => [n.nodeId, n]));
 
@@ -92,18 +92,18 @@ function layoutGraph(
 
       const dir = dirs[i];
       const [dx, dy] = VECTOR[dir];
-      const midpoint: Vec = [pos[0] + dx, pos[1] + dy];
-      slotCells.set(slot.slotId, { pos: midpoint, dir });
 
       if (slot.state === 'CLOSED') {
         const edge = board.getEdgeFromSlot(slot.slotId)!;
-        visit(edge.childNodeId, [pos[0] + 2 * dx, pos[1] + 2 * dy], dir);
+        visit(edge.childNodeId, [pos[0] + dx, pos[1] + dy], dir);
+      } else {
+        openSlotCells.set(slot.slotId, { pos: [pos[0] + dx, pos[1] + dy] });
       }
     });
   }
 
   visit(rootId, [0, 0], null);
-  return { positions, slotCells, nodeDirs };
+  return { positions, openSlotCells, nodeDirs };
 }
 
 /**
@@ -130,21 +130,15 @@ function orientForDisplay(
     : { left: node.rightVal, right: node.leftVal, vertical: false };
 }
 
-// The board uses "doubled coordinates": a domino sits on every EVEN grid line, and the operator
-// between two touching dominoes sits on the ODD line between them. Giving those two kinds of
-// lines very different track sizes — a full tile-sized track for dominoes, a small badge-sized
-// track for operators — is what makes the chain actually look like a real domino chain (tiles
-// touching edge-to-edge with just a small connector badge on the seam) instead of floating apart.
+// Every grid track is a uniform tile-sized cell — dominoes touch directly end-to-end now that
+// there's no operator badge sitting on the seam between them.
 const NODE_COL = 113; // matches Tile's rendered footprint (h-18/w-13 boxes side by side)
 const NODE_ROW = 152; // matches Tile's vertical footprint when stacked N/S
-const OP_SIZE = 56; // small round operator badge track (both axes) — big enough that ÷ never blurs into +
 
 /** Builds the per-track pixel sizes, cumulative offsets, and a center() lookup for one axis. */
 function buildAxis(minCoord: number, maxCoord: number, nodeSize: number) {
-  const sizes: number[] = [];
-  for (let c = minCoord; c <= maxCoord; c++) {
-    sizes.push(Math.abs(c) % 2 === 0 ? nodeSize : OP_SIZE);
-  }
+  const count = maxCoord - minCoord + 1;
+  const sizes: number[] = Array.from({ length: count }, () => nodeSize);
   const offsets: number[] = [0];
   for (const s of sizes) offsets.push(offsets[offsets.length - 1] + s);
   const total = offsets[offsets.length - 1];
@@ -187,11 +181,13 @@ export default function ChainBoard({
   highlightedNodeId,
   activeSpellType,
   onSelectNode,
-  onSelectOperatorSlot,
   spellEffect,
+  isGathering = false,
+  onSelectEdge,
+  activeConsumable,
 }: ChainBoardProps) {
   const rootId = board.getRootNodeId();
-  const { positions, slotCells, nodeDirs } = layoutGraph(board);
+  const { positions, openSlotCells, nodeDirs } = layoutGraph(board);
   const { ref: containerRef, size: containerSize } = useElementSize<HTMLDivElement>();
 
   if (rootId === null) {
@@ -208,14 +204,7 @@ export default function ChainBoard({
     );
   }
 
-  const allPoints: Vec[] = [
-    ...positions.values(),
-    ...[...slotCells.values()].flatMap((c) => {
-      const [dx, dy] = VECTOR[c.dir];
-      // Reserve the cell one step beyond the midpoint too, for a PENDING slot's future closing stone.
-      return [c.pos, [c.pos[0] + dx, c.pos[1] + dy]] as Vec[];
-    }),
-  ];
+  const allPoints: Vec[] = [...positions.values(), ...[...openSlotCells.values()].map((c) => c.pos)];
   const minX = Math.min(...allPoints.map((p) => p[0]));
   const maxX = Math.max(...allPoints.map((p) => p[0]));
   const minY = Math.min(...allPoints.map((p) => p[1]));
@@ -237,10 +226,9 @@ export default function ChainBoard({
   const contentWidth = xAxis.total;
   const contentHeight = yAxis.total;
 
-  // Proportional zoom: fits both width and height, caps at 1.35x zoom, and never lets the board
-  // grow so small that a control becomes unreachable — the container falls back to scrolling
-  // instead of clipping if a chain is too tall/wide even at the floor scale.
-  const minScale = 0.4;
+  // Proportional zoom: always scale to fit within the container — no scrollbars ever.
+  // Uses a very low floor so even massive chains remain visible, and caps at 1.35x.
+  const minScale = 0.15;
   const maxScale = 1.35;
   const autoScale =
     containerSize.width > 0 && containerSize.height > 0
@@ -249,14 +237,33 @@ export default function ChainBoard({
           containerSize.height / contentHeight
         )
       : 1;
-  const scale = Math.max(minScale, Math.min(maxScale, autoScale)) * 0.9;
+  const scale = Math.max(minScale, Math.min(maxScale, autoScale)) * 0.88;
 
   const edges = board.getEdges();
+
+  const isLoop = board.detectHandType() === 'LOOP';
+  let loopCenter: { x: number; y: number } | null = null;
+  if (isLoop && nodes.length > 0) {
+    const sumX = nodes.reduce((sum, n) => {
+      const pos = positions.get(n.nodeId);
+      return sum + (pos ? pos[0] : 0);
+    }, 0);
+    const sumY = nodes.reduce((sum, n) => {
+      const pos = positions.get(n.nodeId);
+      return sum + (pos ? pos[1] : 0);
+    }, 0);
+    const avgGridX = sumX / nodes.length;
+    const avgGridY = sumY / nodes.length;
+    loopCenter = {
+      x: xAxis.center(avgGridX),
+      y: yAxis.center(avgGridY),
+    };
+  }
 
   return (
     <div
       ref={containerRef}
-      className="flex h-full w-full overflow-auto rounded-xl bg-slate-950/30 p-2 shadow-inner justify-center items-center"
+      className="flex h-full w-full overflow-hidden rounded-xl bg-slate-950/30 p-2 shadow-inner justify-center items-center"
     >
       <div
         style={{
@@ -282,10 +289,10 @@ export default function ChainBoard({
         >
         {/* Energy-line layer: connects every placed edge behind the tiles, glowing/flowing while unfrozen. */}
         <svg
-          className="pointer-events-none absolute inset-0"
+          className={`absolute inset-0 transition-opacity duration-300 ${isGathering ? 'opacity-0' : ''} ${activeConsumable === 'consumable_scissors' ? 'z-20' : 'pointer-events-none z-0'}`}
           width={contentWidth}
           height={contentHeight}
-          style={{ zIndex: 0, overflow: 'visible' }}
+          style={{ overflow: 'visible' }}
         >
           {edges.map((edge) => {
             const parentPos = positions.get(edge.parentNodeId);
@@ -294,37 +301,139 @@ export default function ChainBoard({
             const [x1, y1] = pixelCenter(parentPos);
             const [x2, y2] = pixelCenter(childPos);
             const isHighlighted = highlightedEdgeId === edge.edgeId;
+
+            const parentNode = nodeById.get(edge.parentNodeId);
+            const childNode = nodeById.get(edge.childNodeId);
+            const isAmber = (parentNode?.modifier === 'AMBER' || childNode?.modifier === 'AMBER') && !edge.frozen;
+
             return (
-              <line
-                key={edge.edgeId}
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                strokeLinecap="round"
-                className={edge.frozen ? '' : 'energy-line'}
-                stroke={
-                  isHighlighted
-                    ? 'rgba(52,211,153,0.95)'
-                    : edge.frozen
-                      ? 'rgba(100,116,139,0.35)'
-                      : 'rgba(217,158,74,0.8)'
-                }
-                strokeWidth={isHighlighted ? 6 : edge.frozen ? 3 : 4.5}
-                strokeDasharray={edge.frozen ? undefined : '9 7'}
-              />
+              <React.Fragment key={edge.edgeId}>
+                <line
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  strokeLinecap="round"
+                  className={edge.frozen ? '' : 'energy-line'}
+                  stroke={
+                    isHighlighted
+                      ? 'rgba(52,211,153,0.95)'
+                      : edge.frozen
+                        ? 'rgba(100,116,139,0.35)'
+                        : 'rgba(217,158,74,0.8)'
+                  }
+                  strokeWidth={isHighlighted ? 6 : edge.frozen ? 3 : 4.5}
+                  strokeDasharray={edge.frozen ? undefined : '9 7'}
+                />
+                {isAmber && (
+                  <line
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke="#fbbf24"
+                    strokeWidth={7}
+                    className="animate-pulse"
+                    opacity={0.85}
+                    style={{ filter: 'drop-shadow(0 0 10px #f59e0b)' }}
+                  />
+                )}
+                {/* Thick clickable overlay line for scissors spell */}
+                {activeConsumable === 'consumable_scissors' && (
+                  <line
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    strokeLinecap="round"
+                    stroke="rgba(244,63,94,0.15)"
+                    strokeWidth={24}
+                    className="cursor-pointer hover:stroke-rose-500/70 transition duration-150 pointer-events-auto"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onSelectEdge) onSelectEdge(edge.edgeId);
+                    }}
+                  />
+                )}
+              </React.Fragment>
             );
           })}
         </svg>
 
-        {[...positions.entries()].map(([nodeId, pos]) => {
+        {/* Dynamic connection matching sparkles */}
+        {edges.map((edge) => {
+          if (edge.frozen) return null;
+          const parentPos = positions.get(edge.parentNodeId);
+          const childPos = positions.get(edge.childNodeId);
+          if (!parentPos || !childPos) return null;
+          const [x1, y1] = pixelCenter(parentPos);
+          const [x2, y2] = pixelCenter(childPos);
+          const midX = (x1 + x2) / 2;
+          const midY = (y1 + y2) / 2;
+          
+          return (
+            <div key={`sparks-${edge.edgeId}`} className="absolute pointer-events-none" style={{ left: 0, top: 0, zIndex: 10 }}>
+              {Array.from({ length: 5 }).map((_, i) => {
+                const angle = (i * 2 * Math.PI) / 5;
+                const dist = 12 + Math.random() * 15;
+                const dx = `${Math.cos(angle) * dist}px`;
+                const dy = `${Math.sin(angle) * dist}px`;
+                return (
+                  <span
+                    key={i}
+                    className="spark-particle"
+                    style={{
+                      left: `${midX}px`,
+                      top: `${midY}px`,
+                      ['--dx' as any]: dx,
+                      ['--dy' as any]: dy,
+                      animationDelay: `${Math.random() * 80}ms`,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
+
+        {/* Swirling Portal Loop Vortex behind nodes */}
+        {isLoop && loopCenter && (
+          <div
+            className="vortex-glow"
+            style={{
+              left: `${loopCenter.x}px`,
+              top: `${loopCenter.y}px`,
+              transform: 'translate(-50%, -50%)',
+              position: 'absolute',
+              zIndex: 0,
+            }}
+          />
+        )}
+
+        {[...positions.entries()].map(([nodeId, pos], index) => {
           const node = nodeById.get(nodeId)!;
           const { left, right, vertical } = orientForDisplay(node, nodeDirs.get(nodeId));
           const isLeaf = !edges.some((e) => e.parentNodeId === nodeId);
           const isMagnetTarget = activeSpellType === 'MAGNET' && isLeaf;
 
+          const animationClass = isGathering ? 'animate-gather-board' : '';
+          const gatherDelay = isGathering ? `${index * 60}ms` : undefined;
+
+          const isChild = edges.some((e) => e.childNodeId === nodeId);
+          const isParent = edges.some((e) => e.parentNodeId === nodeId);
+          const leftConnected = isChild;
+          const rightConnected = isParent || (!isChild && edges.length > 0);
+
           return (
-            <div key={`node-${nodeId}`} style={cell(pos)}>
+            <div
+              key={`node-${nodeId}`}
+              style={{
+                ...cell(pos),
+                animationDelay: gatherDelay,
+                animationFillMode: isGathering ? 'forwards' : undefined,
+              }}
+              className={animationClass}
+            >
               <Tile
                 left={left}
                 right={right}
@@ -337,71 +446,22 @@ export default function ChainBoard({
                 highlighted={highlightedNodeId === nodeId || isMagnetTarget}
                 onClick={isMagnetTarget && onSelectNode ? () => onSelectNode(nodeId) : undefined}
                 spellEffect={spellEffect?.id === nodeId && spellEffect.type === 'MAGNET' ? 'MAGNET' : null}
+                leftConnected={leftConnected}
+                rightConnected={rightConnected}
               />
             </div>
           );
         })}
 
-        {[...slotCells.entries()].map(([slotId, { pos, dir }]) => {
-          const slots = board.getSlots(slotId.slice(0, slotId.lastIndexOf('#')));
-          const slot = slots.find((s) => s.slotId === slotId);
-          if (!slot) return null;
-
-          if (slot.state === 'CLOSED') {
-            const edge = board.getEdgeFromSlot(slotId)!;
-            const isHighlighted = highlightedEdgeId === edge.edgeId;
+        {selectionKind === 'STONE' &&
+          [...openSlotCells.entries()].map(([slotId, { pos }]) => {
+            const state: SlotState = legalSlotIds.has(slotId) ? 'legal' : 'illegal';
             return (
-              <div key={slotId} style={cell(pos)} className="relative">
-                {isHighlighted && (
-                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center z-0">
-                    <span className="animate-impact-ring w-16 h-16 rounded-full border-4 border-emerald-400" />
-                  </span>
-                )}
-                <OperatorTile
-                  symbol={edge.operator.symbol}
-                  animateIn
-                  frozen={edge.frozen}
-                  highlighted={isHighlighted}
-                  compact
-                />
+              <div key={slotId} style={cell(pos)}>
+                <SlotButton state={state} onClick={() => onCommit(slotId)} />
               </div>
             );
-          }
-
-          if (slot.state === 'PENDING') {
-            const showButton = selectionKind === 'STONE';
-            const state: SlotState = legalSlotIds.has(slotId) ? 'legal' : 'illegal';
-            const [dx, dy] = VECTOR[dir];
-            const closingPos: Vec = [pos[0] + dx, pos[1] + dy];
-            const isBreakerTarget = activeSpellType === 'BREAKER';
-
-            return [
-              <div key={slotId} style={cell(pos)}>
-                <OperatorTile
-                  symbol={slot.pendingOperator!.symbol}
-                  highlighted={isBreakerTarget}
-                  onClick={isBreakerTarget && onSelectOperatorSlot ? () => onSelectOperatorSlot(slotId) : undefined}
-                  compact
-                  spellEffect={spellEffect?.id === slotId && spellEffect.type === 'BREAKER' ? 'BREAKER' : null}
-                />
-              </div>,
-              showButton && (
-                <div key={`${slotId}-close`} style={cell(closingPos)}>
-                  <SlotButton state={state} onClick={() => onCommit(slotId)} />
-                </div>
-              ),
-            ];
-          }
-
-          // OPEN
-          if (selectionKind !== 'OPERATOR') return null;
-          const state: SlotState = legalSlotIds.has(slotId) ? 'legal' : 'illegal';
-          return (
-            <div key={slotId} style={cell(pos)}>
-              <SlotButton state={state} onClick={() => onCommit(slotId)} compact />
-            </div>
-          );
-        })}
+          })}
       </div>
     </div>
   </div>

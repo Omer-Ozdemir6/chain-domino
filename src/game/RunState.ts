@@ -1,16 +1,54 @@
 import { GameState, type GameConfig } from './GameState.js';
 import { CHARMS } from '../models/CharmRegistry.js';
 import type { CharmDef, CharmHooks, RoundEndContext } from '../models/Charm.js';
-import type { DominoStone, OperatorType, TileModifier } from '../models/types.js';
+import type { DominoStone, TileModifier, HandType } from '../models/types.js';
+import { calculateScore, type ScoreCalculationResult, type PlayState } from '../engine/scoreCalculator.js';
 
 export type RunStatus = 'IN_PROGRESS' | 'WON' | 'LOST';
 export type RunPhase =
   | 'START_SCREEN'
   | 'BLIND_SELECT'
   | 'PLAYING'
+  | 'ROUND_REWARD'
   | 'SHOP'
   | 'RUN_OVER_SCREEN'
   | 'CONGRATS_UNLOCK';
+
+export interface SkipTag {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  effect: 'FREE_SHOP_ITEM' | 'SHOP_DISCOUNT' | 'ADD_MONEY' | 'EXTRA_DISCARDS' | 'FREE_THEOREM';
+}
+
+const TAG_POOL: Omit<SkipTag, 'id'>[] = [
+  { name: 'Altın Kupon', description: 'Dükkandaki ilk satın alım tamamen bedava olur.', icon: '🏷️', effect: 'FREE_SHOP_ITEM' },
+  { name: 'Kozmik İndirim', description: 'Bir sonraki dükkanda tüm fiyatlar %50 indirimli olur.', icon: '🪐', effect: 'SHOP_DISCOUNT' },
+  { name: 'Ekonomi Etiketi', description: 'Anında +$6 bakiye kazandırır.', icon: '💰', effect: 'ADD_MONEY' },
+  { name: 'Iskarta Rünü', description: 'Bir sonraki turda fazladan +2 ıskarta hakkı verir.', icon: '🔄', effect: 'EXTRA_DISCARDS' },
+  { name: 'Bilgelik Kitabı', description: 'İlk alacağınız Risale (Teorem Kitabı) bedava olur.', icon: '☄️', effect: 'FREE_THEOREM' },
+];
+
+export function generateRandomTag(): SkipTag {
+  const base = TAG_POOL[Math.floor(Math.random() * TAG_POOL.length)];
+  return {
+    ...base,
+    id: `tag_${Math.random().toString(36).substring(2, 6)}`,
+  };
+}
+
+export interface RoundRewardLine {
+  label: string;
+  amount: number;
+}
+
+export interface RoundRewardSummary {
+  lines: RoundRewardLine[];
+  total: number;
+  moneyBefore: number;
+  moneyAfter: number;
+}
 
 export interface RunConfig {
   totalRounds: number;
@@ -18,7 +56,6 @@ export interface RunConfig {
   targetGrowthFactor: number;
   baseTurns: number;
   stonesPerTurn: number;
-  operatorsPerTurn: number;
   maxPips?: number;
   startingMoney: number;
   maxCharmSlots: number;
@@ -26,18 +63,60 @@ export interface RunConfig {
   rerollCost: number;
 }
 
+// Halved relative to the original curve: the natural-sum + hand-type-level scoring engine (plus
+// stonesPerTurn now at 5, up from 3) still leaves Ante 1's Small Blind out of reach for a
+// first-time, charm-less run at the old 300/800/2000/... numbers. Halving keeps the same growth
+// shape (so late-game charm/level scaling still ramps the same way) while giving new players a
+// realistic shot at clearing Ante 1 on natural sums alone.
+export const ANTE_TARGETS: Record<number, number> = {
+  1: 300,
+  2: 800,
+  3: 2000,
+  4: 5000,
+  5: 12000,
+  6: 28000,
+  7: 60000,
+  8: 140000,
+};
+
 const DEFAULT_RUN_CONFIG: RunConfig = {
   totalRounds: 8,
-  startingTarget: 50,
-  targetGrowthFactor: 1.35,
+  startingTarget: 300,
+  targetGrowthFactor: 2.2,
   baseTurns: 6,
-  stonesPerTurn: 3,
-  operatorsPerTurn: 2,
+  stonesPerTurn: 7,
   startingMoney: 4,
   maxCharmSlots: 5,
   shopSize: 3,
   rerollCost: 2,
 };
+
+export function getHandStats(type: HandType, level: number): { chips: number; mult: number } {
+  if (type === 'STRAIGHT') {
+    return { chips: 15 + (level - 1) * 10, mult: 1 + (level - 1) * 1 };
+  }
+  if (type === 'BRANCHED') {
+    return { chips: 25 + (level - 1) * 15, mult: 2 + (level - 1) * 2 };
+  }
+  if (type === 'LOOP') {
+    return { chips: 40 + (level - 1) * 20, mult: 3 + (level - 1) * 3 };
+  }
+  return { chips: 10, mult: 1 };
+}
+
+export interface TheoremBookDef {
+  id: string;
+  handType: HandType;
+  name: string;
+  description: string;
+  cost: number;
+}
+
+export const THEOREM_BOOKS: readonly TheoremBookDef[] = [
+  { id: 'book_straight', handType: 'STRAIGHT', name: 'Düz Hat Risalesi', description: 'Düz Zincir el seviyesini kalıcı olarak +1 artırır (+10 Chip, +1 Çarpan).', cost: 3 },
+  { id: 'book_branched', handType: 'BRANCHED', name: 'Çatallanma Teorisi', description: 'Çatallı Zincir el seviyesini kalıcı olarak +1 artırır (+15 Chip, +2 Çarpan).', cost: 4 },
+  { id: 'book_loop', handType: 'LOOP', name: 'Sonsuz Döngü Kitabı', description: 'Sonsuz Döngü el seviyesini kalıcı olarak +1 artırır (+20 Chip, +3 Çarpan).', cost: 5 },
+];
 
 export interface RoundRecord {
   round: number;
@@ -48,6 +127,17 @@ export interface RoundRecord {
   skipped?: boolean;
 }
 
+export interface CashoutDetails {
+  blind: 'SMALL' | 'BIG' | 'BOSS';
+  blindReward: number;
+  turnsLeft: number;
+  turnsLeftReward: number;
+  interest: number;
+  charmBonus: number;
+  merchantsBonus: number;
+  totalPayout: number;
+}
+
 export interface ShopActionResult {
   ok: boolean;
   error?: string;
@@ -55,37 +145,36 @@ export interface ShopActionResult {
 }
 
 export type ShopUpgradeId =
-  | 'cosmic_add'
-  | 'cosmic_sub'
-  | 'cosmic_mul'
-  | 'cosmic_div'
   | 'consumable_magnet'
-  | 'consumable_breaker'
   | 'consumable_gild'
   | 'consumable_ivory'
   | 'consumable_obsidian'
-  | 'consumable_amber';
+  | 'consumable_amber'
+  | 'consumable_trash'
+  | 'consumable_scissors'
+  | 'consumable_magnifier'
+  | 'consumable_transmute'
+  | 'consumable_clover';
 
 export interface ShopUpgradeDef {
   id: ShopUpgradeId;
   name: string;
   description: string;
   cost: number;
-  type: 'COSMIC' | 'CONSUMABLE';
-  operator?: OperatorType;
+  type: 'CONSUMABLE';
 }
 
 export const SHOP_UPGRADES: readonly ShopUpgradeDef[] = [
-  { id: 'cosmic_add', name: 'Kozmik Artı (+)', description: 'Toplama (+) operatörünü seviye atlatır. Her seviye toplama işlemine +2 puan ekler.', cost: 4, type: 'COSMIC', operator: 'ADD' },
-  { id: 'cosmic_sub', name: 'Kozmik Eksi (-)', description: 'Çıkarma (-) operatörünü seviye atlatır. Çıkarma işlemine +3 puan ekler.', cost: 4, type: 'COSMIC', operator: 'SUBTRACT' },
-  { id: 'cosmic_mul', name: 'Kozmik Çarpı (x)', description: 'Çarpma (x) operatörünü seviye atlatır. Çarpma işlemine +5 puan ekler.', cost: 5, type: 'COSMIC', operator: 'MULTIPLY' },
-  { id: 'cosmic_div', name: 'Kozmik Bölü (÷)', description: 'Bölme (÷) operatörünü seviye atlatır. Bölme işlemine +4 puan ekler.', cost: 5, type: 'COSMIC', operator: 'DIVIDE' },
   { id: 'consumable_magnet', name: 'Mıknatıs', description: 'Tahtadaki dondurulmuş bir yaprak (uçta kalan) domino taşını söküp elinize geri alır.', cost: 3, type: 'CONSUMABLE' },
-  { id: 'consumable_breaker', name: 'Kırıcı', description: 'Tahtadaki dondurulmuş bir operatör taşını kırıp yok eder ve o yolu açar.', cost: 3, type: 'CONSUMABLE' },
   { id: 'consumable_gild', name: 'Yaldız', description: 'Elinizdeki bir taşı Altın Taş yapar. Altın taşlar oynandığında +$3 kazandırır.', cost: 4, type: 'CONSUMABLE' },
   { id: 'consumable_ivory', name: 'Fildişi Rünü', description: 'Elinizdeki bir taşı kalıcı olarak Fildişi yapar (+15 Taban Puan).', cost: 4, type: 'CONSUMABLE' },
   { id: 'consumable_obsidian', name: 'Obsidyen Rünü', description: 'Elinizdeki bir taşı kalıcı olarak Obsidyen yapar (Çarpan x2, %25 kırılma şansı).', cost: 5, type: 'CONSUMABLE' },
   { id: 'consumable_amber', name: 'Kehribar Rünü', description: 'Elinizdeki bir taşı kalıcı olarak Kehribar yapar (Bağlandığı komşu taş sayılarını eşitler).', cost: 4, type: 'CONSUMABLE' },
+  { id: 'consumable_trash', name: 'Parçalama Ritüeli', description: 'Elinizdeki bir taşı kalıcı olarak destenizden siler (destenizi inceltir).', cost: 4, type: 'CONSUMABLE' },
+  { id: 'consumable_scissors', name: 'Mistik Makas', description: 'Tahtadaki uymayan bir bağlantıyı (edge) keser, zinciri iki bağımsız kol haline getirir.', cost: 3, type: 'CONSUMABLE' },
+  { id: 'consumable_magnifier', name: 'Tozlu Büyüteç', description: 'Elinizdeki bir domino taşının üzerindeki sayıları o el için geçici olarak ikiye katlar.', cost: 4, type: 'CONSUMABLE' },
+  { id: 'consumable_transmute', name: 'Dönüşüm İksiri', description: 'Elinizdeki bir domino taşının sol ve sağ sayılarını birbirine eşitler (çift/spinner yapar).', cost: 4, type: 'CONSUMABLE' },
+  { id: 'consumable_clover', name: 'Uğurlu Yonca', description: 'Elinizdeki tüm taşları o el için altın taş yapar (+3 dolar kazanç).', cost: 5, type: 'CONSUMABLE' },
 ];
 
 export type VoucherId =
@@ -161,17 +250,18 @@ export interface BoosterPackDef {
 }
 
 export const BOOSTER_PACKS: readonly BoosterPackDef[] = [
-  { id: 'booster_standard', name: 'Standart Taş Paketi', description: '3 adet rastgele normal domino taşı üretir, 1 tanesini destenize seçersiniz.', cost: 4, modifier: 'NORMAL' },
-  { id: 'booster_obsidian', name: 'Obsidyen Paketi', description: '3 adet Obsidyen taş üretir, 1 tanesini destenize seçersiniz.', cost: 8, modifier: 'OBSIDIAN' },
-  { id: 'booster_ivory', name: 'Fildişi Paketi', description: '3 adet Fildişi taş üretir, 1 tanesini destenize seçersiniz.', cost: 7, modifier: 'IVORY' },
-  { id: 'booster_amber', name: 'Kehribar Paketi', description: '3 adet Kehribar taş üretir, 1 tanesini destenize seçersiniz.', cost: 6, modifier: 'AMBER' },
+  { id: 'booster_standard', name: 'Standart Taş Kesesi', description: '3 adet rastgele normal domino taşı içeren mistik kese; 1 tanesini destenize seçersiniz.', cost: 4, modifier: 'NORMAL' },
+  { id: 'booster_obsidian', name: 'Obsidyen Kesesi', description: '3 adet Obsidyen taşı içeren kese; 1 tanesini destenize seçersiniz.', cost: 8, modifier: 'OBSIDIAN' },
+  { id: 'booster_ivory', name: 'Fildişi Kesesi', description: '3 adet Fildişi taşı içeren kese; 1 tanesini destenize seçersiniz.', cost: 7, modifier: 'IVORY' },
+  { id: 'booster_amber', name: 'Kehribar Kesesi', description: '3 adet Kehribar taşı içeren kese; 1 tanesini destenize seçersiniz.', cost: 6, modifier: 'AMBER' },
 ];
 
 export type ShopOffer =
   | { type: 'CHARM'; item: CharmDef }
   | { type: 'UPGRADE'; item: ShopUpgradeDef }
   | { type: 'VOUCHER'; item: VoucherDef }
-  | { type: 'BOOSTER'; item: BoosterPackDef };
+  | { type: 'BOOSTER'; item: BoosterPackDef }
+  | { type: 'THEOREM'; item: TheoremBookDef };
 
 // ─────────────────────────────────────────────────────────────
 // BOSS BLINDS
@@ -195,8 +285,8 @@ export const BOSS_BLINDS: readonly BossBlindDef[] = [
   {
     id: 'boss_blind_judge',
     name: 'Kör Kadı',
-    flavorText: '"Adalet kördür — ve bölme göze görünmez."',
-    ruleLabel: 'Bölme (÷) operatörü yasak!',
+    flavorText: '"Adalet kördür — tek sayı taşıyan taşları görmez."',
+    ruleLabel: 'Tek toplamlı taş varsa tılsımlar tetiklenmez!',
     tier: 'MODERATE',
     icon: '⚖️',
   },
@@ -211,8 +301,8 @@ export const BOSS_BLINDS: readonly BossBlindDef[] = [
   {
     id: 'boss_blind_gate',
     name: 'Demirli Kapı',
-    flavorText: '"Toplama kolaydır — kolayı yasakla."',
-    ruleLabel: 'Toplama (+) operatörü yasak!',
+    flavorText: '"Bu kapı yalnız düz yoldan geçenleri tanır."',
+    ruleLabel: 'Çatallı zincir yasak — sadece düz zincir!',
     tier: 'DANGEROUS',
     icon: '🔒',
   },
@@ -243,16 +333,16 @@ export const BOSS_BLINDS: readonly BossBlindDef[] = [
   {
     id: 'boss_blind_watcher',
     name: 'Gözetleyen Göz',
-    flavorText: '"Her tekrar bir zayıflıktır."',
-    ruleLabel: 'Aynı operatör üst üste kullanılamaz!',
+    flavorText: '"Uzun zincirler dikkatimi dağıtır."',
+    ruleLabel: 'Bir elde en fazla 4 taş oynanabilir!',
     tier: 'LETHAL',
     icon: '👁️',
   },
   {
     id: 'boss_blind_pressure',
     name: 'Büyük Baskı',
-    flavorText: '"Kötüleri iki katla, iyileri bir kat."',
-    ruleLabel: 'Çıkarma negatifleri ×2 ceza!',
+    flavorText: '"Çiftlerin ağırlığı seni ezer."',
+    ruleLabel: 'Çiftli (spinner) taş varsa çarpan yarıya iner!',
     tier: 'LETHAL',
     icon: '🌑',
   },
@@ -263,10 +353,10 @@ export const BOSS_BLINDS: readonly BossBlindDef[] = [
 // ─────────────────────────────────────────────────────────────
 
 export type ChestId =
-  | 'chest_collectors_safe'
-  | 'chest_alchemists_jar'
-  | 'chest_warriors_kit'
-  | 'chest_merchants_purse';
+  | 'chest_ivory'
+  | 'chest_curator'
+  | 'chest_nomad'
+  | 'chest_obsidian';
 
 export interface ChestDef {
   id: ChestId;
@@ -279,51 +369,56 @@ export interface ChestDef {
 
 export const STARTING_CHESTS: readonly ChestDef[] = [
   {
-    id: 'chest_collectors_safe',
-    name: "Koleksiyoncunun Kasası",
-    description: '+1 Tılsım slotu ve başlangıçta 1 ücretsiz UNCOMMON tılsım.',
-    icon: '🏛️',
+    id: 'chest_ivory',
+    name: "Fildişi Sandık",
+    description: 'Oyuna destesinde fazladan 4 adet kalıcı "Fildişi Mühürlü" domino taşıyla başlar.',
+    icon: '🦴',
     apply: (run) => {
-      (run.config as any).maxCharmSlots += 1;
-      const uncommons = CHARMS.filter((c) => c.rarity === 'UNCOMMON' && !run.ownedCharmIds.includes(c.id));
-      if (uncommons.length > 0) {
-        const picked = uncommons[Math.floor(Math.random() * uncommons.length)];
-        run.ownedCharmIds.push(picked.id);
+      const maxPips = run.config.maxPips ?? 6;
+      for (let i = 0; i < 4; i++) {
+        const left = Math.floor(Math.random() * (maxPips + 1));
+        const right = Math.floor(Math.random() * (maxPips + 1 - left)) + left;
+        const randId = Math.random().toString(36).substring(2, 6);
+        run.customDeck.push({
+          id: `domino_ivory_${left}_${right}_${randId}`,
+          leftVal: left,
+          rightVal: right,
+          modifier: 'IVORY',
+        });
       }
     },
   },
   {
-    id: 'chest_alchemists_jar',
-    name: "Simyacının Kavanozu",
-    description: 'Destenizden rastgele 2 taş kalıcı olarak Fildişi yapılır.',
-    icon: '⚗️',
+    id: 'chest_curator',
+    name: "Küratörün Çantası",
+    description: 'Oyuna maksimum 6 Tılsım slotuyla başlar ama başlangıç altın miktarı sıfırdır.',
+    icon: '👜',
     apply: (run) => {
-      if (run.customDeck.length < 2) return;
-      const shuffled = [...run.customDeck].sort(() => Math.random() - 0.5);
-      shuffled.slice(0, 2).forEach((stone) => {
-        const s = run.customDeck.find((x) => x.id === stone.id);
-        if (s) s.modifier = 'IVORY';
+      run.config.maxCharmSlots = 6;
+      run.money = 0;
+    },
+  },
+  {
+    id: 'chest_nomad',
+    name: "Gezgin Sandığı",
+    description: 'Dükkandaki tüm nesneleri %25 indirimli alır ama destesinde hiç 5 veya 6 barındıran taş yoktur.',
+    icon: '⛺',
+    apply: (run) => {
+      run.hasNomadDiscount = true;
+      run.customDeck = run.customDeck.filter((s) => s.leftVal < 5 && s.rightVal < 5);
+    },
+  },
+  {
+    id: 'chest_obsidian',
+    name: "Obsidyen Sandık",
+    description: 'Destenizdeki tüm çiftli taşlar "Obsidyen (Cam)" mühürlüdür (kırılırlarsa desteden silinirler).',
+    icon: '🌋',
+    apply: (run) => {
+      run.customDeck.forEach((s) => {
+        if (s.leftVal === s.rightVal) {
+          s.modifier = 'OBSIDIAN';
+        }
       });
-    },
-  },
-  {
-    id: 'chest_warriors_kit',
-    name: "Savaşçının Sandığı",
-    description: '+3 ıskarta hakkı ve +$2 başlangıç parası.',
-    icon: '⚔️',
-    apply: (run) => {
-      run.discardsLeft += 3;
-      run.money += 2;
-    },
-  },
-  {
-    id: 'chest_merchants_purse',
-    name: "Tüccarın Kesesi",
-    description: '+$6 başlangıç parası ve her tur sonunda +$1 faiz bonusu.',
-    icon: '💰',
-    apply: (run) => {
-      run.money += 6;
-      run.hasMerchantsBonus = true;
     },
   },
 ];
@@ -365,23 +460,40 @@ export class RunState {
   phase: RunPhase = 'START_SCREEN';
   ownedCharmIds: string[] = [];
   currentTarget: number;
+  /** Total score carried across every blind of the run — blinds add on top of it instead of resetting to 0. */
+  cumulativeScore = 0;
   game!: GameState;
   shopOffers: ShopOffer[] = [];
   history: RoundRecord[] = [];
+  /** Itemized money breakdown for the round that was just won, shown by RoundRewardScreen before the shop opens. */
+  lastRoundReward: RoundRewardSummary | null = null;
   customDeck: DominoStone[] = [];
+  handLevels: Record<HandType, number> = { STRAIGHT: 1, BRANCHED: 1, LOOP: 1 };
   draftOffers: DominoStone[] = [];
   activeBoosterId: string | null = null;
 
-  // Consumables & Operator Levels
-  operatorLevels: Record<OperatorType, number> = { ADD: 1, SUBTRACT: 1, MULTIPLY: 1, DIVIDE: 1 };
+  // Consumables
   consumables: string[] = [];
   discardsLeft = 2;
+  /** Permanent per-round discard bonus (e.g. from the "Savaşçının Sandığı" starting chest) — startRound()
+   *  re-derives discardsLeft from the deck base every round, so this must be re-added there each time. */
+  extraDiscardsPerRound = 0;
 
   // Permanent, run-wide upgrades bought once from the shop (never expire, never re-offered).
   ownedVoucherIds: string[] = [];
   maxConsumableSlots = 2;
   /** Set by "Kehanet Küresi" — consumed by the next rollShopOffers() call. */
   nextShopBonusCharm = false;
+
+  // Setup tags & rerolls
+  currentRerollCost = 2;
+  activeTag: SkipTag | null = null;
+  smallBlindTag: SkipTag | null = null;
+  bigBlindTag: SkipTag | null = null;
+  extraDiscardsNextRound = 0;
+  isEndless = false;
+  charmDurability: Record<string, number> = {};
+  perishedCharmMessage: string | null = null;
 
   // Run Setup selections
   selectedDeck: 'RED' | 'BLUE' | 'YELLOW' = 'RED';
@@ -392,10 +504,9 @@ export class RunState {
   activeBossId: string | null = null;
   selectedChestId: ChestId | null = null;
   hasMerchantsBonus = false;
+  hasNomadDiscount = false;
   /** Track which fused charms we own (sub-IDs of hybrid charms). */
   fusedCharmIds: string[] = [];
-  /** Last operator type played this turn (for Gözetleyen Göz boss rule). */
-  lastOperatorType: OperatorType | null = null;
 
   // Statistics tracker
   bestHandScore = 0;
@@ -407,22 +518,30 @@ export class RunState {
 
   private roundHooks: CharmHooks[] = [];
 
+  // Faz 10: İmza Tılsımlar (active/interactive charm state)
+  private activatedCharmIdsThisTurn = new Set<string>();
+  private lastActivationTurn = 0;
+  private rescueUsedThisRound = false;
+  /** Set for one tick when an onSubmitFail charm rescues the round — App.tsx reads then clears it. */
+  lastRescueCharmName: string | null = null;
+
   constructor(config: Partial<RunConfig> = {}) {
     this.config = { ...DEFAULT_RUN_CONFIG, ...config };
     this.money = this.config.startingMoney;
     this.currentTarget = this.config.startingTarget;
+    this.currentRerollCost = this.config.rerollCost;
   }
 
   initializeRun(deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED'): void {
     this.selectedDeck = deck;
     this.selectedStake = stake;
     this.money = deck === 'YELLOW' ? 8 : 4;
-    this.currentTarget = this.config.startingTarget;
+    this.currentTarget = ANTE_TARGETS[1];
+    this.cumulativeScore = 0;
     this.round = 1;
     this.status = 'IN_PROGRESS';
     this.phase = 'BLIND_SELECT';
     this.activeBlind = null;
-    this.operatorLevels = { ADD: 1, SUBTRACT: 1, MULTIPLY: 1, DIVIDE: 1 };
     this.consumables = [];
     this.ownedCharmIds = [];
     this.ownedVoucherIds = [];
@@ -431,8 +550,20 @@ export class RunState {
     this.activeBossId = null;
     this.selectedChestId = null;
     this.hasMerchantsBonus = false;
+    this.hasNomadDiscount = false;
+    this.extraDiscardsPerRound = 0;
     this.fusedCharmIds = [];
-    this.lastOperatorType = null;
+    this.lastRoundReward = null;
+    this.handLevels = { STRAIGHT: 1, BRANCHED: 1, LOOP: 1 };
+
+    this.resetRerollCost();
+    this.activeTag = null;
+    this.smallBlindTag = generateRandomTag();
+    this.bigBlindTag = generateRandomTag();
+    this.extraDiscardsNextRound = 0;
+    this.isEndless = false;
+    this.charmDurability = {};
+    this.perishedCharmMessage = null;
 
     // Generate persistent customDeck
     const initialStones: DominoStone[] = [];
@@ -451,6 +582,7 @@ export class RunState {
     this.customDeck = initialStones;
     this.draftOffers = [];
     this.activeBoosterId = null;
+    this.shopOffers = [];
     this.history = [];
     this.bestHandScore = 0;
     this.totalCardsPlayed = 0;
@@ -458,6 +590,17 @@ export class RunState {
     this.totalRerolls = 0;
     this.totalPurchases = 0;
     this.defeatedBy = '';
+
+    // An empty placeholder round so `game` is always defined the instant a run starts — lets the
+    // UI keep the board/HUD mounted as a persistent backdrop behind blind-select/shop/reward
+    // overlays instead of navigating to a separate screen. startRound() replaces this with the
+    // real thing the moment a blind is actually played.
+    this.game = new GameState({
+      targetScore: this.currentTarget,
+      maxTurns: 6,
+      stonesPerTurn: this.config.stonesPerTurn,
+      maxPips: this.config.maxPips,
+    });
   }
 
   startBlind(blindType: 'SMALL' | 'BIG' | 'BOSS'): void {
@@ -466,22 +609,34 @@ export class RunState {
     this.startRound();
   }
 
+  /** The absolute score this blind requires — the running cumulative total plus this blind's own increment,
+   *  since score carries over across the whole run instead of resetting to 0 each blind. */
   getBlindTarget(blindType: 'SMALL' | 'BIG' | 'BOSS'): number {
     const multiplier = this.selectedStake === 'RED' ? 1.25 : 1.0;
     const factor = blindType === 'SMALL' ? 0.6 : blindType === 'BIG' ? 1.0 : 1.5;
-    return Math.round(this.currentTarget * factor * multiplier);
+    const increment = Math.round(this.currentTarget * factor * multiplier);
+    return this.cumulativeScore + increment;
   }
 
   skipBlind(blindType: 'SMALL' | 'BIG'): void {
     if (this.phase !== 'BLIND_SELECT') return;
 
+    let tagToApply: SkipTag | null = null;
     if (blindType === 'SMALL') {
-      this.money += 4; // Agriculturist tag rewards $4
+      tagToApply = this.smallBlindTag;
+      this.smallBlindTag = null;
     } else {
-      // Celestial tag upgrades a random operator level
-      const ops: OperatorType[] = ['ADD', 'SUBTRACT', 'MULTIPLY', 'DIVIDE'];
-      const chosen = ops[Math.floor(Math.random() * ops.length)];
-      this.operatorLevels[chosen] += 1;
+      tagToApply = this.bigBlindTag;
+      this.bigBlindTag = null;
+    }
+
+    if (tagToApply) {
+      this.activeTag = tagToApply;
+      if (tagToApply.effect === 'ADD_MONEY') {
+        this.money += 6;
+      } else if (tagToApply.effect === 'EXTRA_DISCARDS') {
+        this.extraDiscardsNextRound = 2;
+      }
     }
 
     const blindTarget = this.getBlindTarget(blindType);
@@ -495,6 +650,7 @@ export class RunState {
     });
 
     this.activeBlind = blindType; // set temporarily to know what we skipped
+    this.currentRerollCost = this.config.rerollCost; // Reset reroll cost inflation!
     this.phase = 'SHOP';
     this.shopOffers = this.rollShopOffers();
   }
@@ -503,11 +659,17 @@ export class RunState {
   act<T>(fn: (game: GameState) => T): T {
     const result = fn(this.game);
 
+    // "Turda bir kez" tılsım aktivasyonları, gerçek bir tur ilerlemesinde sıfırlanır — bu tek
+    // merkezi mutasyon noktası, ayrı bir turn-change hook'una gerek bırakmadan bunu yapar.
+    if (this.game && this.game.turn !== this.lastActivationTurn) {
+      this.activatedCharmIdsThisTurn.clear();
+      this.lastActivationTurn = this.game.turn;
+    }
+
     if (this.phase === 'PLAYING') {
       if (this.game.status === 'WON') {
-        const blindTarget = this.getBlindTarget(this.activeBlind!);
         // Boss 6 – Hassas Terazi: cannot exceed target by more than 15
-        if (this.activeBossId === 'boss_blind_precision' && this.game.score > blindTarget + 15) {
+        if (this.activeBossId === 'boss_blind_precision' && this.game.score > this.game.config.targetScore + 15) {
           this.game.status = 'LOST';
           this.game.lossReason = null;
           this.status = 'LOST';
@@ -515,17 +677,83 @@ export class RunState {
         } else {
           this.completeRound();
         }
-      } else if (this.game.status === 'LOST' && this.game.lossReason !== 'STUCK') {
-        // STUCK is intentionally self-healing inside GameState (undo/skip stay available and
-        // clear it) — only a real loss (out of turns, or the boss-6 precision cap above) ends the run.
-        this.status = 'LOST';
-        this.defeatedBy =
-          this.activeBlind === 'SMALL' ? 'Small Blind' : this.activeBlind === 'BIG' ? 'Big Blind' : 'Boss Blind';
-        this.phase = 'RUN_OVER_SCREEN';
+      } else if (this.game.status === 'LOST') {
+        // Zamanı Büken Sarkaç ve benzeri "onSubmitFail" tılsımları: rauntta bir kez, kaybı
+        // gerçek LOST'a çevirmeden önce geri sarma/ücretsiz çekiş şansı sunar.
+        const rescue = this.rescueUsedThisRound ? null : this.tryOnSubmitFailRescue();
+        if (rescue) {
+          this.rescueUsedThisRound = true;
+        } else {
+          this.status = 'LOST';
+          this.defeatedBy =
+            this.activeBlind === 'SMALL' ? 'Small Blind' : this.activeBlind === 'BIG' ? 'Big Blind' : 'Boss Blind';
+          this.phase = 'RUN_OVER_SCREEN';
+        }
       }
     }
 
     return result;
+  }
+
+  /** Checks owned charms' onSubmitFail hooks (first one that returns a truthy result wins),
+   *  applies its rewind/free-draw, and returns its charm name — or null if no rescue applies. */
+  private tryOnSubmitFailRescue(): string | null {
+    const roundEndCtx: RoundEndContext = {
+      finalScore: this.game.score,
+      target: this.getBlindTarget(this.activeBlind!),
+      turnsUsed: this.game.turn - 1,
+      turnsLeft: Math.max(0, (this.selectedDeck === 'BLUE' ? 7 : 6) - (this.game.turn - 1)),
+      nodes: this.game.board.getNodes(),
+    };
+
+    for (let idx = 0; idx < this.ownedCharmIds.length; idx++) {
+      const hooks = this.roundHooks[idx];
+      if (!hooks?.onSubmitFail) continue;
+      const result = hooks.onSubmitFail(roundEndCtx);
+      if (!result) continue;
+
+      // submitChain() already froze the board before this runs, so the usual undo-log
+      // (undoLastMove) can no longer reach the placed stones — drain the whole board back
+      // into hand instead, and give the turn itself back too, for a genuine "second try".
+      if (result.rewind) {
+        this.game.hand.push(...this.game.board.drainAll());
+        this.game.turn = Math.max(1, this.game.turn - 1);
+      }
+      if (result.freeDraw) this.game.hand.push(...this.game.stoneDeck.draw(result.freeDraw));
+      this.game.status = 'PLAYING';
+      this.game.lossReason = null;
+
+      const def = CHARMS.find((c) => c.id === this.ownedCharmIds[idx]);
+      this.lastRescueCharmName = def?.name ?? null;
+      return this.lastRescueCharmName;
+    }
+    return null;
+  }
+
+  /** Turda bir kez, oyuncunun tıklayarak elindeki bir taşa uyguladığı manuel tılsım etkisi. */
+  useActiveCharm(charmId: string, targetStoneId: string): ShopActionResult {
+    if (this.phase !== 'PLAYING') return { ok: false, error: 'Sadece oynarken kullanılabilir.' };
+    if (!this.ownedCharmIds.includes(charmId)) return { ok: false, error: 'Bu tılsıma sahip değilsin.' };
+    if (this.activatedCharmIdsThisTurn.has(charmId)) return { ok: false, error: 'Bu tılsım bu tur zaten kullanıldı.' };
+
+    const idx = this.ownedCharmIds.indexOf(charmId);
+    const hooks = this.roundHooks[idx];
+    if (!hooks?.onActivate) return { ok: false, error: 'Bu tılsımın aktif bir yeteneği yok.' };
+
+    const stoneIdx = this.game.hand.findIndex((s) => s.id === targetStoneId);
+    if (stoneIdx === -1) return { ok: false, error: 'Taş elinizde bulunamadı.' };
+
+    const replacement = hooks.onActivate(this.game.hand[stoneIdx]);
+    if (!replacement) return { ok: false, error: 'Bu taşa uygulanamaz.' };
+
+    this.game.hand.splice(stoneIdx, 1, ...replacement);
+    this.activatedCharmIdsThisTurn.add(charmId);
+    return { ok: true };
+  }
+
+  /** Whether `charmId` has already been clicked/used this turn (for CharmBar's dimmed state). */
+  isCharmActivatedThisTurn(charmId: string): boolean {
+    return this.activatedCharmIdsThisTurn.has(charmId);
   }
 
   buyItem(itemId: string): ShopActionResult {
@@ -540,6 +768,12 @@ export class RunState {
       }
       this.money -= offer.item.cost;
       this.ownedCharmIds.push(offer.item.id);
+      
+      const charmDef = offer.item as any;
+      if (charmDef.perish && charmDef.maxDurability !== undefined) {
+        this.charmDurability[offer.item.id] = charmDef.maxDurability;
+      }
+      this.resetRerollCost(); // Apply reroll discount if small_number_love is bought!
     } else if (offer.type === 'VOUCHER') {
       this.money -= offer.item.cost;
       this.ownedVoucherIds.push(offer.item.id);
@@ -548,18 +782,25 @@ export class RunState {
       this.money -= offer.item.cost;
       this.activeBoosterId = offer.item.id;
       this.generateDraftOffers(offer.item.modifier);
+    } else if (offer.type === 'THEOREM') {
+      this.money -= offer.item.cost;
+      const handType = offer.item.handType;
+      this.handLevels[handType] = (this.handLevels[handType] ?? 1) + 1;
     } else {
       const upgrade = offer.item;
-      if (upgrade.type === 'COSMIC') {
-        this.money -= upgrade.cost;
-        const op = upgrade.operator!;
-        this.operatorLevels[op] = (this.operatorLevels[op] || 1) + 1;
-      } else {
-        if (this.consumables.length >= this.maxConsumableSlots) {
-          return { ok: false, error: `Sarf edilebilir eşya slotların dolu (Maks ${this.maxConsumableSlots}).` };
-        }
-        this.money -= upgrade.cost;
-        this.consumables.push(upgrade.id);
+      if (this.consumables.length >= this.maxConsumableSlots) {
+        return { ok: false, error: `Sarf edilebilir eşya slotların dolu (Maks ${this.maxConsumableSlots}).` };
+      }
+      this.money -= upgrade.cost;
+      this.consumables.push(upgrade.id);
+    }
+
+    // Consume one-time free tag effects
+    if (this.activeTag) {
+      if (this.activeTag.effect === 'FREE_SHOP_ITEM') {
+        this.activeTag = null;
+      } else if (this.activeTag.effect === 'FREE_THEOREM' && offer.type === 'THEOREM') {
+        this.activeTag = null;
       }
     }
 
@@ -609,6 +850,8 @@ export class RunState {
     const def = CHARMS.find((c) => c.id === charmId)!;
     const refund = Math.floor(def.cost / 2);
     this.ownedCharmIds.splice(index, 1);
+    delete this.charmDurability[charmId]; // Clean durability state
+    this.resetRerollCost(); // Update reroll cost (removes discount if small_number_love is sold)
     this.money += refund;
     return { ok: true, refund };
   }
@@ -654,9 +897,10 @@ export class RunState {
 
   rerollShop(): ShopActionResult {
     if (this.phase !== 'SHOP') return { ok: false, error: 'Mağazada değilsin.' };
-    if (this.money < this.config.rerollCost) return { ok: false, error: 'Yeterli paran yok.' };
+    if (this.money < this.currentRerollCost) return { ok: false, error: 'Yeterli paran yok.' };
 
-    this.money -= this.config.rerollCost;
+    this.money -= this.currentRerollCost;
+    this.currentRerollCost += 1; // Reroll Inflation!
     this.totalRerolls += 1;
     this.shopOffers = this.rollShopOffers();
     return { ok: true };
@@ -671,10 +915,6 @@ export class RunState {
       const stone = this.game.board.removeNode(targetId);
       if (!stone) return { ok: false, error: 'Sadece uçta kalan dondurulmuş taşları geri alabilirsiniz.' };
       this.game.hand.push(stone);
-    } else if (item === 'consumable_breaker') {
-      const op = this.game.board.removeOperator(targetId);
-      if (!op) return { ok: false, error: 'Sadece dondurulmuş ve ucu boşta olan operatörleri kırabilirsiniz.' };
-      this.game.operatorHand.push(op);
     } else if (item === 'consumable_gild') {
       const stone = this.game.hand.find((s) => s.id === targetId);
       if (!stone) return { ok: false, error: 'Taş elinizde bulunamadı.' };
@@ -697,6 +937,37 @@ export class RunState {
       stone.modifier = 'AMBER';
       const deckStone = this.customDeck.find((s) => s.id === targetId);
       if (deckStone) deckStone.modifier = 'AMBER';
+    } else if (item === 'consumable_trash') {
+      const idx = this.game.hand.findIndex((s) => s.id === targetId);
+      if (idx === -1) return { ok: false, error: 'Taş elinizde bulunamadı.' };
+      this.game.hand.splice(idx, 1);
+      this.customDeck = this.customDeck.filter((s) => s.id !== targetId);
+    } else if (item === 'consumable_scissors') {
+      const ok = this.game.board.removeEdgeById(targetId);
+      if (!ok) return { ok: false, error: 'Silinecek bağlantı bulunamadı.' };
+    } else if (item === 'consumable_magnifier') {
+      const stone = this.game.hand.find((s) => s.id === targetId);
+      if (!stone) return { ok: false, error: 'Taş elinizde bulunamadı.' };
+      stone.leftVal *= 2;
+      stone.rightVal *= 2;
+      const deckStone = this.customDeck.find((s) => s.id === targetId);
+      if (deckStone) {
+        deckStone.leftVal *= 2;
+        deckStone.rightVal *= 2;
+      }
+    } else if (item === 'consumable_transmute') {
+      const stone = this.game.hand.find((s) => s.id === targetId);
+      if (!stone) return { ok: false, error: 'Taş elinizde bulunamadı.' };
+      stone.rightVal = stone.leftVal;
+      const deckStone = this.customDeck.find((s) => s.id === targetId);
+      if (deckStone) {
+        deckStone.rightVal = deckStone.leftVal;
+      }
+    } else if (item === 'consumable_clover') {
+      if (this.game.hand.length === 0) return { ok: false, error: 'Elinizde taş yok.' };
+      this.game.hand.forEach((stone) => {
+        stone.isGolden = true;
+      });
     } else {
       return { ok: false, error: 'Bilinmeyen büyü türü.' };
     }
@@ -706,39 +977,38 @@ export class RunState {
     return { ok: true };
   }
 
-  discardSelected(stoneIds: string[], operatorIds: string[]): { ok: boolean; error?: string } {
+  discardSelected(stoneIds: string[]): { ok: boolean; error?: string } {
     if (this.phase !== 'PLAYING') return { ok: false, error: 'Iskartayı sadece oynarken yapabilirsiniz.' };
     if (this.discardsLeft <= 0) return { ok: false, error: 'Iskarta hakkınız kalmadı.' };
 
     const toDiscardStones = this.game.hand.filter((s) => stoneIds.includes(s.id));
-    const toDiscardOps = this.game.operatorHand.filter((o) => operatorIds.includes(o.id));
 
-    if (toDiscardStones.length === 0 && toDiscardOps.length === 0) {
-      return { ok: false, error: 'Lütfen ıskarta edilecek kartları seçin.' };
+    if (toDiscardStones.length === 0) {
+      return { ok: false, error: 'Lütfen ıskarta edilecek taşları seçin.' };
     }
 
     // Discard them
     this.game.stoneDeck.discard(toDiscardStones);
-    this.game.operatorDeck.discard(toDiscardOps);
 
-    this.totalCardsDiscarded += toDiscardStones.length + toDiscardOps.length;
+    this.totalCardsDiscarded += toDiscardStones.length;
 
     // Remove from hand
     this.game.hand = this.game.hand.filter((s) => !stoneIds.includes(s.id));
-    this.game.operatorHand = this.game.operatorHand.filter((o) => !operatorIds.includes(o.id));
 
     // Draw replacements
     this.game.hand.push(...this.game.stoneDeck.draw(toDiscardStones.length));
-    this.game.operatorHand.push(...this.game.operatorDeck.draw(toDiscardOps.length));
 
     this.discardsLeft -= 1;
-    (this.game as any).checkStuck();
     return { ok: true };
   }
 
   /** Leaves the shop, advances to the next blind or next Ante. */
   leaveShop(): void {
     if (this.phase !== 'SHOP') return;
+
+    this.activeTag = null; // Clear active tag effects
+    if (!this.smallBlindTag) this.smallBlindTag = generateRandomTag();
+    if (!this.bigBlindTag) this.bigBlindTag = generateRandomTag();
 
     if (this.activeBlind === 'SMALL') {
       this.phase = 'BLIND_SELECT';
@@ -748,16 +1018,29 @@ export class RunState {
       this.activeBlind = null;
     } else if (this.activeBlind === 'BOSS') {
       // Completed full Ante!
-      if (this.round >= this.config.totalRounds) {
+      if (this.round >= this.config.totalRounds && !this.isEndless) {
         this.status = 'WON';
         this.phase = 'CONGRATS_UNLOCK';
       } else {
         this.round += 1;
-        this.currentTarget = this.nextTarget(this.currentTarget);
+        this.currentTarget = ANTE_TARGETS[this.round] ?? Math.round(ANTE_TARGETS[8] * Math.pow(this.config.targetGrowthFactor, this.round - 8));
         this.phase = 'BLIND_SELECT';
         this.activeBlind = null;
+        // Generate entirely new tags for the new Ante
+        this.smallBlindTag = generateRandomTag();
+        this.bigBlindTag = generateRandomTag();
       }
     }
+  }
+
+  startEndlessMode(): void {
+    this.isEndless = true;
+    this.round += 1;
+    this.currentTarget = Math.round(ANTE_TARGETS[8] * Math.pow(this.config.targetGrowthFactor, this.round - 8));
+    this.phase = 'BLIND_SELECT';
+    this.activeBlind = null;
+    this.smallBlindTag = generateRandomTag();
+    this.bigBlindTag = generateRandomTag();
   }
 
   private completeRound(): void {
@@ -766,6 +1049,7 @@ export class RunState {
     const turnsLeft = Math.max(0, maxTurnsVal - turnsUsed);
     const blindTarget = this.getBlindTarget(this.activeBlind!);
 
+    const blindLabel = this.activeBlind === 'SMALL' ? 'Küçük Kör' : this.activeBlind === 'BIG' ? 'Büyük Kör' : 'Boss Kör';
     const blindReward = this.activeBlind === 'SMALL' ? 3 : this.activeBlind === 'BIG' ? 4 : 5;
     const interest = Math.min(5, Math.floor(this.money / 5));
 
@@ -776,14 +1060,42 @@ export class RunState {
       turnsLeft,
       nodes: this.game.board.getNodes(),
     };
-    const charmBonus = this.roundHooks.reduce(
-      (sum, h) => sum + (h.onRoundEnd ? h.onRoundEnd(roundEndCtx) : 0),
-      0
-    );
+
+    // Itemize every owned charm's onRoundEnd contribution individually (skipping zero-payout
+    // ones) instead of a single opaque lump sum, so the player can see exactly which charm paid
+    // for what — this is the "detailed ledger" screen shown before the shop opens.
+    const lines: RoundRewardLine[] = [
+      { label: `${blindLabel} Ödülü`, amount: blindReward },
+    ];
+    if (turnsLeft > 0) lines.push({ label: `Kullanılmayan Tur Bonusu (x${turnsLeft})`, amount: turnsLeft });
+    if (interest > 0) lines.push({ label: 'Faiz', amount: interest });
+    if (this.hasMerchantsBonus) lines.push({ label: 'Tüccarın Kesesi Faizi', amount: 1 });
+
+    let charmBonus = 0;
+    this.ownedCharmIds.forEach((id, idx) => {
+      const hooks = this.roundHooks[idx];
+      if (!hooks?.onRoundEnd) return;
+      const amount = hooks.onRoundEnd(roundEndCtx);
+      if (amount !== 0) {
+        charmBonus += amount;
+        const def = CHARMS.find((c) => c.id === id);
+        lines.push({ label: def?.name ?? id, amount });
+      }
+    });
 
     const totalPayout = blindReward + turnsLeft * 1 + interest + charmBonus + (this.hasMerchantsBonus ? 1 : 0);
-
+    const moneyBefore = this.money;
     this.money += totalPayout;
+
+    this.lastRoundReward = {
+      lines,
+      total: totalPayout,
+      moneyBefore,
+      moneyAfter: this.money,
+    };
+
+    // Carry the total forward — the next blind's target builds on top of this instead of a reset to 0.
+    this.cumulativeScore = this.game.score;
 
     this.history.push({
       round: this.round,
@@ -794,6 +1106,48 @@ export class RunState {
       skipped: false,
     });
 
+    // Process charm durability degradation
+    this.perishedCharmMessage = null;
+    const perishedCharms: string[] = [];
+    this.ownedCharmIds.forEach((id) => {
+      const def = CHARMS.find((c) => c.id === id);
+      if (def?.perish) {
+        const curDur = this.charmDurability[id] !== undefined ? this.charmDurability[id] : (def.maxDurability ?? 4);
+        const nextDur = curDur - 1;
+        if (nextDur <= 0) {
+          perishedCharms.push(def.name);
+          delete this.charmDurability[id];
+        } else {
+          this.charmDurability[id] = nextDur;
+        }
+      }
+    });
+
+    if (perishedCharms.length > 0) {
+      this.ownedCharmIds = this.ownedCharmIds.filter((id) => {
+        const def = CHARMS.find((c) => c.id === id);
+        if (def?.perish) {
+          return this.charmDurability[id] !== undefined;
+        }
+        return true;
+      });
+      this.perishedCharmMessage = `${perishedCharms.join(', ')} aşınarak tuzla buz oldu! ⏳`;
+    }
+
+    // Show the itemized reward ledger first — proceedToShop() (called once the player
+    // acknowledges it) is what actually opens the shop.
+    this.phase = 'ROUND_REWARD';
+  }
+
+  resetRerollCost(): void {
+    const hasDiscount = this.ownedCharmIds.includes('small_number_love');
+    this.currentRerollCost = Math.max(1, this.config.rerollCost - (hasDiscount ? 1 : 0));
+  }
+
+  /** Acknowledges the round-reward ledger and opens the shop. */
+  proceedToShop(): void {
+    if (this.phase !== 'ROUND_REWARD') return;
+    this.resetRerollCost(); // Reset reroll cost inflation and apply discount if owned!
     this.phase = 'SHOP';
     this.shopOffers = this.rollShopOffers();
   }
@@ -814,70 +1168,77 @@ export class RunState {
     const bossReducesHand = this.activeBossId === 'boss_blind_chainbreaker';
     const effectiveStonesPerTurn = bossReducesHand ? 3 : this.config.stonesPerTurn;
 
+    // Score carries over across the whole run instead of resetting each blind — blindTarget is
+    // already the absolute cumulative threshold (see getBlindTarget), not a reset-to-0 amount.
     const gameConfig: GameConfig = {
       targetScore: blindTarget,
       maxTurns: maxTurnsVal,
       stonesPerTurn: effectiveStonesPerTurn,
-      operatorsPerTurn: this.config.operatorsPerTurn,
       maxPips: this.config.maxPips,
     };
     this.game = new GameState(gameConfig);
+    this.game.score = this.cumulativeScore;
     if (this.customDeck.length > 0) {
       this.game.stoneDeck.getStones().length = 0;
       this.game.stoneDeck.discard(JSON.parse(JSON.stringify(this.customDeck)));
     }
     this.game.stoneDeck.shuffle();
     this.roundHooks = this.wireCharms();
-    this.discardsLeft = this.selectedDeck === 'RED' ? 3 : 2;
-    this.lastOperatorType = null;
+    this.discardsLeft = (this.selectedDeck === 'RED' ? 3 : 2) + this.extraDiscardsPerRound + this.extraDiscardsNextRound;
+    this.extraDiscardsNextRound = 0; // Consume the tag bonus
+
+    // Kozmik Karadelik: while owned, the board matches by ascending sequence instead of pips.
+    const sequenceCharm = this.ownedCharmIds
+      .map((id) => CHARMS.find((c) => c.id === id))
+      .find((c) => c?.placementMode === 'SEQUENCE');
+    this.game.board.setMatchMode(sequenceCharm ? 'SEQUENCE' : 'PIP');
+
+    this.activatedCharmIdsThisTurn.clear();
+    this.lastActivationTurn = this.game.turn;
+    this.rescueUsedThisRound = false;
+    this.lastRescueCharmName = null;
 
     // ─── Boss Blind submit override ────────────────────────────
     const originalSubmit = this.game.submitChain.bind(this.game);
     this.game.submitChain = () => {
       const boss = this.activeBossId;
-      const unfrozenEdges = this.game.board.getUnfrozenEdges();
+      const unfrozenStones = this.game.board.getNodes().filter((n) => !n.frozen);
 
-      // Boss 1 – Kör Kadı: block DIVIDE
-      if (boss === 'boss_blind_judge') {
-        if (unfrozenEdges.some((e) => e.operator.type === 'DIVIDE')) {
-          return { ok: false, error: '⚖️ Kör Kadı: Bölme (÷) operatörü bu aşamada yasaktır!', steps: [] };
-        }
+      // Boss 3 (Demirli Kapı): branched chains (a double used as a branch point) forbidden.
+      if (boss === 'boss_blind_gate' && this.game.board.detectHandType() === 'BRANCHED') {
+        return { ok: false, error: 'Demirli Kapı: Çatallı zincir bu aşamada yasaktır, sadece düz zincir!', steps: [] };
       }
 
-      // Boss 3 – Demirli Kapı: block ADD
-      if (boss === 'boss_blind_gate') {
-        if (unfrozenEdges.some((e) => e.operator.type === 'ADD')) {
-          return { ok: false, error: '🔒 Demirli Kapı: Toplama (+) operatörü bu aşamada yasaktır!', steps: [] };
-        }
-      }
-
-      // Boss 7 – Gözetleyen Göz: block same operator used consecutively
-      if (boss === 'boss_blind_watcher' && this.lastOperatorType !== null) {
-        const firstOpType = unfrozenEdges[0]?.operator?.type ?? null;
-        if (firstOpType && firstOpType === this.lastOperatorType) {
-          return {
-            ok: false,
-            error: `👁️ Gözetleyen Göz: ${firstOpType} operatörünü üst üste kullanamazsın!`,
-            steps: [],
-          };
-        }
+      // Boss 7 (Gözetleyen Göz): at most 4 stones per submission.
+      if (boss === 'boss_blind_watcher' && unfrozenStones.length > 4) {
+        return { ok: false, error: 'Gözetleyen Göz: Bir elde en fazla 4 taş oynayabilirsin!', steps: [] };
       }
 
       // Find any golden / special stones placed this turn
-      const unscoredNodes = this.game.board.getNodes().filter((n) => !n.frozen);
-      const unscoredGoldenCount = unscoredNodes.filter((n) => (n as any).isGolden).length;
-      const unscoredEdgesCount = unfrozenEdges.length;
+      const unscoredGoldenCount = unfrozenStones.filter((n) => (n as any).isGolden).length;
+      const unscoredStoneCount = unfrozenStones.length;
 
-      // Construct activeCharms array for the score engine
-      const activeCharms = this.ownedCharmIds.map((id, idx) => {
-        const def = CHARMS.find((c) => c.id === id);
-        return { id, name: def?.name ?? '', hooks: this.roundHooks[idx] };
-      });
+      // buildActiveCharms() applies Boss 1's (Kör Kadı) odd-stone charm-silence rule and injects
+      // the mirror/pressure boss hooks — same logic previewScore() uses, kept in sync by construction.
+      const stonesForCharms: DominoStone[] = unfrozenStones.map((n) => ({
+        id: n.nodeId,
+        leftVal: n.leftVal,
+        rightVal: n.rightVal,
+        isGolden: n.isGolden,
+        modifier: n.modifier,
+        tags: n.tags,
+      }));
+      const activeCharms = this.buildActiveCharms(stonesForCharms);
 
-      const res = originalSubmit(activeCharms, this.operatorLevels);
+      const handType = this.game.board.detectHandType();
+      const handLevel = this.handLevels[handType] ?? 1;
+      const handStats = getHandStats(handType, handLevel);
+      const handTypeName = handType === 'STRAIGHT' ? 'Düz Zincir' : handType === 'BRANCHED' ? 'Çatallı Zincir' : 'Sonsuz Döngü';
+
+      const res = originalSubmit(activeCharms, handStats, handTypeName);
 
       if (res.ok && res.scoreGained !== undefined) {
-        this.totalCardsPlayed += unscoredEdgesCount;
+        this.totalCardsPlayed += unscoredStoneCount;
         this.bestHandScore = Math.max(this.bestHandScore, res.scoreGained);
 
         // Award $3 per golden stone submitted
@@ -890,18 +1251,13 @@ export class RunState {
 
         // Boss 4 – Cam Kırıcı: 100% obsidian break (override normal 25%)
         if (this.activeBossId === 'boss_blind_glassbreaker') {
-          const obsidianIds = unscoredNodes
+          const obsidianIds = unfrozenStones
             .filter((n) => (n as any).modifier === 'OBSIDIAN')
             .map((n) => n.nodeId);
           if (obsidianIds.length > 0) {
             obsidianIds.forEach((id) => this.game.stoneDeck.removeStoneById(id));
             this.customDeck = this.customDeck.filter((s) => !obsidianIds.includes(s.id));
           }
-        }
-
-        // Track last operator used (for Gözetleyen Göz)
-        if (unfrozenEdges.length > 0) {
-          this.lastOperatorType = unfrozenEdges[unfrozenEdges.length - 1].operator.type;
         }
       }
       return res;
@@ -910,46 +1266,95 @@ export class RunState {
     this.game.drawForTurn();
   }
 
+  /** Boss 2 (Aynalı Kule) and Boss 8 (Büyük Baskı) are implemented as a synthetic charm hook
+   *  appended to the scoring pass, rather than a submit-time rejection — they alter the math,
+   *  not whether the chain is legal. Returns null when no active boss needs one. */
+  private buildBossHook(): CharmHooks | null {
+    if (this.activeBossId === 'boss_blind_mirror') {
+      return { onCalculate: (state) => ({ ...state, chips: Math.round(state.chips / 2) }) };
+    }
+    if (this.activeBossId === 'boss_blind_pressure') {
+      return {
+        onCalculate: (state, chain) => {
+          const hasDouble = chain.some((s) => s.leftVal === s.rightVal);
+          return hasDouble ? { ...state, mult: state.mult / 2 } : state;
+        },
+      };
+    }
+    return null;
+  }
 
-  /** Instantiates fresh hook closures for every owned charm and composes them onto the evaluator. */
+
+  /** Instantiates fresh hook closures for every owned charm -- createHooks() is called once per
+   *  round so any internal counter state resets at round boundaries. */
   private wireCharms(): CharmHooks[] {
     const hookCtx = { ownedCharmIds: this.ownedCharmIds };
-    const hooks = this.ownedCharmIds
+    return this.ownedCharmIds
       .map((id) => CHARMS.find((c) => c.id === id))
       .filter((c): c is CharmDef => Boolean(c))
       .map((c) => c.createHooks(hookCtx));
+  }
+  /** The activeCharms array submitChain()'s boss override builds, factored out so previewScore()
+   *  can mirror it exactly without risking drift from what actually gets scored. */
+  private buildActiveCharms(stones: DominoStone[]): { id: string; name: string; hooks: CharmHooks }[] {
+    const hasOddStone = stones.some((s) => (s.leftVal + s.rightVal) % 2 !== 0);
+    const judgeBlocksCharms = this.activeBossId === 'boss_blind_judge' && hasOddStone;
+    const activeCharms: { id: string; name: string; hooks: CharmHooks }[] = judgeBlocksCharms
+      ? []
+      : this.ownedCharmIds.map((id, idx) => {
+          const def = CHARMS.find((c) => c.id === id);
+          return { id, name: def?.name ?? '', hooks: this.roundHooks[idx] };
+        });
+    const bossHook = this.buildBossHook();
+    if (bossHook) {
+      const bossDef = BOSS_BLINDS.find((b) => b.id === this.activeBossId);
+      activeCharms.push({ id: 'boss_effect', name: bossDef?.name ?? 'Boss', hooks: bossHook });
+    }
+    return activeCharms;
+  }
 
-    this.game.evaluator.onOperatorResolve = (operator, parentBase, childExposed, edgeValue) => {
-      let val = edgeValue;
-      // Apply level bonuses
-      const lvl = this.operatorLevels[operator];
-      if (lvl > 1) {
-        if (operator === 'ADD') val += (lvl - 1) * 2;
-        else if (operator === 'SUBTRACT') val += (lvl - 1) * 3;
-        else if (operator === 'MULTIPLY') val += (lvl - 1) * 5;
-        else if (operator === 'DIVIDE') val += (lvl - 1) * 4;
-      }
+  /**
+   * Computes a score for an arbitrary (possibly partial) stone selection using the exact same
+   * engine, charm hooks, and boss effects that submitChain() will use for the real commit. Lets
+   * the UI preview/animate a submission — including a running chips×mult total for a growing
+   * subset of the board — without ever risking drift from what actually gets scored.
+   */
+  previewScore(stones: DominoStone[]): ScoreCalculationResult {
+    const handType = this.game.board.detectHandType();
+    const handLevel = this.handLevels[handType] ?? 1;
+    const handStats = getHandStats(handType, handLevel);
+    const handTypeName = handType === 'STRAIGHT' ? 'Düz Zincir' : handType === 'BRANCHED' ? 'Çatallı Zincir' : 'Sonsuz Döngü';
 
-      // Boss 8 – Büyük Baskı: Negatives from subtraction are doubled
-      if (this.activeBossId === 'boss_blind_pressure' && operator === 'SUBTRACT' && val < 0) {
-        val *= 2;
-      }
+    return calculateScore(stones, this.game.board.getUnfrozenEdges(), this.buildActiveCharms(stones), handStats, handTypeName);
+  }
 
-      // Boss 2 – Aynalı Kule: chips halved (simulate by halving every edge value)
-      if (this.activeBossId === 'boss_blind_mirror') {
-        val = Math.round(val / 2);
-      }
+  /**
+   * Same engine/charms/boss-effects as previewScore(), but returns each active charm's own
+   * isolated before/after {chips,mult} snapshot (applied strictly in owned order) — this is what
+   * drives the "Tetiklenme Şöleni" scoring animation: the natural sum resolves first, then each
+   * charm visibly triggers one at a time in the exact order it will actually apply.
+   */
+  previewScoreSteps(stones: DominoStone[]): {
+    baseChips: number;
+    baseMult: number;
+    steps: { id: string; name: string; before: PlayState; after: PlayState }[];
+    final: ScoreCalculationResult;
+  } {
+    const handType = this.game.board.detectHandType();
+    const handLevel = this.handLevels[handType] ?? 1;
+    const handStats = getHandStats(handType, handLevel);
+    const handTypeName = handType === 'STRAIGHT' ? 'Düz Zincir' : handType === 'BRANCHED' ? 'Çatallı Zincir' : 'Sonsuz Döngü';
 
-      return hooks.reduce(
-        (value, h) => (h.onOperatorResolve ? h.onOperatorResolve(operator, parentBase, childExposed, value) : value),
-        val
-      );
-    };
-
-    this.game.evaluator.onEvaluationEnd = (totalGain) =>
-      hooks.reduce((value, h) => (h.onEvaluationEnd ? h.onEvaluationEnd(value) : value), totalGain);
-
-    return hooks;
+    const activeCharms = this.buildActiveCharms(stones);
+    const baseResult = calculateScore(stones, this.game.board.getUnfrozenEdges(), [], handStats, handTypeName);
+    let state: PlayState = { chips: baseResult.chips, mult: baseResult.mult };
+    const steps = activeCharms.map((charm) => {
+      const before = state;
+      const after = charm.hooks.onCalculate ? charm.hooks.onCalculate(state, stones) : state;
+      state = after;
+      return { id: charm.id, name: charm.name, before, after };
+    });
+    return { baseChips: baseResult.chips, baseMult: baseResult.mult, steps, final: this.previewScore(stones) };
   }
 
   private computePayout(finalScore: number, target: number, turnsLeft: number): number {
@@ -970,26 +1375,53 @@ export class RunState {
     const availableCharms = CHARMS.filter((c) => !this.ownedCharmIds.includes(c.id));
     const shuffledCharms = [...availableCharms].sort(() => Math.random() - 0.5);
     shuffledCharms.slice(0, charmSlots).forEach((c) => {
-      offers.push({ type: 'CHARM', item: c });
+      offers.push({ type: 'CHARM', item: { ...c } as any });
     });
 
     // 1 Upgrade/Consumable
     const shuffledUpgrades = [...SHOP_UPGRADES].sort(() => Math.random() - 0.5);
     if (shuffledUpgrades[0]) {
-      offers.push({ type: 'UPGRADE', item: shuffledUpgrades[0] });
+      offers.push({ type: 'UPGRADE', item: { ...shuffledUpgrades[0] } as any });
     }
 
     // 1 permanent Voucher, if any remain unbought
     const availableVouchers = VOUCHERS.filter((v) => !this.ownedVoucherIds.includes(v.id));
     if (availableVouchers.length > 0) {
       const voucher = availableVouchers[Math.floor(Math.random() * availableVouchers.length)];
-      offers.push({ type: 'VOUCHER', item: voucher });
+      offers.push({ type: 'VOUCHER', item: { ...voucher } as any });
     }
 
     // 1 Booster Pack
     const shuffledBoosters = [...BOOSTER_PACKS].sort(() => Math.random() - 0.5);
     if (shuffledBoosters[0]) {
-      offers.push({ type: 'BOOSTER', item: shuffledBoosters[0] });
+      offers.push({ type: 'BOOSTER', item: { ...shuffledBoosters[0] } as any });
+    }
+
+    // 1 Theorem Book
+    const shuffledBooks = [...THEOREM_BOOKS].sort(() => Math.random() - 0.5);
+    if (shuffledBooks[0]) {
+      offers.push({ type: 'THEOREM', item: { ...shuffledBooks[0] } as any });
+    }
+
+    // Apply Nomad Chest 25% discount first
+    if (this.hasNomadDiscount) {
+      offers.forEach((o) => {
+        o.item.cost = Math.floor(o.item.cost * 0.75);
+      });
+    }
+
+    // Apply Skip Tag discounts/free items
+    if (this.activeTag) {
+      const tagEffect = this.activeTag.effect;
+      offers.forEach((o) => {
+        if (tagEffect === 'FREE_SHOP_ITEM') {
+          o.item.cost = 0;
+        } else if (tagEffect === 'SHOP_DISCOUNT') {
+          o.item.cost = Math.floor(o.item.cost / 2);
+        } else if (tagEffect === 'FREE_THEOREM' && o.type === 'THEOREM') {
+          o.item.cost = 0;
+        }
+      });
     }
 
     return offers;

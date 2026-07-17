@@ -43,8 +43,8 @@ export default function Pips({ value, large }: PipsProps) {
   const positions = LAYOUTS[value];
   if (!positions) return null;
 
-  const sizeClass = large ? 'h-10 w-10 gap-[3px]' : 'h-6 w-6 gap-[2px]';
-  const dotSize = large ? 'w-2 h-2 rounded-full' : 'w-[4.5px] h-[4.5px] rounded-full';
+  const sizeClass = large ? 'h-7 w-7 md:h-8 md:w-8 lg:h-10 lg:w-10 gap-[2px] md:gap-[3px]' : 'h-6 w-6 gap-[2px]';
+  const dotSize = large ? 'w-1.5 h-1.5 md:w-[7px] md:h-[7px] lg:w-2 lg:h-2 rounded-full' : 'w-[4.5px] h-[4.5px] rounded-full';
 
   return (
     <div className={`grid grid-cols-3 grid-rows-3 ${sizeClass}`}>

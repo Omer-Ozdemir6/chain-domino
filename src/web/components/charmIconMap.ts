@@ -58,14 +58,14 @@ export const CHARM_ICON_MAP: Record<string, string> = {
 
   // Curse
   chaos_coin: `${ICONS}/t1_r0c3.png`,
-  reverse_symmetry: `${ICONS}/t2_r3c4.png`,
+  reverse_symmetry: `${ICONS}/t2_r0c4.png`,
   add_sub_clash: `${ICONS}/t2_r0c2.png`,
   mul_div_clash: `${ICONS}/t2_r0c3.png`,
   lucky_dice: `${ICONS}/t1_r2c0.png`,
   all_or_nothing: `${ICONS}/t2_r2c4.png`,
   speed_demon: `${ICONS}/t2_r0c0.png`,
   volatile_soul: `${ICONS}/t1_r0c7.png`,
-  debt_collector: `${ICONS}/t2_r1c8.png`,
+  debt_collector: `${ICONS}/t2_r0c5.png`,
   high_roller: `${ICONS}/t2_r2c5.png`,
   even_curse: `${ICONS}/t1_r3c4.png`,
   odd_curse: `${ICONS}/t1_r3c0.png`,
@@ -106,10 +106,11 @@ export const CHARM_ICON_MAP: Record<string, string> = {
 
 export const VOUCHER_ICON_MAP: Record<string, string> = {
   voucher_wide_pockets: `${ICONS}/t2_r3c8.png`,
-  voucher_wizard_bag: `${ICONS}/t2_r4c4.png`,
-  voucher_rich_start: `${ICONS}/t2_r3c8.png`,
-  voucher_bargaining_power: `${ICONS}/t2_r4c4.png`,
+  voucher_wizard_bag: `${ICONS}/t2_r3c7.png`,
+  voucher_rich_start: `${ICONS}/t2_r4c4.png`,
   voucher_crystal_ball: `${ICONS}/t1_r3c1.png`,
+  // voucher_bargaining_power intentionally has no dedicated art — every other sprite-sheet image
+  // is already claimed by a different item — it falls back to ShopScreen's generic voucher glyph.
 };
 
 export const CONSUMABLE_ICON_MAP: Record<string, string> = {

@@ -1,39 +1,40 @@
 import { describe, it, expect } from 'vitest';
 import { GameState } from './GameState.js';
-import { createOperatorCard } from '../models/OperatorDeck.js';
 import type { DominoStone } from '../models/types.js';
 
 const stone = (id: string, l: number, r: number): DominoStone => ({ id, leftVal: l, rightVal: r });
 
-const baseConfig = { targetScore: 100, maxTurns: 5, stonesPerTurn: 3, operatorsPerTurn: 2 };
+const baseConfig = { targetScore: 100, maxTurns: 5, stonesPerTurn: 3 };
 
 describe('GameState', () => {
-  it('drawForTurn moves stones/operators from the decks into hand, filling all operator slots', () => {
+  it('drawForTurn fills the stone hand up to stonesPerTurn', () => {
     const game = new GameState(baseConfig);
     const initialStoneDeck = game.stoneDeck.remaining;
-    const initialOpDeck = game.operatorDeck.remaining;
 
     game.drawForTurn();
 
     expect(game.hand).toHaveLength(3);
-    expect(game.operatorHand).toHaveLength(2); // baseConfig.operatorsPerTurn
     expect(game.stoneDeck.remaining).toBe(initialStoneDeck - 3);
-    expect(game.operatorDeck.remaining).toBe(initialOpDeck - 2);
   });
 
-  it('playing an operator immediately refills its slot from the deck', () => {
+  it('drawForTurn tops the stone hand up to its cap instead of adding stonesPerTurn every call', () => {
     const game = new GameState(baseConfig);
-    game.hand = [stone('s1', 3, 4)];
-    game.operatorHand = [createOperatorCard('ADD'), createOperatorCard('SUBTRACT')];
-    const deckBefore = game.operatorDeck.remaining;
+    game.drawForTurn();
+    expect(game.hand).toHaveLength(3);
 
-    game.playStone('s1');
-    const playedId = game.operatorHand[0].id;
-    game.playOperator(playedId);
+    // Play one stone away, leaving 2 in hand — the next draw should only top up by 1, not add 3 more.
+    const playedId = game.hand[0].id;
+    game.playStone(playedId);
+    expect(game.hand).toHaveLength(2);
 
-    expect(game.operatorHand).toHaveLength(2); // stays full: the played slot was topped back up
-    expect(game.operatorHand.some((o) => o.id === playedId)).toBe(false);
-    expect(game.operatorDeck.remaining).toBe(deckBefore - 1);
+    game.drawForTurn();
+    expect(game.hand).toHaveLength(3);
+
+    // A full hand should draw nothing at all.
+    const deckBefore = game.stoneDeck.remaining;
+    game.drawForTurn();
+    expect(game.hand).toHaveLength(3);
+    expect(game.stoneDeck.remaining).toBe(deckBefore);
   });
 
   it('playStone places the first stone at ROOT by default', () => {
@@ -54,36 +55,43 @@ describe('GameState', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('playOperator fails and leaves hand untouched when the board has no open slot', () => {
+  it('playStone connects a second stone directly onto a matching open end (no operator involved)', () => {
     const game = new GameState(baseConfig);
-    game.operatorHand = [createOperatorCard('ADD')];
-
-    // No stone on the board yet, so there is no open slot for an operator.
-    const result = game.playOperator(game.operatorHand[0].id);
-
-    expect(result.ok).toBe(false);
-    expect(game.operatorHand).toHaveLength(1);
-  });
-
-  it('submitChain scores the new edge, keeps the graph on the board, and advances the turn', () => {
-    const game = new GameState(baseConfig);
-    game.hand = [stone('s1', 3, 4), stone('s2', 3, 2)];
-    game.operatorHand = [createOperatorCard('ADD')];
+    game.hand = [stone('s1', 3, 4), stone('s2', 4, 2)];
 
     game.playStone('s1');
-    game.playOperator(game.operatorHand[0].id);
+    const result = game.playStone('s2');
+
+    expect(result.ok).toBe(true);
+    expect(game.board.length).toBe(3); // 2 nodes + 1 edge
+  });
+
+  it('playStone fails when the stone does not match any open slot', () => {
+    const game = new GameState(baseConfig);
+    game.hand = [stone('s1', 3, 4), stone('bad', 9, 9)];
+    game.playStone('s1');
+
+    const result = game.playStone('bad');
+    expect(result.ok).toBe(false);
+  });
+
+  it('submitChain sums the natural pip total of every placed stone, root included', () => {
+    const game = new GameState(baseConfig);
+    game.hand = [stone('s1', 3, 4), stone('s2', 4, 2)];
+
+    game.playStone('s1');
     game.playStone('s2');
 
     const result = game.submitChain();
 
     expect(result.ok).toBe(true);
-    expect(result.scoreGained).toBe(9); // (3+4) + 2
-    expect(game.score).toBe(9);
+    expect(result.scoreGained).toBe(3 + 4 + 4 + 2); // 13, matching the design's own worked example
+    expect(game.score).toBe(13);
     expect(game.turn).toBe(2);
     expect(game.board.length).toBe(3); // 2 nodes + 1 edge, stays on the board
   });
 
-  it('a lone stone with no connection yet scores 0', () => {
+  it('a lone root stone still counts its own pip value', () => {
     const game = new GameState(baseConfig);
     game.hand = [stone('s1', 3, 4)];
     game.playStone('s1');
@@ -91,69 +99,46 @@ describe('GameState', () => {
     const result = game.submitChain();
 
     expect(result.ok).toBe(true);
-    expect(result.scoreGained).toBe(0);
-    expect(game.score).toBe(0);
+    expect(result.scoreGained).toBe(7); // 3 + 4, no "root doesn't count" exemption
+    expect(game.score).toBe(7);
   });
 
-  it('a later submit only scores newly-added edges, never re-scoring frozen ones', () => {
+  it('a later submit only scores newly-added stones, never re-scoring frozen ones', () => {
     const game = new GameState(baseConfig);
-    game.hand = [stone('s1', 3, 4), stone('s2', 3, 2)];
-    game.operatorHand = [createOperatorCard('ADD')];
+    game.hand = [stone('s1', 3, 4), stone('s2', 4, 2)];
 
     game.playStone('s1');
-    game.playOperator(game.operatorHand[0].id);
     game.playStone('s2');
-    const first = game.submitChain(); // edge: (3+4)+2=9
+    const first = game.submitChain(); // 3+4+4+2 = 13
 
-    // s1 (a non-double) still has one open slot left (its rightVal side, 4); branch off it again.
-    const s1Slot = game.board.getOpenOperatorTargets().find((id) => id.startsWith('s1#'))!;
-    game.hand = [stone('s3', 4, 5)];
-    game.operatorHand = [createOperatorCard('MULTIPLY')];
-    game.playOperator(game.operatorHand[0].id, s1Slot);
-    game.playStone('s3', s1Slot); // new edge: (3+4)*5=35
+    // s1 still has one open slot left (its 3 side); branch off it again.
+    const s1Slot = game.board.getSlots('s1').find((s) => s.state === 'OPEN')!.slotId;
+    game.hand = [stone('s3', 3, 5)];
+    game.playStone('s3', s1Slot);
 
     const second = game.submitChain();
 
-    expect(first.scoreGained).toBe(9);
+    expect(first.scoreGained).toBe(13);
     expect(second.ok).toBe(true);
-    expect(second.scoreGained).toBe(35); // only the new edge, not 9+35
-    expect(game.score).toBe(9 + 35);
+    expect(second.scoreGained).toBe(3 + 5); // only the new stone, not 13+8
+    expect(game.score).toBe(13 + 8);
     expect(game.board.length).toBe(5); // 3 nodes + 2 edges
-  });
-
-  it('a SUBTRACT/DIVIDE edge can score low or negative for that turn, without touching banked score', () => {
-    const game = new GameState(baseConfig);
-    game.hand = [stone('s1', 3, 4)];
-    game.playStone('s1');
-    game.hand = [stone('s2', 3, 4)];
-    game.operatorHand = [createOperatorCard('DIVIDE')];
-    game.playOperator(game.operatorHand[0].id);
-    game.playStone('s2'); // edge: round((3+4)/4) = 2
-    const result = game.submitChain();
-
-    expect(result.ok).toBe(true);
-    expect(result.scoreGained).toBe(2);
-    expect(game.score).toBe(2);
   });
 
   it("skipTurn only discards this turn's unscored growth, leaving the frozen graph on the board", () => {
     const game = new GameState(baseConfig);
-    game.hand = [stone('s1', 3, 4), stone('s2', 3, 2)];
-    game.operatorHand = [createOperatorCard('ADD')];
+    game.hand = [stone('s1', 3, 4), stone('s2', 4, 2)];
     game.playStone('s1');
-    game.playOperator(game.operatorHand[0].id);
     game.playStone('s2');
-    game.submitChain(); // freezes s1/s2/edge, score 9
+    game.submitChain(); // freezes s1/s2/edge, score 13
 
-    const s1Slot = game.board.getOpenOperatorTargets().find((id) => id.startsWith('s1#'))!;
-    game.hand = [stone('s3', 4, 1)];
-    game.operatorHand = [createOperatorCard('SUBTRACT')];
-    game.playOperator(game.operatorHand[0].id, s1Slot);
+    const s1Slot = game.board.getSlots('s1').find((s) => s.state === 'OPEN')!.slotId;
+    game.hand = [stone('s3', 3, 1)];
     game.playStone('s3', s1Slot); // not yet submitted
 
     game.skipTurn();
 
-    expect(game.score).toBe(9); // unchanged, nothing new was scored
+    expect(game.score).toBe(13); // unchanged, nothing new was scored
     expect(game.board.length).toBe(3); // only the frozen s1/s2/edge remain
   });
 
@@ -169,33 +154,15 @@ describe('GameState', () => {
     expect(game.board.length).toBe(1);
   });
 
-  it('submitChain rejects a dangling operator without advancing the turn or score', () => {
-    const game = new GameState(baseConfig);
-    game.hand = [stone('s1', 3, 4)];
-    game.operatorHand = [createOperatorCard('ADD')];
-
-    game.playStone('s1');
-    game.playOperator(game.operatorHand[0].id);
-    // no closing stone placed -> a slot dangles on an operator
-
-    const result = game.submitChain();
-
-    expect(result.ok).toBe(false);
-    expect(game.score).toBe(0);
-    expect(game.turn).toBe(1);
-  });
-
   it('reaches WON status once score meets the target', () => {
     const game = new GameState({ ...baseConfig, targetScore: 5 });
-    game.hand = [stone('s1', 3, 4), stone('s2', 3, 2)];
-    game.operatorHand = [createOperatorCard('ADD')];
+    game.hand = [stone('s1', 3, 4), stone('s2', 4, 2)];
 
     game.playStone('s1');
-    game.playOperator(game.operatorHand[0].id);
     game.playStone('s2');
     const result = game.submitChain();
 
-    expect(result.scoreGained).toBe(9);
+    expect(result.scoreGained).toBe(13);
     expect(game.status).toBe('WON');
   });
 
@@ -208,14 +175,13 @@ describe('GameState', () => {
 
     expect(game.turn).toBe(2);
     expect(game.status).toBe('LOST');
+    expect(game.lossReason).toBe('MAX_TURNS');
   });
 
   it('ignores further plays once the game has ended', () => {
     const game = new GameState({ ...baseConfig, targetScore: 1, maxTurns: 5 });
-    game.hand = [stone('s1', 3, 4), stone('s2', 3, 2)];
-    game.operatorHand = [createOperatorCard('ADD')];
+    game.hand = [stone('s1', 3, 4), stone('s2', 4, 2)];
     game.playStone('s1');
-    game.playOperator(game.operatorHand[0].id);
     game.playStone('s2');
     game.submitChain();
     expect(game.status).toBe('WON');
@@ -237,21 +203,6 @@ describe('GameState', () => {
     expect(game.hand.map((s) => s.id)).toContain('s1');
   });
 
-  it('undoLastMove returns a placed operator back to the operator hand', () => {
-    const game = new GameState(baseConfig);
-    game.hand = [stone('s1', 3, 4)];
-    game.operatorHand = [createOperatorCard('ADD')];
-    const opId = game.operatorHand[0].id;
-    game.playStone('s1');
-    game.playOperator(opId);
-
-    const result = game.undoLastMove();
-
-    expect(result.ok).toBe(true);
-    expect(game.board.length).toBe(1);
-    expect(game.operatorHand.map((o) => o.id)).toContain(opId);
-  });
-
   it('undoLastMove fails when the board is empty', () => {
     const game = new GameState(baseConfig);
     const result = game.undoLastMove();
@@ -260,33 +211,24 @@ describe('GameState', () => {
 
   it('lets a player recover from a mismatched attempt via undo then retry', () => {
     const game = new GameState(baseConfig);
-    game.hand = [stone('s1', 3, 4), stone('bad', 9, 9), stone('s2', 3, 2)];
-    game.operatorHand = [createOperatorCard('ADD')];
-    const opId = game.operatorHand[0].id;
+    game.hand = [stone('s1', 3, 4), stone('bad', 9, 9), stone('s2', 4, 2)];
 
     game.playStone('s1');
-    game.playOperator(opId);
-    expect(game.playStone('bad').ok).toBe(false); // 9 does not match the pending slot's value 3
-
-    game.undoLastMove(); // take the operator back
-    game.playOperator(opId);
-    expect(game.playStone('s2').ok).toBe(true); // 3 matches, edge now valid
+    expect(game.playStone('bad').ok).toBe(false); // 9 doesn't match either open slot (3 or 4)
+    expect(game.playStone('s2').ok).toBe(true); // 4 matches
 
     const result = game.submitChain();
     expect(result.ok).toBe(true);
-    expect(result.scoreGained).toBe(9);
+    expect(result.scoreGained).toBe(13);
   });
 
-  it('skipTurn discards the hand and board back to the decks and advances the turn without scoring', () => {
+  it('skipTurn discards the hand and board back to the deck and advances the turn without scoring', () => {
     const game = new GameState(baseConfig);
     const totalStones = game.stoneDeck.remaining;
-    const totalOperators = game.operatorDeck.remaining;
 
-    game.drawForTurn(); // pulls real stones/operators out of the decks
-    const s1 = game.hand[0].id;
-    game.playStone(s1);
-    game.playOperator(game.operatorHand[0].id);
-    // remaining hand/operatorHand entries stay unplayed
+    game.drawForTurn(); // pulls real stones out of the deck
+    game.playStone(game.hand[0].id);
+    // remaining hand entries stay unplayed
 
     game.skipTurn();
 
@@ -294,9 +236,7 @@ describe('GameState', () => {
     expect(game.turn).toBe(2);
     expect(game.board.length).toBe(0);
     expect(game.hand).toHaveLength(0);
-    expect(game.operatorHand).toHaveLength(0);
     expect(game.stoneDeck.remaining).toBe(totalStones);
-    expect(game.operatorDeck.remaining).toBe(totalOperators);
   });
 
   it('skipTurn can push the game into LOST when it exhausts maxTurns', () => {
@@ -313,30 +253,12 @@ describe('GameState', () => {
     expect(game.hasAnyLegalMove()).toBe(true);
   });
 
-  it('hasAnyLegalMove is false when no stone or operator in hand fits a pending slot', () => {
+  it('hasAnyLegalMove is false when nothing in hand fits any open slot', () => {
     const game = new GameState(baseConfig);
     game.hand = [stone('s1', 3, 4)];
-    game.operatorHand = [createOperatorCard('ADD')];
     game.playStone('s1');
-    game.playOperator(game.operatorHand[0].id);
-    // A slot now dangles awaiting leftVal 4 (or 3, the other side); hand has nothing that fits.
     game.hand = [stone('bad', 9, 9)];
     expect(game.hasAnyLegalMove()).toBe(false);
-  });
-
-  it('flips to LOST with STUCK reason when a slot dangles on an operator and no hand item fits', () => {
-    const game = new GameState(baseConfig);
-    game.hand = [stone('s1', 3, 4), stone('bad', 9, 9)];
-    game.operatorHand = [createOperatorCard('ADD')];
-    const opId = game.operatorHand[0].id;
-
-    game.playStone('s1');
-    game.hand = [stone('bad', 9, 9)]; // only a non-fitting stone remains
-    const result = game.playOperator(opId);
-
-    expect(result.ok).toBe(true);
-    expect(game.status).toBe('LOST');
-    expect(game.lossReason).toBe('STUCK');
   });
 
   it('a double stone can branch into 4 independent connections', () => {
@@ -344,28 +266,51 @@ describe('GameState', () => {
     game.hand = [stone('d1', 6, 6)];
     game.playStone('d1');
 
-    const slots = game.board.getOpenOperatorTargets();
+    const slots = game.board.getSlots('d1').map((s) => s.slotId);
     expect(slots).toHaveLength(4);
 
     game.hand = [stone('c0', 6, 1), stone('c1', 6, 2), stone('c2', 6, 3), stone('c3', 6, 4)];
-    game.operatorHand = [
-      createOperatorCard('ADD'),
-      createOperatorCard('SUBTRACT'),
-      createOperatorCard('MULTIPLY'),
-      createOperatorCard('DIVIDE'),
-    ];
 
-    slots.forEach((slotId, i) => {
-      game.playOperator(game.operatorHand[0].id, slotId);
+    slots.forEach((slotId) => {
       game.playStone(game.hand[0].id, slotId);
     });
 
     expect(game.board.getEdges()).toHaveLength(4);
     const result = game.submitChain();
     expect(result.ok).toBe(true);
-    // (6+6)+1=13, (6+6)-2=10, (6+6)*3=36, round((6+6)/4)=3, plus the +5 hand-emptied bonus
-    // (all 4 drawn stones were played this turn, emptying the hand).
-    expect(result.scoreGained).toBe(13 + 10 + 36 + 3 + 5);
+    // root(6+6=12) + c0(6+1=7) + c1(6+2=8) + c2(6+3=9) + c3(6+4=10) = 46, plus the +5
+    // hand-emptied bonus (all 4 drawn stones were played this turn, emptying the hand).
+    expect(result.scoreGained).toBe(12 + 7 + 8 + 9 + 10 + 5);
     expect(result.handEmptiedBonus).toBe(5);
+  });
+
+  it('resolves the round immediately (WON/LOST) once the stone deck is fully spent and no move is possible', () => {
+    const game = new GameState({ ...baseConfig, targetScore: 5 });
+    game.hand = [stone('s1', 3, 4)];
+    game.playStone('s1'); // occupies ROOT, exposing 3 and 4
+    game.score = 10; // already past the target
+
+    game.stoneDeck.draw(game.stoneDeck.remaining); // fully exhaust the deck
+    game.hand = [stone('s2', 1, 2)]; // matches neither exposed value
+
+    expect(game.status).toBe('PLAYING');
+    game.drawForTurn();
+
+    expect(game.status).toBe('WON');
+  });
+
+  it('resolves as LOST (not an endless grind) when the stone deck is spent below target', () => {
+    const game = new GameState({ ...baseConfig, targetScore: 500 });
+    game.hand = [stone('s1', 3, 4)];
+    game.playStone('s1');
+    game.score = 10; // well below target, unreachable now that nothing more can be drawn or placed
+
+    game.stoneDeck.draw(game.stoneDeck.remaining);
+    game.hand = [stone('s2', 1, 2)];
+
+    game.drawForTurn();
+
+    expect(game.status).toBe('LOST');
+    expect(game.lossReason).toBe('NO_MOVES');
   });
 });

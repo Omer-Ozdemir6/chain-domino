@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { Board } from './Board.js';
-import { createOperatorCard } from './OperatorDeck.js';
 import type { DominoStone } from './types.js';
 
 const stone = (id: string, l: number, r: number): DominoStone => ({ id, leftVal: l, rightVal: r });
@@ -14,51 +13,45 @@ describe('Board', () => {
     expect(board.getRootNodeId()).toBe('s1');
   });
 
-  it('rejects a second stone placed without an operator in between', () => {
+  it('connects a second stone directly onto a matching open end (classic domino matching, no operator)', () => {
     const board = new Board();
     board.addStoneAt(stone('s1', 3, 4), 'ROOT');
-    const slot = board.getSlots('s1')[0];
+    const slot = board.getSlots('s1').find((s) => s.value === 4)!;
     const result = board.addStoneAt(stone('s2', 4, 2), slot.slotId);
-    expect(result.ok).toBe(false);
-    expect(result.error).toBe('SLOT_NOT_PENDING');
+    expect(result.ok).toBe(true);
+    expect(board.length).toBe(3); // 2 nodes + 1 edge
+    expect(board.getEdges()).toHaveLength(1);
   });
 
-  it('rejects an operator before any stone is placed', () => {
-    const board = new Board();
-    const result = board.addOperatorAt(createOperatorCard('ADD'), 'ROOT');
-    expect(result.ok).toBe(false);
-    expect(result.error).toBe('CHAIN_MUST_START_WITH_STONE');
-  });
-
-  it('rejects two consecutive operators on the same slot', () => {
-    const board = new Board();
-    board.addStoneAt(stone('s1', 3, 4), 'ROOT');
-    const slotId = board.getSlots('s1')[0].slotId;
-    board.addOperatorAt(createOperatorCard('ADD'), slotId);
-    const result = board.addOperatorAt(createOperatorCard('SUBTRACT'), slotId);
-    expect(result.ok).toBe(false);
-    expect(result.error).toBe('SLOT_NOT_OPEN');
-  });
-
-  it('rejects a stone whose value does not match the pending slot', () => {
+  it('rejects a stone whose value does not match the open slot', () => {
     const board = new Board();
     board.addStoneAt(stone('s1', 3, 4), 'ROOT');
     const fourSlot = board.getSlots('s1').find((s) => s.value === 4)!.slotId;
-    board.addOperatorAt(createOperatorCard('ADD'), fourSlot);
     const result = board.addStoneAt(stone('bad', 9, 9), fourSlot);
     expect(result.ok).toBe(false);
     expect(result.error).toBe('STONE_MISMATCH');
   });
 
-  it('builds a valid chain: stone -> operator -> stone', () => {
+  it('rejects placing a stone at an already-closed slot', () => {
     const board = new Board();
     board.addStoneAt(stone('s1', 3, 4), 'ROOT');
     const fourSlot = board.getSlots('s1').find((s) => s.value === 4)!.slotId;
-    board.addOperatorAt(createOperatorCard('ADD'), fourSlot);
-    const result = board.addStoneAt(stone('s2', 4, 2), fourSlot);
+    board.addStoneAt(stone('s2', 4, 2), fourSlot);
+    const result = board.addStoneAt(stone('s3', 4, 1), fourSlot);
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('SLOT_NOT_OPEN');
+  });
+
+  it('auto-orients a stone (flips leftVal/rightVal) to fit an open slot', () => {
+    const board = new Board();
+    board.addStoneAt(stone('s1', 3, 4), 'ROOT');
+    const fourSlot = board.getSlots('s1').find((s) => s.value === 4)!.slotId;
+    // s2's matching value (4) is on the right, not the left — must be flipped to attach.
+    const result = board.addStoneAt(stone('s2', 2, 4), fourSlot);
     expect(result.ok).toBe(true);
-    expect(board.length).toBe(3); // 2 nodes + 1 edge
-    expect(board.getEdges()).toHaveLength(1);
+    const child = board.getNodes().find((n) => n.nodeId === 's2')!;
+    expect(child.leftVal).toBe(4);
+    expect(child.rightVal).toBe(2);
   });
 
   it('reset clears the board', () => {
@@ -69,15 +62,16 @@ describe('Board', () => {
     expect(board.getRootNodeId()).toBeNull();
   });
 
-  it('removeLast pops the most recently placed element', () => {
+  it('removeLast pops the most recently placed stone', () => {
     const board = new Board();
     board.addStoneAt(stone('s1', 3, 4), 'ROOT');
     const slotId = board.getSlots('s1')[0].slotId;
-    board.addOperatorAt(createOperatorCard('ADD'), slotId);
+    board.addStoneAt(stone('s2', board.getSlots('s1')[0].value, 2), slotId);
 
     const removed = board.removeLast();
 
-    expect(removed?.type).toBe('OPERATOR');
+    expect(removed).toBeDefined();
+    expect(removed?.id).toBe('s2');
     expect(board.length).toBe(1);
   });
 
@@ -86,26 +80,26 @@ describe('Board', () => {
     expect(board.removeLast()).toBeUndefined();
   });
 
-  it('removeLast lets a different operator be placed after undoing the first', () => {
+  it('removeLast reopens the slot so a different stone can be placed there', () => {
     const board = new Board();
     board.addStoneAt(stone('s1', 3, 4), 'ROOT');
     const slotId = board.getSlots('s1')[0].slotId;
-    board.addOperatorAt(createOperatorCard('ADD'), slotId);
-    board.removeLast(); // undo the operator
-    const result = board.addOperatorAt(createOperatorCard('MULTIPLY'), slotId);
+    const value = board.getSlots('s1')[0].value;
+    board.addStoneAt(stone('s2', value, 1), slotId);
+    board.removeLast(); // undo s2
+    const result = board.addStoneAt(stone('s3', value, 9), slotId);
     expect(result.ok).toBe(true);
   });
 
-  it('drainAll empties the board and returns every stone and operator', () => {
+  it('drainAll empties the board and returns every stone', () => {
     const board = new Board();
     board.addStoneAt(stone('s1', 3, 4), 'ROOT');
     const slotId = board.getSlots('s1')[0].slotId;
-    board.addOperatorAt(createOperatorCard('ADD'), slotId);
     board.addStoneAt(stone('s2', board.getSlots('s1')[0].value, 2), slotId);
 
     const drained = board.drainAll();
 
-    expect(drained).toHaveLength(3); // s1, ADD op, s2
+    expect(drained).toHaveLength(2); // s1, s2
     expect(board.length).toBe(0);
   });
 
@@ -116,6 +110,13 @@ describe('Board', () => {
     expect(board.getLegalStoneTargets(stone('s2', 1, 1))).not.toContain('ROOT');
   });
 
+  it('getLegalStoneTargets only matches slots whose exposed value equals one of the stone\'s sides', () => {
+    const board = new Board();
+    board.addStoneAt(stone('s1', 3, 4), 'ROOT'); // exposes 3 and 4
+    expect(board.getLegalStoneTargets(stone('s2', 4, 1))).toHaveLength(1);
+    expect(board.getLegalStoneTargets(stone('s3', 9, 9))).toHaveLength(0);
+  });
+
   it('addStoneAt rejects ROOT once the board is non-empty', () => {
     const board = new Board();
     board.addStoneAt(stone('s1', 3, 4), 'ROOT');
@@ -124,14 +125,17 @@ describe('Board', () => {
     expect(result.error).toBe('SLOT_NOT_FOUND');
   });
 
-  it('hasPendingOperator is true only while an operator awaits a closing stone', () => {
+  it('detectHandType is STRAIGHT for an unbranched chain and BRANCHED once a node has 2+ children', () => {
     const board = new Board();
-    expect(board.hasPendingOperator()).toBe(false);
-    board.addStoneAt(stone('s1', 3, 4), 'ROOT');
-    expect(board.hasPendingOperator()).toBe(false);
-    const slotId = board.getSlots('s1')[0].slotId;
-    board.addOperatorAt(createOperatorCard('ADD'), slotId);
-    expect(board.hasPendingOperator()).toBe(true);
+    board.addStoneAt(stone('d1', 6, 6), 'ROOT');
+    expect(board.detectHandType()).toBe('STRAIGHT');
+
+    const [slotA, slotB] = board.getSlots('d1').map((s) => s.slotId);
+    board.addStoneAt(stone('branchA', 6, 2), slotA);
+    expect(board.detectHandType()).toBe('STRAIGHT');
+
+    board.addStoneAt(stone('branchB', 6, 3), slotB);
+    expect(board.detectHandType()).toBe('BRANCHED');
   });
 
   describe('branching at double stones', () => {
@@ -153,7 +157,6 @@ describe('Board', () => {
       const board = new Board();
       board.addStoneAt(stone('root', 6, 6), 'ROOT');
       const slotA = board.getSlots('root')[0].slotId;
-      board.addOperatorAt(createOperatorCard('ADD'), slotA);
       board.addStoneAt(stone('child-double', 6, 6), slotA);
 
       const childSlots = board.getSlots('child-double');
@@ -162,7 +165,6 @@ describe('Board', () => {
       expect(childSlots.filter((s) => s.state === 'OPEN')).toHaveLength(3);
 
       const slotB = board.getSlots('root')[1].slotId;
-      board.addOperatorAt(createOperatorCard('SUBTRACT'), slotB);
       board.addStoneAt(stone('child-plain', 6, 1), slotB);
 
       const plainChildSlots = board.getSlots('child-plain');
@@ -171,18 +173,17 @@ describe('Board', () => {
       expect(plainChildSlots.filter((s) => s.state === 'OPEN')).toHaveLength(1);
     });
 
-    it('all 4 slots of a double can independently receive an operator + stone, then none remain open', () => {
+    it('all 4 slots of a double can independently receive a stone, then none remain open', () => {
       const board = new Board();
       board.addStoneAt(stone('d1', 5, 5), 'ROOT');
       const slots = board.getSlots('d1').map((s) => s.slotId);
       expect(slots).toHaveLength(4);
 
       slots.forEach((slotId, i) => {
-        board.addOperatorAt(createOperatorCard('ADD'), slotId);
         board.addStoneAt(stone(`child${i}`, 5, i), slotId);
       });
 
-      expect(board.getOpenOperatorTargets().filter((s) => s.startsWith('d1#'))).toHaveLength(0);
+      expect(board.getSlots('d1').filter((s) => s.state === 'OPEN')).toHaveLength(0);
       expect(board.getEdges()).toHaveLength(4);
     });
 
@@ -191,12 +192,10 @@ describe('Board', () => {
       board.addStoneAt(stone('n1', 3, 4), 'ROOT');
       const [slotA, slotB] = board.getSlots('n1').map((s) => s.slotId);
 
-      board.addOperatorAt(createOperatorCard('ADD'), slotA);
       board.addStoneAt(stone('c1', 3, 1), slotA);
-      board.addOperatorAt(createOperatorCard('SUBTRACT'), slotB);
       board.addStoneAt(stone('c2', 4, 2), slotB);
 
-      expect(board.getOpenOperatorTargets().filter((s) => s.startsWith('n1#'))).toHaveLength(0);
+      expect(board.getSlots('n1').filter((s) => s.state === 'OPEN')).toHaveLength(0);
     });
 
     it('two independent branches off the same double do not interfere with each other', () => {
@@ -204,9 +203,7 @@ describe('Board', () => {
       board.addStoneAt(stone('d1', 6, 6), 'ROOT');
       const [slotA, slotB] = board.getSlots('d1').map((s) => s.slotId);
 
-      board.addOperatorAt(createOperatorCard('ADD'), slotA);
       board.addStoneAt(stone('branchA', 6, 2), slotA);
-      board.addOperatorAt(createOperatorCard('MULTIPLY'), slotB);
       board.addStoneAt(stone('branchB', 6, 3), slotB);
 
       // undoing the most recent move only removes branchB, branchA stays intact
@@ -221,8 +218,7 @@ describe('Board', () => {
       const board = new Board();
       board.addStoneAt(stone('s1', 1, 2), 'ROOT');
       const slotId = board.getSlots('s1')[0].slotId;
-      board.addOperatorAt(createOperatorCard('ADD'), slotId);
-      board.addStoneAt(stone('s2', 2, 1), slotId);
+      board.addStoneAt(stone('s2', board.getSlots('s1')[0].value, 1), slotId);
       expect(board.getUnfrozenEdges()).toHaveLength(1);
 
       board.freeze();
@@ -244,18 +240,15 @@ describe('Board', () => {
       board.addStoneAt(stone('d1', 6, 6), 'ROOT');
       const [slotA, slotB, slotC] = board.getSlots('d1').map((s) => s.slotId);
 
-      board.addOperatorAt(createOperatorCard('ADD'), slotA);
       board.addStoneAt(stone('branchA', 6, 2), slotA);
-      board.addOperatorAt(createOperatorCard('SUBTRACT'), slotB);
       board.addStoneAt(stone('branchB', 6, 1), slotB);
       board.freeze(); // d1, branchA, branchB all committed
 
-      board.addOperatorAt(createOperatorCard('MULTIPLY'), slotC);
       board.addStoneAt(stone('branchC', 6, 3), slotC);
 
       const drained = board.drainUnscored();
 
-      expect(drained).toHaveLength(2); // just the MULTIPLY op + branchC
+      expect(drained).toHaveLength(1); // just branchC
       expect(board.getNodes().find((n) => n.nodeId === 'branchA')).toBeDefined();
       expect(board.getNodes().find((n) => n.nodeId === 'branchB')).toBeDefined();
       expect(board.getNodes().find((n) => n.nodeId === 'branchC')).toBeUndefined();
@@ -265,12 +258,46 @@ describe('Board', () => {
       const board = new Board();
       board.addStoneAt(stone('s1', 1, 2), 'ROOT');
       const slotId = board.getSlots('s1')[0].slotId;
-      board.addOperatorAt(createOperatorCard('ADD'), slotId);
+      board.addStoneAt(stone('s2', board.getSlots('s1')[0].value, 1), slotId);
 
       const drained = board.drainUnscored();
 
       expect(drained).toHaveLength(2);
       expect(board.length).toBe(0);
+    });
+  });
+
+  describe('SEQUENCE match mode (Kozmik Karadelik)', () => {
+    it('defaults to PIP matching — a sequential-but-not-equal stone is illegal', () => {
+      const board = new Board();
+      board.addStoneAt(stone('s1', 3, 4), 'ROOT');
+      const fourSlot = board.getSlots('s1').find((s) => s.value === 4)!.slotId;
+      const result = board.addStoneAt(stone('s2', 5, 9), fourSlot);
+      expect(result.ok).toBe(false);
+    });
+
+    it('once set to SEQUENCE, a stone matches by ascending-by-one instead of equality', () => {
+      const board = new Board();
+      board.setMatchMode('SEQUENCE');
+      board.addStoneAt(stone('s1', 3, 4), 'ROOT');
+      const fourSlot = board.getSlots('s1').find((s) => s.value === 4)!.slotId;
+
+      // A pip-matching [4|x] stone is now ILLEGAL — the rule is fully replaced, not additive.
+      expect(board.addStoneAt(stone('bad', 4, 4), fourSlot).ok).toBe(false);
+
+      // A [5|x] stone (4 -> 5, ascending by one) is legal.
+      const result = board.addStoneAt(stone('s2', 5, 9), fourSlot);
+      expect(result.ok).toBe(true);
+      expect(board.length).toBe(3);
+    });
+
+    it('getLegalStoneTargets reflects SEQUENCE mode too, not just addStoneAt', () => {
+      const board = new Board();
+      board.setMatchMode('SEQUENCE');
+      board.addStoneAt(stone('s1', 3, 4), 'ROOT');
+      // Root has two open slots: value 3 (needs a 4 next) and value 4 (needs a 5 next).
+      expect(board.getLegalStoneTargets(stone('cand', 5, 1))).toHaveLength(1); // matches the "4" slot
+      expect(board.getLegalStoneTargets(stone('cand2', 9, 9))).toHaveLength(0); // matches neither
     });
   });
 });

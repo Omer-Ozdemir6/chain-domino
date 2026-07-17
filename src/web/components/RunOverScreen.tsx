@@ -11,7 +11,10 @@ interface RunOverScreenProps {
   totalRerolls: number;
   totalPurchases: number;
   defeatedBy: string;
-  onRestart: () => void;
+  /** Jumps straight into a new run with the same deck/stake — no menu detour. */
+  onNewRun: () => void;
+  /** Returns to the title screen's deck/stake/chest picker. */
+  onMainMenu: () => void;
 }
 
 export default function RunOverScreen({
@@ -25,14 +28,13 @@ export default function RunOverScreen({
   totalRerolls,
   totalPurchases,
   defeatedBy,
-  onRestart,
+  onNewRun,
+  onMainMenu,
 }: RunOverScreenProps) {
   const won = status === 'WON';
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-slate-950/90 p-4 overflow-y-auto crt select-none animate-[fade-in_0.4s_ease-out]">
-      <div className="w-full max-w-md my-auto rounded-3xl bg-slate-900 border-4 border-slate-950 p-8 shadow-2xl text-white">
-        
+    <div className="w-full max-w-md my-auto rounded-3xl bg-slate-900 border-4 border-slate-950 p-8 shadow-2xl text-white overflow-y-auto crt select-none animate-[fade-in_0.4s_ease-out]">
         {/* Balatro Marquee Game Over Title */}
         <h2 className={`text-4xl font-black font-pixel tracking-wider uppercase text-center drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)] ${won ? 'text-emerald-500' : 'text-rose-500 animate-pulse'}`}>
           {won ? 'RUN KAZANILDI!' : 'GAME OVER'}
@@ -109,21 +111,20 @@ export default function RunOverScreen({
         <div className="mt-8 flex flex-col gap-2">
           <button
             type="button"
-            onClick={onRestart}
+            onClick={onNewRun}
             className="w-full py-3.5 rounded-xl bg-red-650 hover:bg-red-600 active:translate-y-0.5 text-xs font-pixel font-bold text-white shadow-lg border-b-4 border-red-850 transition uppercase"
           >
             YENİ RUN BAŞLAT (NEW RUN)
           </button>
-          
+
           <button
             type="button"
-            onClick={onRestart}
+            onClick={onMainMenu}
             className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:translate-y-0.5 text-xs font-pixel font-bold text-slate-350 border-b-4 border-slate-950 transition uppercase"
           >
             ANA MENÜYE DÖN (MAIN MENU)
           </button>
         </div>
-      </div>
     </div>
   );
 }

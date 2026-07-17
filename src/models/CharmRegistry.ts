@@ -1,193 +1,196 @@
 import type { CharmDef } from './Charm.js';
-import type { OperatorType } from './types.js';
 
-const OPERATORS: readonly OperatorType[] = ['ADD', 'SUBTRACT', 'MULTIPLY', 'DIVIDE'];
-const OP_NAME: Record<OperatorType, string> = {
-  ADD: 'Toplama',
-  SUBTRACT: 'Çıkarma',
-  MULTIPLY: 'Çarpma',
-  DIVIDE: 'Bölme',
-};
+/** Every stone's own base score before any charm touches it — the "doğal toplam" (natural sum). */
+function chipOf(s: { leftVal: number; rightVal: number }): number {
+  return s.leftVal + s.rightVal;
+}
+function isDouble(s: { leftVal: number; rightVal: number }): boolean {
+  return s.leftVal === s.rightVal;
+}
 
-/** The original, hand-authored core set (kept exactly as designed). */
+/** The original, hand-authored core set. */
 const CORE_CHARMS: readonly CharmDef[] = [
-  // --- A: edge-value modifiers ---
   {
     id: 'division_master',
-    name: 'Bölüm Ustası',
-    description: 'Her BÖLME işleminin sonucuna +3 ekler.',
+    name: 'Tek Sayı Ustası',
+    description: 'Toplamı TEK olan her taş için +4 Taban Puan ve +1 Çarpan.',
     cost: 5,
     rarity: 'COMMON',
     createHooks: () => ({
-      onOperatorResolve: (operator, _parentBase, _childExposed, edgeValue) =>
-        operator === 'DIVIDE' ? edgeValue + 3 : edgeValue,
+      onCalculate: (state, chain) => {
+        const odds = chain.filter((s) => chipOf(s) % 2 === 1).length;
+        return {
+          chips: state.chips + odds * 4,
+          mult: state.mult + odds * 1,
+        };
+      },
     }),
   },
   {
     id: 'add_master',
     name: 'Toplam Ustası',
-    description: 'Her TOPLAMA işleminin sonucuna +2 ekler.',
+    description: 'Toplamı ÇİFT olan her taş için +3 Taban Puan. Zincirde 3 veya daha fazla çift toplamlı taş varsa x1.2 Çarpan.',
     cost: 5,
     rarity: 'COMMON',
     createHooks: () => ({
-      onOperatorResolve: (operator, _parentBase, _childExposed, edgeValue) =>
-        operator === 'ADD' ? edgeValue + 2 : edgeValue,
+      onCalculate: (state, chain) => {
+        const evens = chain.filter((s) => chipOf(s) % 2 === 0).length;
+        const nextState = { ...state, chips: state.chips + evens * 3 };
+        return evens >= 3 ? { ...nextState, mult: nextState.mult * 1.2 } : nextState;
+      },
     }),
   },
   {
     id: 'subtract_master',
     name: 'Eksi Ustası',
-    description: 'Her ÇIKARMA işleminin sonucuna +4 ekler.',
+    description: 'Çiftli (spinner) OLMAYAN her taş için +6 Taban Puan. Eldeki tüm taşlar tekliyse +3 Çarpan.',
     cost: 5,
     rarity: 'COMMON',
     createHooks: () => ({
-      onOperatorResolve: (operator, _parentBase, _childExposed, edgeValue) =>
-        operator === 'SUBTRACT' ? edgeValue + 4 : edgeValue,
+      onCalculate: (state, chain) => {
+        const singles = chain.filter((s) => !isDouble(s)).length;
+        const allSingles = singles === chain.length && chain.length > 0;
+        return {
+          chips: state.chips + singles * 6,
+          mult: state.mult + (allSingles ? 3 : 0),
+        };
+      },
     }),
   },
   {
     id: 'multiplier_frenzy',
     name: 'Çarpan Coşkusu',
-    description: 'Bu turda çözülen her 3. bağlantının değerini ikiye katlar.',
+    description: 'Zincirdeki her 3. taş için Çarpanı x1.5 katlar.',
     cost: 7,
     rarity: 'UNCOMMON',
-    createHooks: () => {
-      let count = 0;
-      return {
-        onOperatorResolve: (_operator, _parentBase, _childExposed, edgeValue) => {
-          count += 1;
-          return count % 3 === 0 ? edgeValue * 2 : edgeValue;
-        },
-      };
-    },
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const times = Math.floor(chain.length / 3);
+        let currentMult = state.mult;
+        for (let i = 0; i < times; i++) {
+          currentMult *= 1.5;
+        }
+        return { ...state, mult: currentMult };
+      },
+    }),
   },
   {
     id: 'symmetry_bonus',
     name: 'Simetri Ödülü',
-    description: 'Bağlantının iki ucu aynı sayıysa +5 puan.',
+    description: 'Çiftli (spinner) taş başına +8 Taban Puan ve +2 Çarpan.',
     cost: 5,
     rarity: 'COMMON',
     createHooks: () => ({
-      onOperatorResolve: (_operator, parentBase, childExposed, edgeValue) =>
-        parentBase === childExposed ? edgeValue + 5 : edgeValue,
+      onCalculate: (state, chain) => {
+        const doubles = chain.filter(isDouble).length;
+        return {
+          chips: state.chips + doubles * 8,
+          mult: state.mult + doubles * 2,
+        };
+      },
     }),
   },
   {
     id: 'small_number_love',
     name: 'Küçük Sayı Sevgisi',
-    description: 'Bağladığınız taşın açık değeri 2 veya altındaysa +4 puan.',
-    cost: 4,
+    description: 'Toplamı 2 veya altında olan taş başına +6 Taban Puan. Ayrıca reroll maliyetini kalıcı olarak $1 düşürür.',
+    cost: 5,
     rarity: 'COMMON',
     createHooks: () => ({
-      onOperatorResolve: (_operator, _parentBase, childExposed, edgeValue) =>
-        childExposed <= 2 ? edgeValue + 4 : edgeValue,
+      onCalculate: (state, chain) => {
+        const bonus = chain.filter((s) => chipOf(s) <= 2).length * 6;
+        return { ...state, chips: state.chips + bonus };
+      },
+      // Note: Reroll reduction hook is integrated directly inside RunState reroll cost calculation when small_number_love is owned.
     }),
   },
   {
     id: 'simple_pleasures',
     name: 'Basit Zevkler',
-    description: 'Bağlı taşın toplam değeri (parentBase) 6 veya altındaysa +3 puan.',
+    description: 'Toplamı 6 veya altında olan taş başına +4 Taban Puan. Round tek turda kazanılırsa +$6 bonus.',
     cost: 4,
     rarity: 'COMMON',
     createHooks: () => ({
-      onOperatorResolve: (_operator, parentBase, _childExposed, edgeValue) =>
-        parentBase <= 6 ? edgeValue + 3 : edgeValue,
+      onCalculate: (state, chain) => {
+        const bonus = chain.filter((s) => chipOf(s) <= 6).length * 4;
+        return { ...state, chips: state.chips + bonus };
+      },
+      onRoundEnd: (ctx) => (ctx.turnsUsed === 1 ? 6 : 0),
     }),
   },
   {
     id: 'overtime',
     name: 'Ekstra Mesai',
-    description: 'Bu turun 4. bağlantısından itibaren her bağlantıya +3 ekler — uzun zincirleri ödüllendirir.',
+    description: 'Zincirin 4. taşından itibaren her taşa +3 Çarpan ekler.',
     cost: 7,
     rarity: 'UNCOMMON',
-    createHooks: () => {
-      let count = 0;
-      return {
-        onOperatorResolve: (_operator, _parentBase, _childExposed, edgeValue) => {
-          count += 1;
-          return count >= 4 ? edgeValue + 3 : edgeValue;
-        },
-      };
-    },
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const bonus = Math.max(0, chain.length - 3) * 3;
+        return { ...state, mult: state.mult + bonus };
+      },
+    }),
   },
   {
     id: 'four_way_harmony',
     name: 'Dörtlü Uyum',
-    description: 'Bir turda TOPLAMA, ÇIKARMA, ÇARPMA ve BÖLME operatörlerinin hepsini en az bir kez kullanırsan +15 bonus.',
+    description: 'Zincirde en az 4 farklı taş değeri varsa Çarpanı x2.0 katlar.',
     cost: 9,
     rarity: 'UNCOMMON',
-    createHooks: () => {
-      let seen = new Set<OperatorType>();
-      return {
-        onOperatorResolve: (operator, _parentBase, _childExposed, edgeValue) => {
-          seen.add(operator);
-          return edgeValue;
-        },
-        onEvaluationEnd: (totalGain) => {
-          const bonus = seen.size === 4 ? 15 : 0;
-          seen = new Set();
-          return totalGain + bonus;
-        },
-      };
-    },
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const distinctValues = new Set(chain.map(chipOf));
+        return distinctValues.size >= 4 ? { ...state, mult: state.mult * 2 } : state;
+      },
+    }),
   },
   {
     id: 'balance_master',
     name: 'Denge Ustası',
-    description: 'Bu turda en az bir ÇIKARMA VE en az bir BÖLME kullanırsan +12 bonus.',
-    cost: 8,
-    rarity: 'UNCOMMON',
-    createHooks: () => {
-      let hasSubtract = false;
-      let hasDivide = false;
-      return {
-        onOperatorResolve: (operator, _parentBase, _childExposed, edgeValue) => {
-          if (operator === 'SUBTRACT') hasSubtract = true;
-          if (operator === 'DIVIDE') hasDivide = true;
-          return edgeValue;
-        },
-        onEvaluationEnd: (totalGain) => {
-          const bonus = hasSubtract && hasDivide ? 12 : 0;
-          hasSubtract = false;
-          hasDivide = false;
-          return totalGain + bonus;
-        },
-      };
-    },
-  },
-
-  // --- B: batch-total modifiers ---
-  {
-    id: 'chain_end_interest',
-    name: 'Zincir Sonu Faizi',
-    description: 'Pozitif bir zincir kazancına %10 bonus ekler.',
+    description: 'Zincirde hem çiftli hem tekli taş varsa +20 Taban Puan ve +4 Çarpan.',
     cost: 8,
     rarity: 'UNCOMMON',
     createHooks: () => ({
-      onEvaluationEnd: (totalGain) => (totalGain > 0 ? Math.round(totalGain * 1.1) : totalGain),
+      onCalculate: (state, chain) => {
+        const hasDouble = chain.some(isDouble);
+        const hasSingle = chain.some((s) => !isDouble(s));
+        return hasDouble && hasSingle
+          ? { chips: state.chips + 20, mult: state.mult + 4 }
+          : state;
+      },
+    }),
+  },
+
+  // --- batch-total modifiers ---
+  {
+    id: 'chain_end_interest',
+    name: 'Zincir Sonu Faizi',
+    description: 'Pozitif bir taban puana %10 bonus ekler.',
+    cost: 8,
+    rarity: 'UNCOMMON',
+    createHooks: () => ({
+      onCalculate: (state) => (state.chips > 0 ? { ...state, chips: Math.round(state.chips * 1.1) } : state),
     }),
   },
   {
     id: 'loss_insurance',
     name: 'Kayıp Sigortası',
-    description: 'Bu tur asla negatif puan kazanamazsın, en kötü ihtimalle 0.',
+    description: 'Bu turun taban puanı asla 0\'ın altına düşmez.',
     cost: 6,
     rarity: 'COMMON',
     createHooks: () => ({
-      onEvaluationEnd: (totalGain) => Math.max(0, totalGain),
+      onCalculate: (state) => (state.chips < 0 ? { ...state, chips: 0 } : state),
     }),
   },
 
-  // --- C: round-end money ---
+  // --- round-end money ---
   {
     id: 'generous_trader',
     name: 'Cömert Tüccar',
     description: 'Her tamamlanan round için ekstra +$5 kazandırır.',
     cost: 6,
     rarity: 'COMMON',
-    createHooks: () => ({
-      onRoundEnd: () => 5,
-    }),
+    createHooks: () => ({ onRoundEnd: () => 5 }),
   },
   {
     id: 'early_finisher',
@@ -195,9 +198,7 @@ const CORE_CHARMS: readonly CharmDef[] = [
     description: 'Kullanılmayan her tur için ekstra +$2 kazandırır.',
     cost: 7,
     rarity: 'UNCOMMON',
-    createHooks: () => ({
-      onRoundEnd: (ctx) => ctx.turnsLeft * 2,
-    }),
+    createHooks: () => ({ onRoundEnd: (ctx) => ctx.turnsLeft * 2 }),
   },
   {
     id: 'double_hunter',
@@ -205,9 +206,7 @@ const CORE_CHARMS: readonly CharmDef[] = [
     description: 'Tahtadaki her çift (spinner) taş için +$3 kazandırır.',
     cost: 10,
     rarity: 'RARE',
-    createHooks: () => ({
-      onRoundEnd: (ctx) => ctx.nodes.filter((n) => n.isDouble).length * 3,
-    }),
+    createHooks: () => ({ onRoundEnd: (ctx) => ctx.nodes.filter((n) => n.isDouble).length * 3 }),
   },
   {
     id: 'clutch_finisher',
@@ -215,79 +214,73 @@ const CORE_CHARMS: readonly CharmDef[] = [
     description: "Round'u son turda (0 tur kalmışken) kazanırsan +$15 bonus.",
     cost: 8,
     rarity: 'UNCOMMON',
-    createHooks: () => ({
-      onRoundEnd: (ctx) => (ctx.turnsLeft === 0 ? 15 : 0),
-    }),
+    createHooks: () => ({ onRoundEnd: (ctx) => (ctx.turnsLeft === 0 ? 15 : 0) }),
   },
 
-  // --- D: synergy charms (react to which other charms you own) ---
+  // --- synergy charms (react to which other charms you own) ---
   {
     id: 'twin_souls',
     name: 'İkiz Ruhlar',
-    description: "Bölüm Ustası ve Eksi Ustası'na BİRLİKTE sahipsen, ikisinin bonusuna da +2 ekler.",
+    description: "Tek Sayı Ustası ve Eksi Ustası'na BİRLİKTE sahipsen, her taşa +2 ekler.",
     cost: 10,
     rarity: 'RARE',
     createHooks: (ctx) => {
       const hasBoth = ctx.ownedCharmIds.includes('division_master') && ctx.ownedCharmIds.includes('subtract_master');
       return {
-        onOperatorResolve: (operator, _parentBase, _childExposed, edgeValue) => {
-          if (!hasBoth) return edgeValue;
-          return operator === 'DIVIDE' || operator === 'SUBTRACT' ? edgeValue + 2 : edgeValue;
-        },
+        onCalculate: (state, chain) => (hasBoth ? { ...state, chips: state.chips + chain.length * 2 } : state),
       };
     },
   },
   {
     id: 'multiplier_resonance',
     name: 'Çarpan Rezonansı',
-    description: "Çarpan Coşkusu ve Simetri Ödülü'ne BİRLİKTE sahipsen, simetrik ÇARPMA bağlantılarına ekstra +8.",
+    description: "Çarpan Coşkusu ve Simetri Ödülü'ne BİRLİKTE sahipsen, çiftli taşlara ekstra +8.",
     cost: 9,
     rarity: 'UNCOMMON',
     createHooks: (ctx) => {
       const hasBoth = ctx.ownedCharmIds.includes('multiplier_frenzy') && ctx.ownedCharmIds.includes('symmetry_bonus');
       return {
-        onOperatorResolve: (operator, parentBase, childExposed, edgeValue) =>
-          hasBoth && operator === 'MULTIPLY' && parentBase === childExposed ? edgeValue + 8 : edgeValue,
+        onCalculate: (state, chain) =>
+          hasBoth ? { ...state, chips: state.chips + chain.filter(isDouble).length * 8 } : state,
       };
     },
   },
 
-  // --- E: curse charms — help and hurt at once ---
+  // --- curse charms — help and hurt at once ---
   {
     id: 'gamblers_spirit',
     name: 'Kumarbaz Ruhu',
-    description: 'Pozitif kazançlara %30 bonus verir, AMA negatif kazançları %50 daha da kötüleştirir.',
+    description: 'Pozitif taban puana %30 bonus verir, AMA negatifse %50 daha da kötüleştirir.',
     cost: 9,
     rarity: 'RARE',
     curse: true,
     createHooks: () => ({
-      onEvaluationEnd: (totalGain) => (totalGain > 0 ? Math.round(totalGain * 1.3) : Math.round(totalGain * 1.5)),
+      onCalculate: (state) => ({ ...state, chips: state.chips > 0 ? Math.round(state.chips * 1.3) : Math.round(state.chips * 1.5) }),
     }),
   },
   {
     id: 'mad_scholar',
     name: 'Çılgın Bilgin',
-    description: 'ÇIKARMA ve BÖLME işlemlerine +8 verir, AMA TOPLAMA ve ÇARPMA işlemlerine -3 uygular.',
+    description: 'Çiftli taşlara +8 verir, AMA tekli taşlara -3 uygular.',
     cost: 10,
     rarity: 'RARE',
     curse: true,
     createHooks: () => ({
-      onOperatorResolve: (operator, _parentBase, _childExposed, edgeValue) => {
-        if (operator === 'SUBTRACT' || operator === 'DIVIDE') return edgeValue + 8;
-        if (operator === 'ADD' || operator === 'MULTIPLY') return edgeValue - 3;
-        return edgeValue;
+      onCalculate: (state, chain) => {
+        const bonus = chain.filter(isDouble).length * 8 - chain.filter((s) => !isDouble(s)).length * 3;
+        return { ...state, chips: state.chips + bonus };
       },
     }),
   },
   {
     id: 'sacrificial_heart',
     name: 'Fedakar Kalp',
-    description: 'Negatif kazançları tamamen sıfırlar, AMA pozitif kazançları %10 azaltır.',
+    description: 'Negatif taban puanı tamamen sıfırlar, AMA pozitifse %10 azaltır.',
     cost: 6,
     rarity: 'COMMON',
     curse: true,
     createHooks: () => ({
-      onEvaluationEnd: (totalGain) => (totalGain > 0 ? Math.round(totalGain * 0.9) : 0),
+      onCalculate: (state) => ({ ...state, chips: state.chips > 0 ? Math.round(state.chips * 0.9) : 0 }),
     }),
   },
   {
@@ -298,7 +291,7 @@ const CORE_CHARMS: readonly CharmDef[] = [
     rarity: 'COMMON',
     curse: true,
     createHooks: () => ({
-      onEvaluationEnd: (totalGain) => (totalGain < 0 ? Math.round(totalGain * 1.2) : totalGain),
+      onCalculate: (state) => (state.chips < 0 ? { ...state, chips: Math.round(state.chips * 1.2) } : state),
       onRoundEnd: () => 6,
     }),
   },
@@ -314,31 +307,39 @@ const CORE_CHARMS: readonly CharmDef[] = [
     }),
   },
 
-  // --- F: legendary ---
+  // --- legendary ---
   {
     id: 'legendary_symmetry',
     name: 'Efsanevi Simetri',
-    description: "Simetri Ödülü'nün güçlü hali: bağlantının iki ucu aynı sayıysa +15 puan.",
+    description: "Simetri Ödülü'nün güçlü hali: çiftli taş başına +15 Taban Puan ve Çarpanı x1.5 katlar.",
     cost: 15,
     rarity: 'LEGENDARY',
     createHooks: () => ({
-      onOperatorResolve: (_operator, parentBase, childExposed, edgeValue) =>
-        parentBase === childExposed ? edgeValue + 15 : edgeValue,
+      onCalculate: (state, chain) => {
+        const doubles = chain.filter(isDouble).length;
+        let nextMult = state.mult;
+        for (let i = 0; i < doubles; i++) {
+          nextMult *= 1.5;
+        }
+        return {
+          chips: state.chips + doubles * 15,
+          mult: nextMult,
+        };
+      },
     }),
   },
   {
     id: 'cosmic_pendulum',
     name: 'Galaksili Büyük Saat',
-    description: 'Eğer oynanan zincirde 4 veya daha fazla taş varsa Çarpanı +4 artırır.',
+    description: 'Eğer oynanan zincirde 5 veya daha fazla taş varsa Çarpanı x3.0 yapar. 3 el sonra yok olur.',
     cost: 8,
     rarity: 'UNCOMMON',
+    perish: true,
+    maxDurability: 3,
     createHooks: () => ({
       onCalculate: (state, chain) => {
-        if (chain.length >= 4) {
-          return {
-            ...state,
-            mult: state.mult + 4,
-          };
+        if (chain.length >= 5) {
+          return { ...state, mult: state.mult * 3 };
         }
         return state;
       },
@@ -347,17 +348,14 @@ const CORE_CHARMS: readonly CharmDef[] = [
   {
     id: 'heart_matryoshka',
     name: 'Anatomik Matruşka',
-    description: 'Eğer zincirdeki tüm taşlar çift sayıysa (simetri varsa) Çarpanı x1.5 katlar.',
+    description: 'Eğer zincirdeki tüm taşlar çift toplamlıysa (simetri varsa) Çarpanı x2.2 katlar.',
     cost: 8,
     rarity: 'RARE',
     createHooks: () => ({
       onCalculate: (state, chain) => {
-        const isAllEven = chain.every((tile) => (tile.leftVal + tile.rightVal) % 2 === 0);
+        const isAllEven = chain.every((tile) => chipOf(tile) % 2 === 0);
         if (isAllEven && chain.length > 0) {
-          return {
-            ...state,
-            mult: state.mult * 1.5,
-          };
+          return { ...state, mult: state.mult * 2.2 };
         }
         return state;
       },
@@ -365,364 +363,278 @@ const CORE_CHARMS: readonly CharmDef[] = [
   },
 ];
 
-// --- G: per-operator parity charms (rewards odd/even exposed values) ---
-const PARITY_CHARMS: readonly CharmDef[] = OPERATORS.flatMap((op) => [
+/** A small, distinct set replacing the old per-operator generated variants — since there's no
+ *  operator identity left to multiply by 4 anymore, this stays a compact hand-picked set instead
+ *  of a mechanically duplicated one. */
+const GENERATED_CHARMS: readonly CharmDef[] = [
   {
-    id: `${op.toLowerCase()}_even_lover`,
-    name: `${OP_NAME[op]} Çift Sayı Sevgisi`,
-    description: `${OP_NAME[op]} işleminde bağlanan taşın açık değeri ÇİFT sayıysa +3 puan.`,
+    id: 'add_even_lover',
+    name: 'Çift Sayı Sevgisi',
+    description: 'Toplamı ÇİFT olan her taş için +4 Taban Puan ve +1 Çarpan.',
     cost: 5,
-    rarity: 'COMMON' as const,
+    rarity: 'COMMON',
     createHooks: () => ({
-      onOperatorResolve: (operator: OperatorType, _p: number, childExposed: number, edgeValue: number) =>
-        operator === op && childExposed % 2 === 0 ? edgeValue + 3 : edgeValue,
-    }),
-  },
-  {
-    id: `${op.toLowerCase()}_odd_lover`,
-    name: `${OP_NAME[op]} Tek Sayı Sevgisi`,
-    description: `${OP_NAME[op]} işleminde bağlanan taşın açık değeri TEK sayıysa +3 puan.`,
-    cost: 5,
-    rarity: 'COMMON' as const,
-    createHooks: () => ({
-      onOperatorResolve: (operator: OperatorType, _p: number, childExposed: number, edgeValue: number) =>
-        operator === op && childExposed % 2 === 1 ? edgeValue + 3 : edgeValue,
-    }),
-  },
-]);
-
-// --- H: per-operator high/low value charms ---
-const VALUE_RANGE_CHARMS: readonly CharmDef[] = OPERATORS.flatMap((op) => [
-  {
-    id: `${op.toLowerCase()}_high_value`,
-    name: `${OP_NAME[op]} Ağır Yük`,
-    description: `${OP_NAME[op]} işleminde bağlı taşın toplamı (parentBase) 8 veya üzeriyse +5 puan.`,
-    cost: 6,
-    rarity: 'COMMON' as const,
-    createHooks: () => ({
-      onOperatorResolve: (operator: OperatorType, parentBase: number, _c: number, edgeValue: number) =>
-        operator === op && parentBase >= 8 ? edgeValue + 5 : edgeValue,
-    }),
-  },
-  {
-    id: `${op.toLowerCase()}_low_value`,
-    name: `${OP_NAME[op]} Hafif Yük`,
-    description: `${OP_NAME[op]} işleminde bağlı taşın toplamı (parentBase) 5 veya altındaysa +3 puan.`,
-    cost: 4,
-    rarity: 'COMMON' as const,
-    createHooks: () => ({
-      onOperatorResolve: (operator: OperatorType, parentBase: number, _c: number, edgeValue: number) =>
-        operator === op && parentBase <= 5 ? edgeValue + 3 : edgeValue,
-    }),
-  },
-]);
-
-// --- I: per-operator "expert" tier — a stronger, pricier version of each master charm ---
-const EXPERT_BONUS: Record<OperatorType, number> = { ADD: 5, SUBTRACT: 7, MULTIPLY: 6, DIVIDE: 6 };
-const EXPERT_CHARMS: readonly CharmDef[] = OPERATORS.map((op) => ({
-  id: `${op.toLowerCase()}_expert`,
-  name: `Kıdemli ${OP_NAME[op]} Ustası`,
-  description: `Her ${OP_NAME[op].toUpperCase()} işleminin sonucuna +${EXPERT_BONUS[op]} ekler.`,
-  cost: 9,
-  rarity: 'UNCOMMON' as const,
-  createHooks: () => ({
-    onOperatorResolve: (operator: OperatorType, _p: number, _c: number, edgeValue: number) =>
-      operator === op ? edgeValue + EXPERT_BONUS[op] : edgeValue,
-  }),
-}));
-
-// --- J: per-operator streak charms — reward using the same operator twice in a row ---
-const STREAK_CHARMS: readonly CharmDef[] = OPERATORS.map((op) => ({
-  id: `${op.toLowerCase()}_streak`,
-  name: `${OP_NAME[op]} Serisi`,
-  description: `${OP_NAME[op]} işlemini art arda iki kez kullanırsan, ikincisine +6 bonus.`,
-  cost: 7,
-  rarity: 'UNCOMMON' as const,
-  createHooks: () => {
-    let last: OperatorType | null = null;
-    return {
-      onOperatorResolve: (operator: OperatorType, _p: number, _c: number, edgeValue: number) => {
-        const bonus = operator === op && last === op ? 6 : 0;
-        last = operator;
-        return edgeValue + bonus;
+      onCalculate: (state, chain) => {
+        const count = chain.filter((s) => chipOf(s) % 2 === 0).length;
+        return {
+          chips: state.chips + count * 4,
+          mult: state.mult + count * 1,
+        };
       },
-    };
+    }),
   },
-}));
+  {
+    id: 'add_odd_lover',
+    name: 'Tek Sayı Sevgisi',
+    description: 'Toplamı TEK olan her taş için +4 Taban Puan ve +1 Çarpan.',
+    cost: 5,
+    rarity: 'COMMON',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const count = chain.filter((s) => chipOf(s) % 2 === 1).length;
+        return {
+          chips: state.chips + count * 4,
+          mult: state.mult + count * 1,
+        };
+      },
+    }),
+  },
+  {
+    id: 'add_high_value',
+    name: 'Ağır Yük',
+    description: 'Toplamı 8 veya üzerinde olan her taş için +8 Taban Puan ve +2 Çarpan.',
+    cost: 6,
+    rarity: 'COMMON',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const count = chain.filter((s) => chipOf(s) >= 8).length;
+        return {
+          chips: state.chips + count * 8,
+          mult: state.mult + count * 2,
+        };
+      },
+    }),
+  },
+  {
+    id: 'add_low_value',
+    name: 'Hafif Yük',
+    description: 'Toplamı 5 veya altında olan her taş için +5 Taban Puan ve +1 Çarpan.',
+    cost: 4,
+    rarity: 'COMMON',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const count = chain.filter((s) => chipOf(s) <= 5).length;
+        return {
+          chips: state.chips + count * 5,
+          mult: state.mult + count * 1,
+        };
+      },
+    }),
+  },
+  {
+    id: 'add_expert',
+    name: 'Kıdemli Çiftlik Ustası',
+    description: 'Çiftli (spinner) taş başına +10 Taban Puan ve +3 Çarpan.',
+    cost: 9,
+    rarity: 'UNCOMMON',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const count = chain.filter(isDouble).length;
+        return {
+          chips: state.chips + count * 10,
+          mult: state.mult + count * 3,
+        };
+      },
+    }),
+  },
+  {
+    id: 'subtract_expert',
+    name: 'Kıdemli Zincir Ustası',
+    description: 'Zincir 5 veya daha fazla taş içeriyorsa Çarpanı x1.5 katlar.',
+    cost: 9,
+    rarity: 'UNCOMMON',
+    createHooks: () => ({
+      onCalculate: (state, chain) =>
+        chain.length >= 5 ? { ...state, mult: state.mult * 1.5 } : state,
+    }),
+  },
+  {
+    id: 'add_streak',
+    name: 'Ardışık Seri',
+    description: 'Zincirde art arda gelen iki taşın toplamı eşitse, her eşleşme için +12 Taban Puan ve +3 Çarpan.',
+    cost: 7,
+    rarity: 'UNCOMMON',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        let matchCount = 0;
+        for (let i = 1; i < chain.length; i++) {
+          if (chipOf(chain[i]) === chipOf(chain[i - 1])) matchCount++;
+        }
+        return {
+          chips: state.chips + matchCount * 12,
+          mult: state.mult + matchCount * 3,
+        };
+      },
+    }),
+  },
+];
 
-// --- K: positional charms — reward where in the turn's sequence a connection falls ---
+// --- positional charms — reward where in the chain a stone falls ---
 const POSITIONAL_CHARMS: readonly CharmDef[] = [
   {
     id: 'opening_strike',
     name: 'Açılış Vuruşu',
-    description: "Bu turun İLK bağlantısına +4 puan ekler.",
+    description: 'Zincirin İLK (kök) taşına +25 Taban Puan ve +5 Çarpan ekler.',
     cost: 5,
     rarity: 'COMMON',
-    createHooks: () => {
-      let count = 0;
-      return {
-        onOperatorResolve: (_operator, _p, _c, edgeValue) => {
-          count += 1;
-          return count === 1 ? edgeValue + 4 : edgeValue;
-        },
-      };
-    },
+    createHooks: () => ({
+      onCalculate: (state, chain) =>
+        chain.length > 0
+          ? { chips: state.chips + 25, mult: state.mult + 5 }
+          : state,
+    }),
   },
   {
     id: 'grand_finale',
     name: 'Büyük Final',
-    description: 'Bu turun 6. bağlantısından itibaren her bağlantıya +6 puan ekler (Ekstra Mesai\'nin güçlü hali).',
+    description: 'Zincirin EN SON (yaprak) taşına Çarpanı x2.5 katlama özelliği verir.',
     cost: 10,
     rarity: 'RARE',
-    createHooks: () => {
-      let count = 0;
-      return {
-        onOperatorResolve: (_operator, _p, _c, edgeValue) => {
-          count += 1;
-          return count >= 6 ? edgeValue + 6 : edgeValue;
-        },
-      };
-    },
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        if (chain.length > 0) {
+          // Double last stone's contribution or multiply the whole hand's mult
+          return { ...state, mult: state.mult * 2.5 };
+        }
+        return state;
+      },
+    }),
   },
   {
     id: 'minimalist',
     name: 'Minimalist',
-    description: "Bu tur TAM OLARAK 1 bağlantı kurup gönderirsen +6 bonus.",
+    description: 'Bu tur TAM OLARAK 2 taş oynayıp gönderirseniz Çarpanı +12 artırır.',
     cost: 6,
     rarity: 'UNCOMMON',
-    createHooks: () => {
-      let count = 0;
-      return {
-        onOperatorResolve: (_operator, _p, _c, edgeValue) => {
-          count += 1;
-          return edgeValue;
-        },
-        onEvaluationEnd: (totalGain) => {
-          const bonus = count === 1 ? 6 : 0;
-          count = 0;
-          return totalGain + bonus;
-        },
-      };
-    },
+    createHooks: () => ({
+      onCalculate: (state, chain) =>
+        chain.length === 2 ? { ...state, mult: state.mult + 12 } : state,
+    }),
   },
 ];
 
-// --- L: more round-end economy charms ---
+// --- round-end economy charms ---
 const ECONOMY_CHARMS: readonly CharmDef[] = [
-  {
-    id: 'flat_bonus_common',
-    name: 'Basit Zafer',
-    description: 'Her round sonunda sabit +$3 kazandırır.',
-    cost: 3,
-    rarity: 'COMMON',
-    createHooks: () => ({ onRoundEnd: () => 3 }),
-  },
-  {
-    id: 'flat_bonus_strong',
-    name: 'Deste Ustası',
-    description: 'Her round sonunda sabit +$8 kazandırır.',
-    cost: 10,
-    rarity: 'RARE',
-    createHooks: () => ({ onRoundEnd: () => 8 }),
-  },
-  {
-    id: 'long_turn_reward',
-    name: 'Uzun Yolculuk',
-    description: 'Kullandığınız her tur için +$1 kazandırır (Erken Bitiş Ustası\'nın tam tersi).',
-    cost: 6,
-    rarity: 'COMMON',
-    createHooks: () => ({ onRoundEnd: (ctx) => ctx.turnsUsed * 1 }),
-  },
-  {
-    id: 'overachiever',
-    name: 'Aşırı Başarı',
-    description: 'Hedefi 20 veya daha fazla aşarak kazanırsan +$15 bonus.',
-    cost: 9,
-    rarity: 'RARE',
-    createHooks: () => ({ onRoundEnd: (ctx) => (ctx.finalScore - ctx.target >= 20 ? 15 : 0) }),
-  },
-  {
-    id: 'lone_wolf',
-    name: 'Yalnız Kurt',
-    description: 'Tahtadaki çift OLMAYAN her taş için +$2 kazandırır (Çift Avcısı\'nın tersi).',
-    cost: 7,
-    rarity: 'UNCOMMON',
-    createHooks: () => ({ onRoundEnd: (ctx) => ctx.nodes.filter((n) => !n.isDouble).length * 2 }),
-  },
-  {
-    id: 'perfect_landing',
-    name: 'Tam İsabet',
-    description: "Round'u skoru TAM OLARAK hedefe eşit bitirirsen +$25 bonus.",
-    cost: 12,
-    rarity: 'LEGENDARY',
-    createHooks: () => ({ onRoundEnd: (ctx) => (ctx.finalScore === ctx.target ? 25 : 0) }),
-  },
-  {
-    id: 'almost_there',
-    name: 'Neredeyse Bitti',
-    description: '1 tur kalmışken round\'u kazanırsan +$7 bonus.',
-    cost: 6,
-    rarity: 'COMMON',
-    createHooks: () => ({ onRoundEnd: (ctx) => (ctx.turnsLeft === 1 ? 7 : 0) }),
-  },
-  {
-    id: 'comeback_kid',
-    name: 'Geri Dönüş Çocuğu',
-    description: 'Round\'u tam sınırda (turnsLeft 0 veya 1) kazanırsan +$10 bonus.',
-    cost: 8,
-    rarity: 'UNCOMMON',
-    createHooks: () => ({ onRoundEnd: (ctx) => (ctx.turnsLeft <= 1 ? 10 : 0) }),
-  },
-  {
-    id: 'spinner_fan',
-    name: 'Fırıldak Hayranı',
-    description: 'Tahtada en az 2 çift (spinner) taş varsa +$10 bonus.',
-    cost: 8,
-    rarity: 'UNCOMMON',
-    createHooks: () => ({ onRoundEnd: (ctx) => (ctx.nodes.filter((n) => n.isDouble).length >= 2 ? 10 : 0) }),
-  },
-  {
-    id: 'penny_pincher',
-    name: 'Kuruşu Kurtaran',
-    description: 'Her round sonunda +$4 kazandırır.',
-    cost: 5,
-    rarity: 'COMMON',
-    createHooks: () => ({ onRoundEnd: () => 4 }),
-  },
-  {
-    id: 'grand_hoard',
-    name: 'Büyük Hazine',
-    description: 'Tahtada 8 veya daha fazla taş biriktiyse (uzun round) +$12 bonus.',
-    cost: 9,
-    rarity: 'RARE',
-    createHooks: () => ({ onRoundEnd: (ctx) => (ctx.nodes.length >= 8 ? 12 : 0) }),
-  },
-  {
-    id: 'swift_victory',
-    name: 'Hızlı Zafer',
-    description: 'Round\'u 2 veya daha az tur kullanarak kazanırsan +$14 bonus.',
-    cost: 9,
-    rarity: 'RARE',
-    createHooks: () => ({ onRoundEnd: (ctx) => (ctx.turnsUsed <= 2 ? 14 : 0) }),
-  },
-  {
-    id: 'modest_gain',
-    name: 'Mütevazı Kazanç',
-    description: 'Her round sonunda +$2 kazandırır — ucuz ve garanti.',
-    cost: 2,
-    rarity: 'COMMON',
-    createHooks: () => ({ onRoundEnd: () => 2 }),
-  },
-  {
-    id: 'triple_double',
-    name: 'Üçlü Çift',
-    description: 'Tahtada TAM OLARAK 3 çift taş varsa +$18 bonus.',
-    cost: 11,
-    rarity: 'RARE',
-    createHooks: () => ({ onRoundEnd: (ctx) => (ctx.nodes.filter((n) => n.isDouble).length === 3 ? 18 : 0) }),
-  },
-  {
-    id: 'marathon_runner',
-    name: 'Maraton Koşucusu',
-    description: 'Tüm turları kullanıp (0 tur kalmışken) kazanırsan +$9 verir.',
-    cost: 6,
-    rarity: 'UNCOMMON',
-    createHooks: () => ({ onRoundEnd: (ctx) => (ctx.turnsLeft === 0 ? 9 : 0) }),
-  },
+  { id: 'flat_bonus_common', name: 'Basit Zafer', description: 'Her round sonunda sabit +$3 kazandırır.', cost: 3, rarity: 'COMMON', createHooks: () => ({ onRoundEnd: () => 3 }) },
+  { id: 'flat_bonus_strong', name: 'Deste Ustası', description: 'Her round sonunda sabit +$8 kazandırır.', cost: 10, rarity: 'RARE', createHooks: () => ({ onRoundEnd: () => 8 }) },
+  { id: 'long_turn_reward', name: 'Uzun Yolculuk', description: "Kullandığınız her tur için +$1 kazandırır (Erken Bitiş Ustası'nın tam tersi).", cost: 6, rarity: 'COMMON', createHooks: () => ({ onRoundEnd: (ctx) => ctx.turnsUsed * 1 }) },
+  { id: 'overachiever', name: 'Aşırı Başarı', description: 'Hedefi 20 veya daha fazla aşarak kazanırsan +$15 bonus.', cost: 9, rarity: 'RARE', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.finalScore - ctx.target >= 20 ? 15 : 0) }) },
+  { id: 'lone_wolf', name: 'Yalnız Kurt', description: "Tahtadaki çift OLMAYAN her taş için +$2 kazandırır (Çift Avcısı'nın tersi).", cost: 7, rarity: 'UNCOMMON', createHooks: () => ({ onRoundEnd: (ctx) => ctx.nodes.filter((n) => !n.isDouble).length * 2 }) },
+  { id: 'perfect_landing', name: 'Tam İsabet', description: "Round'u skoru TAM OLARAK hedefe eşit bitirirsen +$25 bonus.", cost: 12, rarity: 'LEGENDARY', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.finalScore === ctx.target ? 25 : 0) }) },
+  { id: 'almost_there', name: 'Neredeyse Bitti', description: "1 tur kalmışken round'u kazanırsan +$7 bonus.", cost: 6, rarity: 'COMMON', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.turnsLeft === 1 ? 7 : 0) }) },
+  { id: 'comeback_kid', name: 'Geri Dönüş Çocuğu', description: "Round'u tam sınırda (turnsLeft 0 veya 1) kazanırsan +$10 bonus.", cost: 8, rarity: 'UNCOMMON', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.turnsLeft <= 1 ? 10 : 0) }) },
+  { id: 'spinner_fan', name: 'Fırıldak Hayranı', description: 'Tahtada en az 2 çift (spinner) taş varsa +$10 bonus.', cost: 8, rarity: 'UNCOMMON', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.nodes.filter((n) => n.isDouble).length >= 2 ? 10 : 0) }) },
+  { id: 'penny_pincher', name: 'Kuruşu Kurtaran', description: 'Her round sonunda +$4 kazandırır.', cost: 5, rarity: 'COMMON', createHooks: () => ({ onRoundEnd: () => 4 }) },
+  { id: 'grand_hoard', name: 'Büyük Hazine', description: 'Tahtada 8 veya daha fazla taş biriktiyse (uzun round) +$12 bonus.', cost: 9, rarity: 'RARE', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.nodes.length >= 8 ? 12 : 0) }) },
+  { id: 'swift_victory', name: 'Hızlı Zafer', description: "Round'u 2 veya daha az tur kullanarak kazanırsan +$14 bonus.", cost: 9, rarity: 'RARE', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.turnsUsed <= 2 ? 14 : 0) }) },
+  { id: 'modest_gain', name: 'Mütevazı Kazanç', description: 'Her round sonunda +$2 kazandırır — ucuz ve garanti.', cost: 2, rarity: 'COMMON', createHooks: () => ({ onRoundEnd: () => 2 }) },
+  { id: 'triple_double', name: 'Üçlü Çift', description: 'Tahtada TAM OLARAK 3 çift taş varsa +$18 bonus.', cost: 11, rarity: 'RARE', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.nodes.filter((n) => n.isDouble).length === 3 ? 18 : 0) }) },
+  { id: 'marathon_runner', name: 'Maraton Koşucusu', description: 'Tüm turları kullanıp (0 tur kalmışken) kazanırsan +$9 verir.', cost: 6, rarity: 'UNCOMMON', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.turnsLeft === 0 ? 9 : 0) }) },
 ];
 
-// --- M: more curse charms ---
+// --- more curse charms ---
 const CURSE_CHARMS: readonly CharmDef[] = [
   {
     id: 'chaos_coin',
     name: 'Kaos Parası',
-    description: 'Bu turun kazancını %50 ihtimalle ikiye katlar, %50 ihtimalle SIFIRLAR.',
+    description: 'Bu turun taban puanını %50 ihtimalle ikiye katlar, %50 ihtimalle SIFIRLAR.',
     cost: 9,
     rarity: 'RARE',
     curse: true,
     createHooks: () => ({
-      onEvaluationEnd: (totalGain) => (Math.random() < 0.5 ? totalGain * 2 : 0),
+      onCalculate: (state) => ({ ...state, chips: Math.random() < 0.5 ? state.chips * 2 : 0 }),
     }),
   },
   {
     id: 'reverse_symmetry',
     name: 'Ters Simetri',
-    description: 'Bağlantının iki ucu FARKLIYSA +4, AYNIYSA -4 puan.',
+    description: 'Tekli taş +4, çiftli (spinner) taş -4 puan.',
     cost: 5,
     rarity: 'COMMON',
     curse: true,
     createHooks: () => ({
-      onOperatorResolve: (_operator, parentBase, childExposed, edgeValue) =>
-        parentBase === childExposed ? edgeValue - 4 : edgeValue + 4,
+      onCalculate: (state, chain) => {
+        const bonus = chain.filter((s) => !isDouble(s)).length * 4 - chain.filter(isDouble).length * 4;
+        return { ...state, chips: state.chips + bonus };
+      },
     }),
   },
   {
     id: 'add_sub_clash',
-    name: 'Toplama-Çıkarma Çatışması',
-    description: 'TOPLAMA işlemine +6 verir, AMA ÇIKARMA işlemine -5 uygular.',
+    name: 'Çift-Tek Çatışması',
+    description: 'Çiftli taşa +6 verir, AMA tekli taşa -5 uygular.',
     cost: 8,
     rarity: 'UNCOMMON',
     curse: true,
     createHooks: () => ({
-      onOperatorResolve: (operator, _p, _c, edgeValue) => {
-        if (operator === 'ADD') return edgeValue + 6;
-        if (operator === 'SUBTRACT') return edgeValue - 5;
-        return edgeValue;
+      onCalculate: (state, chain) => {
+        const bonus = chain.filter(isDouble).length * 6 - chain.filter((s) => !isDouble(s)).length * 5;
+        return { ...state, chips: state.chips + bonus };
       },
     }),
   },
   {
     id: 'mul_div_clash',
-    name: 'Çarpma-Bölme Çatışması',
-    description: 'ÇARPMA işlemine +8 verir, AMA BÖLME işlemine -6 uygular.',
+    name: 'Ağır-Hafif Çatışması',
+    description: 'Toplamı 7 veya üzeri olan taşa +8 verir, AMA altındakine -6 uygular.',
     cost: 8,
     rarity: 'UNCOMMON',
     curse: true,
     createHooks: () => ({
-      onOperatorResolve: (operator, _p, _c, edgeValue) => {
-        if (operator === 'MULTIPLY') return edgeValue + 8;
-        if (operator === 'DIVIDE') return edgeValue - 6;
-        return edgeValue;
+      onCalculate: (state, chain) => {
+        const bonus = chain.filter((s) => chipOf(s) >= 7).length * 8 - chain.filter((s) => chipOf(s) < 7).length * 6;
+        return { ...state, chips: state.chips + bonus };
       },
     }),
   },
   {
     id: 'lucky_dice',
     name: 'Şanslı Zar',
-    description: 'Her bağlantıda %25 ihtimalle +10, %25 ihtimalle -5 puan (geri kalan %50 değişiklik yok).',
+    description: 'Her taş için %25 ihtimalle +10, %25 ihtimalle -5 puan (kalan %50 değişiklik yok).',
     cost: 7,
     rarity: 'UNCOMMON',
     curse: true,
     createHooks: () => ({
-      onOperatorResolve: (_operator, _p, _c, edgeValue) => {
-        const roll = Math.random();
-        if (roll < 0.25) return edgeValue + 10;
-        if (roll < 0.5) return edgeValue - 5;
-        return edgeValue;
+      onCalculate: (state, chain) => {
+        let bonus = 0;
+        chain.forEach(() => {
+          const roll = Math.random();
+          if (roll < 0.25) bonus += 10;
+          else if (roll < 0.5) bonus -= 5;
+        });
+        return { ...state, chips: state.chips + bonus };
       },
     }),
   },
   {
     id: 'all_or_nothing',
     name: 'Ya Hep Ya Hiç',
-    description: "Bu turun İLK bağlantısına +20 verir, AMA sonraki her bağlantıya -3 uygular.",
+    description: 'Zincirin İLK taşına +20 verir, AMA sonraki her taşa -3 uygular.',
     cost: 10,
     rarity: 'RARE',
     curse: true,
-    createHooks: () => {
-      let count = 0;
-      return {
-        onOperatorResolve: (_operator, _p, _c, edgeValue) => {
-          count += 1;
-          return count === 1 ? edgeValue + 20 : edgeValue - 3;
-        },
-      };
-    },
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        if (chain.length === 0) return state;
+        const bonus = 20 - (chain.length - 1) * 3;
+        return { ...state, chips: state.chips + bonus };
+      },
+    }),
   },
   {
     id: 'speed_demon',
     name: 'Hız Şeytanı',
-    description: 'turnsLeft 3 veya üzeriyle round\'u kazanırsan +$20 verir, AMA son tura kalırsan (turnsLeft 0) -$5 kaybedersin.',
+    description: "turnsLeft 3 veya üzeriyle round'u kazanırsan +$20 verir, AMA son tura kalırsan (turnsLeft 0) -$5 kaybedersin.",
     cost: 9,
     rarity: 'RARE',
     curse: true,
@@ -737,12 +649,12 @@ const CURSE_CHARMS: readonly CharmDef[] = [
   {
     id: 'volatile_soul',
     name: 'Değişken Ruh',
-    description: 'Bu turun kazancını %40 azaltır ya da %40 artırır — hangisi olacağı rastgele.',
+    description: 'Bu turun taban puanını %40 azaltır ya da %40 artırır — hangisi olacağı rastgele.',
     cost: 8,
     rarity: 'UNCOMMON',
     curse: true,
     createHooks: () => ({
-      onEvaluationEnd: (totalGain) => Math.round(totalGain * (Math.random() < 0.5 ? 0.6 : 1.4)),
+      onCalculate: (state) => ({ ...state, chips: Math.round(state.chips * (Math.random() < 0.5 ? 0.6 : 1.4)) }),
     }),
   },
   {
@@ -753,7 +665,7 @@ const CURSE_CHARMS: readonly CharmDef[] = [
     rarity: 'UNCOMMON',
     curse: true,
     createHooks: () => ({
-      onEvaluationEnd: (totalGain) => (totalGain < 0 ? totalGain - 3 : totalGain),
+      onCalculate: (state) => (state.chips < 0 ? { ...state, chips: state.chips - 3 } : state),
       onRoundEnd: () => 10,
     }),
   },
@@ -771,58 +683,64 @@ const CURSE_CHARMS: readonly CharmDef[] = [
   {
     id: 'even_curse',
     name: 'Çift Laneti',
-    description: 'Açık değer ÇİFT ise +7, TEK ise -4 puan.',
+    description: 'Toplamı ÇİFT olan taşa +7, TEK olana -4 puan.',
     cost: 6,
     rarity: 'COMMON',
     curse: true,
     createHooks: () => ({
-      onOperatorResolve: (_operator, _p, childExposed, edgeValue) =>
-        childExposed % 2 === 0 ? edgeValue + 7 : edgeValue - 4,
+      onCalculate: (state, chain) => {
+        const bonus = chain.filter((s) => chipOf(s) % 2 === 0).length * 7 - chain.filter((s) => chipOf(s) % 2 === 1).length * 4;
+        return { ...state, chips: state.chips + bonus };
+      },
     }),
   },
   {
     id: 'odd_curse',
     name: 'Tek Laneti',
-    description: 'Açık değer TEK ise +7, ÇİFT ise -4 puan.',
+    description: 'Toplamı TEK olan taşa +7, ÇİFT olana -4 puan.',
     cost: 6,
     rarity: 'COMMON',
     curse: true,
     createHooks: () => ({
-      onOperatorResolve: (_operator, _p, childExposed, edgeValue) =>
-        childExposed % 2 === 1 ? edgeValue + 7 : edgeValue - 4,
+      onCalculate: (state, chain) => {
+        const bonus = chain.filter((s) => chipOf(s) % 2 === 1).length * 7 - chain.filter((s) => chipOf(s) % 2 === 0).length * 4;
+        return { ...state, chips: state.chips + bonus };
+      },
     }),
   },
   {
     id: 'boom_or_bust',
     name: 'Ya Patlarsın Ya Batarsın',
-    description: 'Bu turun kazancını %70 ihtimalle sıfırlar, %30 ihtimalle 3 katına çıkarır.',
+    description: 'Bu turun taban puanını %70 ihtimalle sıfırlar, %30 ihtimalle 3 katına çıkarır.',
     cost: 11,
     rarity: 'RARE',
     curse: true,
     createHooks: () => ({
-      onEvaluationEnd: (totalGain) => (Math.random() < 0.3 ? totalGain * 3 : 0),
+      onCalculate: (state) => ({ ...state, chips: Math.random() < 0.3 ? state.chips * 3 : 0 }),
     }),
   },
   {
     id: 'greedy_hand',
     name: 'Açgözlü El',
-    description: 'parentBase 9 veya üzeriyse +9 verir, AMA 9\'un altındaysa -3 uygular.',
+    description: 'Toplamı 9 veya üzeri olan taşa +9 verir, AMA altındakine -3 uygular.',
     cost: 7,
     rarity: 'UNCOMMON',
     curse: true,
     createHooks: () => ({
-      onOperatorResolve: (_operator, parentBase, _c, edgeValue) =>
-        parentBase >= 9 ? edgeValue + 9 : edgeValue - 3,
+      onCalculate: (state, chain) => {
+        const bonus = chain.filter((s) => chipOf(s) >= 9).length * 9 - chain.filter((s) => chipOf(s) < 9).length * 3;
+        return { ...state, chips: state.chips + bonus };
+      },
     }),
   },
 ];
 
-// --- N: more synergy charms ---
+// --- more synergy charms ---
 const SYNERGY_CHARMS: readonly CharmDef[] = [
   {
     id: 'synergy_all_masters',
     name: 'Dört Usta Uyumu',
-    description: 'Bölüm, Toplam, Eksi Ustası ve Çarpan Coşkusu\'nun HEPSİNE sahipsen, her bağlantıya ekstra +5.',
+    description: 'Tek Sayı, Toplam, Eksi Ustası ve Çarpan Coşkusu\'nun HEPSİNE sahipsen, her taşa ekstra +5.',
     cost: 14,
     rarity: 'RARE',
     createHooks: (ctx) => {
@@ -832,14 +750,14 @@ const SYNERGY_CHARMS: readonly CharmDef[] = [
         ctx.ownedCharmIds.includes('subtract_master') &&
         ctx.ownedCharmIds.includes('multiplier_frenzy');
       return {
-        onOperatorResolve: (_operator, _p, _c, edgeValue) => (hasAll ? edgeValue + 5 : edgeValue),
+        onCalculate: (state, chain) => (hasAll ? { ...state, chips: state.chips + chain.length * 5 } : state),
       };
     },
   },
   {
     id: 'synergy_economy_duo',
     name: 'Tüccar İkilisi',
-    description: 'Cömert Tüccar ve Erken Bitiş Ustası\'na BİRLİKTE sahipsen, round sonunda ekstra +$5.',
+    description: "Cömert Tüccar ve Erken Bitiş Ustası'na BİRLİKTE sahipsen, round sonunda ekstra +$5.",
     cost: 8,
     rarity: 'UNCOMMON',
     createHooks: (ctx) => {
@@ -850,52 +768,49 @@ const SYNERGY_CHARMS: readonly CharmDef[] = [
   {
     id: 'synergy_curse_ward',
     name: 'Lanet Kalkanı',
-    description: 'Çılgın Bilgin\'e sahipsen, onun TOPLAMA/ÇARPMA cezasını iptal eder (+3 geri verir).',
+    description: "Çılgın Bilgin'e sahipsen, onun tekli-taş cezasını hafifletir (çiftli taşlara ekstra +3).",
     cost: 10,
     rarity: 'RARE',
     createHooks: (ctx) => {
       const hasCurse = ctx.ownedCharmIds.includes('mad_scholar');
       return {
-        onOperatorResolve: (operator, _p, _c, edgeValue) =>
-          hasCurse && (operator === 'ADD' || operator === 'MULTIPLY') ? edgeValue + 3 : edgeValue,
+        onCalculate: (state, chain) =>
+          hasCurse ? { ...state, chips: state.chips + chain.filter(isDouble).length * 3 } : state,
       };
     },
   },
   {
     id: 'synergy_small_simple',
     name: 'Küçük ve Basit',
-    description: 'Küçük Sayı Sevgisi ve Basit Zevkler\'e BİRLİKTE sahipsen, ikisi de aynı anda tetiklendiğinde ekstra +3.',
+    description: "Küçük Sayı Sevgisi ve Basit Zevkler'e BİRLİKTE sahipsen, toplamı 6 veya altındaki taşlara ekstra +3.",
     cost: 7,
     rarity: 'COMMON',
     createHooks: (ctx) => {
       const hasBoth = ctx.ownedCharmIds.includes('small_number_love') && ctx.ownedCharmIds.includes('simple_pleasures');
       return {
-        onOperatorResolve: (_operator, parentBase, childExposed, edgeValue) =>
-          hasBoth && parentBase <= 6 && childExposed <= 2 ? edgeValue + 3 : edgeValue,
+        onCalculate: (state, chain) =>
+          hasBoth ? { ...state, chips: state.chips + chain.filter((s) => chipOf(s) <= 6).length * 3 } : state,
       };
     },
   },
   {
     id: 'synergy_harmony_overtime',
     name: 'Uyum ve Mesai',
-    description: "Dörtlü Uyum ve Ekstra Mesai\'ye BİRLİKTE sahipsen, 4. bağlantıdan itibaren ekstra +4.",
+    description: "Dörtlü Uyum ve Ekstra Mesai'ye BİRLİKTE sahipsen, 4. taştan itibaren ekstra +4.",
     cost: 9,
     rarity: 'UNCOMMON',
     createHooks: (ctx) => {
       const hasBoth = ctx.ownedCharmIds.includes('four_way_harmony') && ctx.ownedCharmIds.includes('overtime');
-      let count = 0;
       return {
-        onOperatorResolve: (_operator, _p, _c, edgeValue) => {
-          count += 1;
-          return hasBoth && count >= 4 ? edgeValue + 4 : edgeValue;
-        },
+        onCalculate: (state, chain) =>
+          hasBoth ? { ...state, chips: state.chips + Math.max(0, chain.length - 3) * 4 } : state,
       };
     },
   },
   {
     id: 'synergy_finisher_duo',
     name: 'Son Anda İkilisi',
-    description: 'Son Anda Kurtuluş ve Erken Bitiş Ustası\'na BİRLİKTE sahipsen, turnsLeft 0 iken ekstra +$5.',
+    description: "Son Anda Kurtuluş ve Erken Bitiş Ustası'na BİRLİKTE sahipsen, turnsLeft 0 iken ekstra +$5.",
     cost: 8,
     rarity: 'UNCOMMON',
     createHooks: (ctx) => {
@@ -905,52 +820,39 @@ const SYNERGY_CHARMS: readonly CharmDef[] = [
   },
 ];
 
-// --- O: extra legendary tier ---
+// --- extra legendary tier ---
 const LEGENDARY_CHARMS: readonly CharmDef[] = [
   {
     id: 'legendary_universal_chain',
     name: 'Efsanevi Zincir',
-    description: 'Operatör türü fark etmeksizin HER bağlantıya +10 puan ekler.',
+    description: 'Zincirdeki HER taşa +10 puan ekler.',
     cost: 20,
     rarity: 'LEGENDARY',
     createHooks: () => ({
-      onOperatorResolve: (_operator, _p, _c, edgeValue) => edgeValue + 10,
+      onCalculate: (state, chain) => ({ ...state, chips: state.chips + chain.length * 10 }),
     }),
   },
   {
     id: 'legendary_double_edge',
     name: 'Efsanevi İkilik',
-    description: 'Bu turun kazancını 2 katına çıkarır (pozitifse), AMA negatifse 3 katına çıkarır.',
+    description: 'Bu turun taban puanını 2 katına çıkarır (pozitifse), AMA negatifse 3 katına çıkarır.',
     cost: 18,
     rarity: 'LEGENDARY',
     curse: true,
     createHooks: () => ({
-      onEvaluationEnd: (totalGain) => (totalGain > 0 ? totalGain * 2 : totalGain * 3),
+      onCalculate: (state) => ({ ...state, chips: state.chips > 0 ? state.chips * 2 : state.chips * 3 }),
     }),
   },
   {
     id: 'legendary_grand_harmony',
     name: 'Büyük Uyum',
-    description: 'Bir turda 4 operatörün tümünü VE en az 6 bağlantı kullanırsan +40 bonus.',
+    description: 'Zincir en az 6 taş içeriyorsa VE en az 2 çiftli taş varsa +40 bonus.',
     cost: 20,
     rarity: 'LEGENDARY',
-    createHooks: () => {
-      let seen = new Set<OperatorType>();
-      let count = 0;
-      return {
-        onOperatorResolve: (operator, _p, _c, edgeValue) => {
-          seen.add(operator);
-          count += 1;
-          return edgeValue;
-        },
-        onEvaluationEnd: (totalGain) => {
-          const bonus = seen.size === 4 && count >= 6 ? 40 : 0;
-          seen = new Set();
-          count = 0;
-          return totalGain + bonus;
-        },
-      };
-    },
+    createHooks: () => ({
+      onCalculate: (state, chain) =>
+        chain.length >= 6 && chain.filter(isDouble).length >= 2 ? { ...state, chips: state.chips + 40 } : state,
+    }),
   },
   {
     id: 'legendary_midas',
@@ -962,115 +864,106 @@ const LEGENDARY_CHARMS: readonly CharmDef[] = [
   },
 ];
 
-// --- P: numeric-coincidence flavor charms ---
+// --- numeric-coincidence flavor charms ---
 const NUMBER_CHARMS: readonly CharmDef[] = [
   {
     id: 'lucky_seven',
     name: 'Şanslı Yedi',
-    description: 'Bağlı taş toplamı + açık değer = 7 ise +7 bonus.',
+    description: 'Toplamı TAM OLARAK 7 olan taş başına +7 bonus.',
     cost: 6,
     rarity: 'COMMON',
     createHooks: () => ({
-      onOperatorResolve: (_operator, parentBase, childExposed, edgeValue) =>
-        parentBase + childExposed === 7 ? edgeValue + 7 : edgeValue,
+      onCalculate: (state, chain) => ({ ...state, chips: state.chips + chain.filter((s) => chipOf(s) === 7).length * 7 }),
     }),
   },
   {
     id: 'unlucky_thirteen',
-    name: 'Uğursuz On Üç',
-    description: 'Toplam 13 ise -8 puan, değilse her bağlantıya sabit +2.',
+    name: 'Uğursuz On İki',
+    description: 'Toplamı 12 (en yüksek çift) olan taş -8, değilse her taşa sabit +2.',
     cost: 5,
     rarity: 'COMMON',
     curse: true,
     createHooks: () => ({
-      onOperatorResolve: (_operator, parentBase, childExposed, edgeValue) =>
-        parentBase + childExposed === 13 ? edgeValue - 8 : edgeValue + 2,
+      onCalculate: (state, chain) => {
+        const bonus = chain.filter((s) => chipOf(s) === 12).length * -8 + chain.filter((s) => chipOf(s) !== 12).length * 2;
+        return { ...state, chips: state.chips + bonus };
+      },
     }),
   },
   {
     id: 'double_trouble',
     name: 'Çifte Bela',
-    description: 'ÇARPMA işleminde iki uç eşitse (simetrik çarpım) +12 puan.',
+    description: 'Çiftli (spinner) taş başına +12 puan.',
     cost: 11,
     rarity: 'RARE',
     createHooks: () => ({
-      onOperatorResolve: (operator, parentBase, childExposed, edgeValue) =>
-        operator === 'MULTIPLY' && parentBase === childExposed ? edgeValue + 12 : edgeValue,
+      onCalculate: (state, chain) => ({ ...state, chips: state.chips + chain.filter(isDouble).length * 12 }),
     }),
   },
   {
     id: 'zero_hero',
     name: 'Sıfır Kahramanı',
-    description: 'Açık değer 0 ise +6 puan.',
+    description: 'İçinde 0 pip olan taş başına +6 puan.',
     cost: 5,
     rarity: 'COMMON',
     createHooks: () => ({
-      onOperatorResolve: (_operator, _p, childExposed, edgeValue) => (childExposed === 0 ? edgeValue + 6 : edgeValue),
+      onCalculate: (state, chain) => ({ ...state, chips: state.chips + chain.filter((s) => s.leftVal === 0 || s.rightVal === 0).length * 6 }),
     }),
   },
   {
     id: 'six_pack',
     name: 'Altılı Paket',
-    description: 'Açık değer 6 ise +5 puan.',
+    description: 'İçinde 6 pip olan taş başına +5 puan.',
     cost: 5,
     rarity: 'COMMON',
     createHooks: () => ({
-      onOperatorResolve: (_operator, _p, childExposed, edgeValue) => (childExposed === 6 ? edgeValue + 5 : edgeValue),
+      onCalculate: (state, chain) => ({ ...state, chips: state.chips + chain.filter((s) => s.leftVal === 6 || s.rightVal === 6).length * 5 }),
     }),
   },
   {
     id: 'total_recall',
     name: 'Toplu Hafıza',
-    description: 'Bu turda kurduğunuz her bağlantı için tur sonunda +1 ekstra puan.',
+    description: 'Zincirdeki taş sayısı kadar +1 ekstra puan.',
     cost: 7,
     rarity: 'UNCOMMON',
-    createHooks: () => {
-      let count = 0;
-      return {
-        onOperatorResolve: (_operator, _p, _c, edgeValue) => {
-          count += 1;
-          return edgeValue;
-        },
-        onEvaluationEnd: (totalGain) => {
-          const bonus = count;
-          count = 0;
-          return totalGain + bonus;
-        },
-      };
-    },
+    createHooks: () => ({
+      onCalculate: (state, chain) => ({ ...state, chips: state.chips + chain.length }),
+    }),
   },
   {
     id: 'steady_hand',
     name: 'Sakin El',
-    description: 'Bağlantı zaten pozitifse +1 küçük bonus.',
+    description: 'Zincirde en az 3 taş varsa, her taşa +1 küçük bonus.',
     cost: 3,
     rarity: 'COMMON',
     createHooks: () => ({
-      onOperatorResolve: (_operator, _p, _c, edgeValue) => (edgeValue > 0 ? edgeValue + 1 : edgeValue),
+      onCalculate: (state, chain) => (chain.length >= 3 ? { ...state, chips: state.chips + chain.length } : state),
     }),
   },
   {
     id: 'negative_nightmare',
     name: 'Negatif Kabus',
-    description: 'Bağlantı negatifse kaybı ikiye katlar, pozitifse küçük +1 bonus verir.',
+    description: 'Toplamı 3 veya altında olan taşlar -2, üzerindekiler +1 verir.',
     cost: 6,
     rarity: 'UNCOMMON',
     curse: true,
     createHooks: () => ({
-      onOperatorResolve: (_operator, _p, _c, edgeValue) => (edgeValue < 0 ? edgeValue * 2 : edgeValue + 1),
+      onCalculate: (state, chain) => {
+        const bonus = chain.filter((s) => chipOf(s) <= 3).length * -2 + chain.filter((s) => chipOf(s) > 3).length * 1;
+        return { ...state, chips: state.chips + bonus };
+      },
     }),
   },
   {
     id: 'synergy_expert_masters',
     name: 'Kıdemli İkili',
-    description: 'Kıdemli Toplam ve Kıdemli Eksi Ustası\'na BİRLİKTE sahipsen, ikisine de ekstra +4.',
+    description: "Kıdemli Çiftlik ve Kıdemli Zincir Ustası'na BİRLİKTE sahipsen, ikisine de ekstra +4.",
     cost: 12,
     rarity: 'RARE',
     createHooks: (ctx) => {
       const hasBoth = ctx.ownedCharmIds.includes('add_expert') && ctx.ownedCharmIds.includes('subtract_expert');
       return {
-        onOperatorResolve: (operator, _p, _c, edgeValue) =>
-          hasBoth && (operator === 'ADD' || operator === 'SUBTRACT') ? edgeValue + 4 : edgeValue,
+        onCalculate: (state, chain) => (hasBoth ? { ...state, chips: state.chips + chain.length * 4 } : state),
       };
     },
   },
@@ -1101,7 +994,7 @@ const NUMBER_CHARMS: readonly CharmDef[] = [
   {
     id: 'high_five',
     name: 'Beşli Çakış',
-    description: "Tahtada TAM OLARAK 5 taş varsa +$16 bonus.",
+    description: 'Tahtada TAM OLARAK 5 taş varsa +$16 bonus.',
     cost: 9,
     rarity: 'RARE',
     createHooks: () => ({ onRoundEnd: (ctx) => (ctx.nodes.length === 5 ? 16 : 0) }),
@@ -1109,25 +1002,123 @@ const NUMBER_CHARMS: readonly CharmDef[] = [
   {
     id: 'perfect_ten',
     name: 'Kusursuz On',
-    description: 'Bağlantının değeri TAM OLARAK 10 ise +5 ekstra puan.',
+    description: 'Toplamı TAM OLARAK 10 olan taş başına +5 ekstra puan.',
     cost: 6,
     rarity: 'COMMON',
     createHooks: () => ({
-      onOperatorResolve: (_operator, _p, _c, edgeValue) => (edgeValue === 10 ? edgeValue + 5 : edgeValue),
+      onCalculate: (state, chain) => ({ ...state, chips: state.chips + chain.filter((s) => chipOf(s) === 10).length * 5 }),
     }),
   },
   {
     id: 'mirror_image',
     name: 'Ayna Görüntüsü',
-    description: 'Ters Simetri ve Simetri Ödülü\'ne BİRLİKTE sahipsen, her bağlantıya sabit +3.',
+    description: "Ters Simetri ve Simetri Ödülü'ne BİRLİKTE sahipsen, her taşa sabit +3.",
     cost: 10,
     rarity: 'RARE',
     createHooks: (ctx) => {
       const hasBoth = ctx.ownedCharmIds.includes('reverse_symmetry') && ctx.ownedCharmIds.includes('symmetry_bonus');
       return {
-        onOperatorResolve: (_operator, _p, _c, edgeValue) => (hasBoth ? edgeValue + 3 : edgeValue),
+        onCalculate: (state, chain) => (hasBoth ? { ...state, chips: state.chips + chain.length * 3 } : state),
       };
     },
+  },
+];
+
+const BASE_FUSION_COMPONENTS: readonly CharmDef[] = [
+  {
+    id: 'double_oracle',
+    name: 'Çift Kehanet',
+    description: 'Her ÇİFT taş oynandığında +6 puan.',
+    cost: 7,
+    rarity: 'UNCOMMON',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const doubleCount = chain.filter(isDouble).length;
+        return { ...state, chips: state.chips + doubleCount * 6 };
+      },
+    }),
+  },
+  {
+    id: 'binary_mirror',
+    name: 'İkili Ayna',
+    description: 'Her zincir başına sabit +4 taban puan.',
+    cost: 8,
+    rarity: 'UNCOMMON',
+    createHooks: () => ({
+      onCalculate: (state) => ({ ...state, chips: state.chips + 4 }),
+    }),
+  },
+  {
+    id: 'golden_abacus',
+    name: 'Altın Abaküs',
+    description: 'Oynanan her Altın Taş için +3 taban puan.',
+    cost: 7,
+    rarity: 'UNCOMMON',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const goldenCount = chain.filter((s) => s.isGolden).length;
+        return { ...state, chips: state.chips + goldenCount * 3 };
+      },
+    }),
+  },
+  {
+    id: 'thrifty_phantom',
+    name: 'Cimri Hayalet',
+    description: 'Her tur sonu +$3 kazandırır.',
+    cost: 5,
+    rarity: 'COMMON',
+    createHooks: () => ({
+      onRoundEnd: () => 3,
+    }),
+  },
+  {
+    id: 'chain_weaver',
+    name: 'Zincir Dokuyucu',
+    description: 'En az 4 taşlık zincir oynandığında +8 taban puan.',
+    cost: 8,
+    rarity: 'UNCOMMON',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        if (chain.length >= 4) return { ...state, chips: state.chips + 8 };
+        return state;
+      },
+    }),
+  },
+  {
+    id: 'echo_chamber',
+    name: 'Yankı Odası',
+    description: 'Zincirdeki her taşa +2 ekler.',
+    cost: 7,
+    rarity: 'UNCOMMON',
+    createHooks: () => ({
+      onCalculate: (state, chain) => ({ ...state, chips: state.chips + chain.length * 2 }),
+    }),
+  },
+  {
+    id: 'obsidian_eye',
+    name: 'Obsidyen Göz',
+    description: 'Oynanan her Obsidyen taş +4 Çarpan ekler.',
+    cost: 9,
+    rarity: 'RARE',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const count = chain.filter((s) => s.modifier === 'OBSIDIAN').length;
+        return { ...state, mult: state.mult + count * 4 };
+      },
+    }),
+  },
+  {
+    id: 'ivory_veil',
+    name: 'Fildişi Duvak',
+    description: 'Oynanan her Fildişi taş +10 taban puan ekler.',
+    cost: 9,
+    rarity: 'RARE',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const count = chain.filter((s) => s.modifier === 'IVORY').length;
+        return { ...state, chips: state.chips + count * 10 };
+      },
+    }),
   },
 ];
 
@@ -1136,15 +1127,13 @@ const FUSION_CHARMS: readonly CharmDef[] = [
   {
     id: 'fusion_grand_resonance',
     name: '⚡ Büyük Rezonans',
-    description: '[FÜZ] cosmic_pendulum + heart_matryoshka: Her ÇARPMA işlemi +8 ekler VE çift taşlar çarpanı +0.5 artırır.',
+    description: '[FÜZ] cosmic_pendulum + heart_matryoshka: Çiftli taş başına +8 chip VE çiftli taşlar çarpanı +0.5 artırır.',
     cost: 0,
     rarity: 'LEGENDARY',
     createHooks: () => ({
-      onOperatorResolve: (operator, _p, _c, edgeValue) =>
-        operator === 'MULTIPLY' ? edgeValue + 8 : edgeValue,
       onCalculate: (state, chain) => {
-        const doubleCount = chain.filter((s) => s.leftVal === s.rightVal).length;
-        return { ...state, mult: state.mult + doubleCount * 0.5 };
+        const doubleCount = chain.filter(isDouble).length;
+        return { chips: state.chips + doubleCount * 8, mult: state.mult + doubleCount * 0.5 };
       },
     }),
   },
@@ -1156,7 +1145,7 @@ const FUSION_CHARMS: readonly CharmDef[] = [
     rarity: 'LEGENDARY',
     createHooks: () => ({
       onCalculate: (state, chain) => {
-        const doubles = chain.filter((s) => s.leftVal === s.rightVal).length;
+        const doubles = chain.filter(isDouble).length;
         return { ...state, chips: state.chips + doubles * 10 + 10 };
       },
     }),
@@ -1178,14 +1167,13 @@ const FUSION_CHARMS: readonly CharmDef[] = [
   {
     id: 'fusion_resonant_chain',
     name: '🔗 Rezonans Zinciri',
-    description: '[FÜZ] chain_weaver + echo_chamber: 4+ taş zincirlerde Çarpan ×2 ve her işlem başına +3 puan.',
+    description: '[FÜZ] chain_weaver + echo_chamber: 4+ taş zincirlerde Çarpan ×2 ve zincirdeki her taşa +3 puan.',
     cost: 0,
     rarity: 'LEGENDARY',
     createHooks: () => ({
-      onOperatorResolve: (_op, _p, _c, edgeValue) => edgeValue + 3,
       onCalculate: (state, chain) => {
-        if (chain.length >= 4) return { ...state, mult: state.mult * 2 };
-        return state;
+        const withEcho = { ...state, chips: state.chips + chain.length * 3 };
+        return chain.length >= 4 ? { ...withEcho, mult: withEcho.mult * 2 } : withEcho;
       },
     }),
   },
@@ -1208,17 +1196,116 @@ const FUSION_CHARMS: readonly CharmDef[] = [
   },
 ];
 
+// --- Faz 10: "İmza Tılsımlar" — tetiklendiklerinde özel görsel+ses "yumruğu" olan, oyuncunun
+// bizzat tıklayarak veya yerleştirme kuralını bükerek etkileşime girdiği amiral gemisi tılsımlar. ---
+const SIGNATURE_CHARMS: readonly CharmDef[] = [
+  {
+    id: 'curators_gavel',
+    name: 'Küratörün Çekici',
+    description: 'Turda bir kez, üzerine tıklayıp elindeki bir taşı tıklayarak onu ikiye kır: [a|b] → [a|0] ve [b|0].',
+    cost: 6,
+    rarity: 'RARE',
+    interactive: true,
+    signature: { sound: 'gavel', visual: 'smoke' },
+    createHooks: () => ({
+      onActivate: (stone) => [
+        { ...stone, id: `${stone.id}_a`, leftVal: stone.leftVal, rightVal: 0, isGolden: undefined },
+        { ...stone, id: `${stone.id}_b`, leftVal: stone.rightVal, rightVal: 0, isGolden: undefined },
+      ],
+    }),
+  },
+  {
+    id: 'alchemists_mirror',
+    name: 'Simyacı Aynası',
+    description: 'Turda bir kez, üzerine tıklayıp elindeki bir taşın iki ucunu anında yer değiştirir.',
+    cost: 3,
+    rarity: 'UNCOMMON',
+    interactive: true,
+    signature: { sound: 'chime', visual: 'smoke' },
+    createHooks: () => ({
+      onActivate: (stone) => [{ ...stone, leftVal: stone.rightVal, rightVal: stone.leftVal }],
+    }),
+  },
+  {
+    id: 'cosmic_singularity',
+    name: 'Kozmik Karadelik',
+    description: 'Domino eşleşme kuralını tamamen geçersiz kılar: taşlar artık eşit değil, ARDIŞIK sayılarla dizilir. 5 el sonra yok olur.',
+    cost: 10,
+    rarity: 'LEGENDARY',
+    placementMode: 'SEQUENCE',
+    perish: true,
+    maxDurability: 5,
+    signature: { sound: 'void', visual: 'vortex' },
+    createHooks: () => ({}),
+  },
+  {
+    id: 'gluttonous_matryoshka',
+    name: 'Obur Matruşka',
+    description: 'Oynanan her çiftli (spinner) taş, zincirde kendinden önce gelen taşların puanını yutup çarpanına ekler.',
+    cost: 7,
+    rarity: 'RARE',
+    signature: { sound: 'devour', visual: 'gnaw' },
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        let chips = state.chips;
+        let mult = state.mult;
+        const eaten = new Set<string>();
+        chain.forEach((stone, i) => {
+          if (!isDouble(stone)) return;
+          let sum = 0;
+          for (let j = 0; j < i; j++) {
+            const prev = chain[j];
+            if (eaten.has(prev.id)) continue;
+            sum += chipOf(prev);
+            eaten.add(prev.id);
+          }
+          if (sum > 0) {
+            chips -= sum;
+            mult += Math.round((sum / 10) * 10) / 10;
+          }
+        });
+        return { chips, mult };
+      },
+    }),
+  },
+  {
+    id: 'chrono_pendulum',
+    name: 'Zamanı Büken Sarkaç',
+    description: 'Rauntta bir kez: son taşınla hedefi geçemezsen zamanı 1 hamle geri sarar ve ücretsiz 1 taş çeker. 3 el sonra yok olur.',
+    cost: 10,
+    rarity: 'LEGENDARY',
+    perish: true,
+    maxDurability: 3,
+    signature: { sound: 'rewind', visual: 'rewind' },
+    createHooks: () => ({
+      onSubmitFail: () => ({ rewind: true, freeDraw: 1 }),
+    }),
+  },
+  {
+    id: 'cracked_hourglass',
+    name: 'Çatlak Kum Saati',
+    description: 'Her el oynandığında fazladan x5 Çarpan (X Mult) verir. Ancak 4 el sonra tuzla buz olur!',
+    cost: 10,
+    rarity: 'LEGENDARY',
+    perish: true,
+    maxDurability: 4,
+    signature: { sound: 'void', visual: 'smoke' },
+    createHooks: () => ({
+      onCalculate: (state) => ({ ...state, mult: state.mult * 5 }),
+    }),
+  },
+];
+
 export const CHARMS: readonly CharmDef[] = [
   ...CORE_CHARMS,
-  ...PARITY_CHARMS,
-  ...VALUE_RANGE_CHARMS,
-  ...EXPERT_CHARMS,
-  ...STREAK_CHARMS,
+  ...GENERATED_CHARMS,
   ...POSITIONAL_CHARMS,
   ...ECONOMY_CHARMS,
   ...CURSE_CHARMS,
   ...SYNERGY_CHARMS,
   ...LEGENDARY_CHARMS,
   ...NUMBER_CHARMS,
+  ...BASE_FUSION_COMPONENTS,
   ...FUSION_CHARMS,
+  ...SIGNATURE_CHARMS,
 ];

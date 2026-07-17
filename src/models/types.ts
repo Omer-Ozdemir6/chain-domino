@@ -1,6 +1,4 @@
-export type OperatorType = 'ADD' | 'SUBTRACT' | 'MULTIPLY' | 'DIVIDE';
-
-export type TileModifier = 'NORMAL' | 'OBSIDIAN' | 'AMBER' | 'MERCURY' | 'IVORY';
+export type TileModifier = 'NORMAL' | 'OBSIDIAN' | 'AMBER' | 'IVORY';
 
 export interface DominoStone {
   id: string;
@@ -13,12 +11,4 @@ export interface DominoStone {
 
 export type DominoTile = DominoStone;
 
-export interface OperatorCard {
-  id: string;
-  type: OperatorType;
-  symbol: string;
-}
-
-export type ChainElement =
-  | { type: 'STONE'; data: DominoStone }
-  | { type: 'OPERATOR'; data: OperatorCard };
+export type HandType = 'STRAIGHT' | 'BRANCHED' | 'LOOP';

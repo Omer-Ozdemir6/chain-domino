@@ -26,8 +26,12 @@ export function useRunState(config?: Partial<RunConfig>) {
     return result;
   }
 
-  function reset(): void {
+  /** Replaces the run with a brand-new instance. If `after` is given, it runs against the fresh
+   *  instance before the re-render — lets callers (e.g. "New Run") jump straight past the start
+   *  screen into a freshly initialized run instead of landing back on the main menu. */
+  function reset(after?: (freshRun: RunState) => void): void {
     ref.current = new RunState(config);
+    after?.(ref.current);
     bump();
   }
 
