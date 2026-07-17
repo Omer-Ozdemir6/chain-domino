@@ -89,6 +89,33 @@
   animation: charm-mult-beam 550ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+/* Two bone dice tumble in when the shop is rerolled, before the offer cards are actually
+   swapped out — a physical "roll of the dice" beat instead of the cards just instantly
+   changing. */
+@keyframes dice-tumble {
+  0% { transform: translateY(-140px) rotate(0deg) scale(0.5); opacity: 0; }
+  30% { opacity: 1; }
+  55% { transform: translateY(14px) rotate(560deg) scale(1.2); }
+  75% { transform: translateY(-8px) rotate(650deg) scale(0.92); }
+  100% { transform: translateY(0) rotate(720deg) scale(1); opacity: 1; }
+}
+.animate-dice-tumble {
+  display: inline-block;
+  animation: dice-tumble 750ms cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.7));
+}
+
+/* New shop offer cards glinting up into place — either on first load, or once the dice have
+   settled after a reroll and the old cards have been swapped out for new ones. */
+@keyframes shop-card-in {
+  0% { transform: translateY(18px) scale(0.9); opacity: 0; filter: brightness(1.6); }
+  60% { opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; filter: brightness(1); }
+}
+.animate-shop-card-in {
+  animation: shop-card-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* Idle "breathing" aura behind charm/upgrade cards — grows/shrinks and fades slowly so the row
    never reads as a dead row of static images, even when nothing's actively triggering. */
 @keyframes charm-aura-breathe {

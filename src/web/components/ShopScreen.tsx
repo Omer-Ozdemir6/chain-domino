@@ -5,7 +5,7 @@ import { CHARMS } from '../../models/CharmRegistry.js';
 import { renderCharmIcon } from './CharmBar.js';
 import { VOUCHER_ICON_MAP, CONSUMABLE_ICON_MAP } from './charmIconMap.js';
 import type { DominoStone } from '../../models/types.js';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 
 function renderBoosterIcon(id: string, size?: 'STANDARD' | 'JUMBO') {
   let color = 'from-blue-500 to-indigo-700';
@@ -215,7 +215,6 @@ export function renderUpgradeIcon(id: string) {
         <path d="M50 65 Q80 35 65 50 Q50 65 50 65" fill="#10B981" stroke="#047857" strokeWidth="3" />
         <path d="M50 65 Q50 95 65 80 Q80 65 50 65" fill="#10B981" stroke="#047857" strokeWidth="3" />
         <path d="M50 65 Q20 95 35 80 Q50 65 50 65" fill="#10B981" stroke="#047857" strokeWidth="3" />
-        <path d="M50 65 fill" opacity="0" />
         <path d="M50 65 Q45 105 30 110" fill="none" stroke="#047857" strokeWidth="4" strokeLinecap="round" />
       </svg>
     );
@@ -259,6 +258,37 @@ export default function ShopScreen({
   onApplyRune,
 }: ShopScreenProps) {
   const slotsFull = ownedCharms.length >= maxCharmSlots;
+
+  // Reroll dice physics: two bone dice tumble in, and only once they've landed do the old offer
+  // cards actually get replaced — `rerollKey` remounts the whole offers row so every card replays
+  // its entrance animation, standing in for the "new cards glinting up" half of the effect.
+  const [isRerolling, setIsRerolling] = useState(false);
+  const [rerollKey, setRerollKey] = useState(0);
+  const [diceFaces, setDiceFaces] = useState<[number, number]>([1, 1]);
+  function handleRerollClick() {
+    if (isRerolling || money < rerollCost) return;
+    setIsRerolling(true);
+    setDiceFaces([1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)]);
+    setTimeout(() => {
+      onReroll();
+      setRerollKey((k) => k + 1);
+      setIsRerolling(false);
+    }, 750);
+  }
+
+  const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+  const diceOverlay = isRerolling && (
+    <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none bg-slate-950/30">
+      <div className="flex gap-8">
+        <span className="text-7xl text-stone-100 animate-dice-tumble" style={{ animationDelay: '0ms' }}>
+          {DICE_FACES[diceFaces[0] - 1]}
+        </span>
+        <span className="text-7xl text-stone-100 animate-dice-tumble" style={{ animationDelay: '90ms' }}>
+          {DICE_FACES[diceFaces[1] - 1]}
+        </span>
+      </div>
+    </div>
+  );
 
   const [fuseA, setFuseA] = useState<string | null>(null);
   const [fuseB, setFuseB] = useState<string | null>(null);
@@ -812,7 +842,7 @@ export default function ShopScreen({
 
   if (isPortrait) {
     return (
-      <div className="w-full h-full flex flex-col bg-stone-900 border-2 border-stone-950 p-3 gap-3 select-none overflow-y-auto">
+      <div className="relative w-full h-full flex flex-col bg-stone-900 border-2 border-stone-950 p-3 gap-3 select-none overflow-y-auto">
         {/* Controls */}
         <div className="flex gap-3 shrink-0 flex-row items-center">
           <div className="rounded-xl border-4 border-amber-800 bg-linear-to-b from-amber-700 to-amber-900 text-center shadow-md flex-1 py-2">
@@ -834,8 +864,8 @@ export default function ShopScreen({
             </button>
             <button
               type="button"
-              onClick={onReroll}
-              disabled={money < rerollCost}
+              onClick={handleRerollClick}
+              disabled={money < rerollCost || isRerolling}
               className="btn-arcade btn-arcade-slate px-5 py-3 rounded-xl text-base font-pixel font-black text-white uppercase"
             >
               Yenile (${rerollCost})
@@ -869,7 +899,7 @@ export default function ShopScreen({
           {/* Offers rack — Balatro's own shop is one flat row of a handful of cards (2 jokers,
               1-2 packs, sometimes a voucher), not sorted into category panels. */}
           <div className="flex flex-row flex-wrap gap-3 justify-center items-start shrink-0">
-            {offers.map(renderOfferCard)}
+            <Fragment key={rerollKey}>{offers.map((offer, i) => (<div key={i} className="animate-shop-card-in" style={{ animationDelay: `${i * 70}ms` }}>{renderOfferCard(offer)}</div>))}</Fragment>
           </div>
 
           {/* Fusion in Portrait */}
@@ -940,6 +970,7 @@ export default function ShopScreen({
         {runePackOverlay}
         {runeTargetOverlay}
         {detailsPanel}
+        {diceOverlay}
       </div>
     );
   }
@@ -990,8 +1021,8 @@ export default function ShopScreen({
           {/* Reroll Button (Slate, matching controls) */}
           <button
             type="button"
-            onClick={onReroll}
-            disabled={money < rerollCost}
+            onClick={handleRerollClick}
+            disabled={money < rerollCost || isRerolling}
             className="btn-arcade btn-arcade-slate w-full py-2.5 md:py-3 lg:py-4 rounded-xl text-sm md:text-base font-pixel font-black text-white"
           >
             Yenile (${rerollCost})
@@ -1012,7 +1043,7 @@ export default function ShopScreen({
         </div>
 
         <div className="flex-1 mt-3 flex flex-row flex-wrap gap-3 justify-center items-start content-start min-h-0 overflow-y-auto">
-          {offers.map(renderOfferCard)}
+          <Fragment key={rerollKey}>{offers.map((offer, i) => (<div key={i} className="animate-shop-card-in" style={{ animationDelay: `${i * 70}ms` }}>{renderOfferCard(offer)}</div>))}</Fragment>
         </div>
       </div>
 
@@ -1185,6 +1216,7 @@ export default function ShopScreen({
       {runePackOverlay}
       {runeTargetOverlay}
       {detailsPanel}
+      {diceOverlay}
     </div>
   );
 }
