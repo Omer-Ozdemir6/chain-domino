@@ -267,6 +267,7 @@ export default function CharmBar({
           return (
             <InfoTooltip key={charm.id} text={tooltipContent} widthClass="w-56" side="right">
               <div
+                data-charm-id={charm.id}
                 onClick={isClickable ? () => onActivateCharm!(charm.id) : undefined}
                 onMouseMove={handleTiltMove}
                 onMouseLeave={handleTiltLeave}

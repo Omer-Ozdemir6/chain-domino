@@ -116,10 +116,11 @@ export default function Tile({
               : numberColorClass
         }`}>{left}</span>
         <div className={leftConnected ? 'animate-pulse drop-shadow-[0_0_8px_#fbbf24] saturate-200' : ''}>
-          <Pips 
-            value={left} 
-            large 
-            dotColorClass={(leftUpgrade && leftUpgrade > 0) ? 'bg-cyan-500 dark:bg-cyan-300 shadow-[0_0_8px_#06b6d4]' : pipDotColorClass} 
+          <Pips
+            value={left}
+            large
+            dotColorClass={(leftUpgrade && leftUpgrade > 0) ? 'bg-cyan-500 dark:bg-cyan-300 shadow-[0_0_8px_#06b6d4]' : pipDotColorClass}
+            sparkle={highlighted}
           />
         </div>
       </span>
@@ -138,10 +139,11 @@ export default function Tile({
               : numberColorClass
         }`}>{right}</span>
         <div className={rightConnected ? 'animate-pulse drop-shadow-[0_0_8px_#fbbf24] saturate-200' : ''}>
-          <Pips 
-            value={right} 
-            large 
-            dotColorClass={(rightUpgrade && rightUpgrade > 0) ? 'bg-cyan-500 dark:bg-cyan-300 shadow-[0_0_8px_#06b6d4]' : pipDotColorClass} 
+          <Pips
+            value={right}
+            large
+            dotColorClass={(rightUpgrade && rightUpgrade > 0) ? 'bg-cyan-500 dark:bg-cyan-300 shadow-[0_0_8px_#06b6d4]' : pipDotColorClass}
+            sparkle={highlighted}
           />
         </div>
       </span>

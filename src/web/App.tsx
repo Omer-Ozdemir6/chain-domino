@@ -120,6 +120,9 @@ export default function App() {
   const [tilePopup, setTilePopup] = useState<{ text: string; left: number; top: number } | null>(null);
   const [charmPopupText, setCharmPopupText] = useState<string | null>(null);
   const [handBonusText, setHandBonusText] = useState<string | null>(null);
+  // A light beam from a triggering charm card to the red Mult badge — only fires for charms that
+  // actually raised the multiplier, tracing where that boost physically came from.
+  const [charmMultBeam, setCharmMultBeam] = useState<{ key: number; x1: number; y1: number; x2: number; y2: number; length: number; angle: number } | null>(null);
   const [stepPopup, setStepPopup] = useState<{ key: number; text: string; positive: boolean } | null>(null);
   const [activeScoringCharmId, setActiveScoringCharmId] = useState<string | null>(null);
   const [activeCharmPopupText, setActiveCharmPopupText] = useState<string | null>(null);
@@ -168,6 +171,24 @@ export default function App() {
     setTimeout(() => {
       setFlyingParticles((prev) => prev.filter((p) => !newParticles.find((np) => np.id === p.id)));
     }, 1600);
+  }
+
+  /** Traces a light beam from a triggering charm card straight to the red Mult badge — only
+   *  called when that charm actually raised the multiplier, so the beam always means something. */
+  function spawnCharmMultBeam(charmId: string) {
+    const fromEl = document.querySelector(`[data-charm-id="${charmId}"]`);
+    const toEl = document.querySelector('[data-mult-badge]');
+    if (!fromEl || !toEl) return;
+    const fromRect = fromEl.getBoundingClientRect();
+    const toRect = toEl.getBoundingClientRect();
+    const x1 = fromRect.left + fromRect.width / 2;
+    const y1 = fromRect.top + fromRect.height / 2;
+    const x2 = toRect.left + toRect.width / 2;
+    const y2 = toRect.top + toRect.height / 2;
+    const length = Math.hypot(x2 - x1, y2 - y1);
+    const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+    setCharmMultBeam({ key: Date.now() + Math.random(), x1, y1, x2, y2, length, angle });
+    setTimeout(() => setCharmMultBeam(null), 550);
   }
 
   /** The final hand score flying up from the center of the board into the sidebar's round-score
@@ -497,6 +518,11 @@ export default function App() {
         setActiveCharmPopupText(popupText);
         triggerBoardFlash(350);
         spawnScoreParticles(step.id);
+        if (step.after.mult > step.before.mult) {
+          // Wait a frame so the card's own "scoring active" pop-up transform has settled before
+          // measuring its rect for the beam's origin point.
+          requestAnimationFrame(() => spawnCharmMultBeam(step.id));
+        }
 
         // This charm's contribution lands in the LCD card below — the round score above stays
         // completely untouched until every charm has had its turn and the Büyük Patlama fires.
@@ -1437,6 +1463,37 @@ export default function App() {
         {/* Antique lens vignette — sits above everything else in the scaled canvas, darkening the
             corners and adding a faint warm tint. Purely decorative, pointer-events-none. */}
         <PixiEffectsLayer variant="lens" reducedMotion={prefersReducedMotion} />
+
+        {/* Light beam from a triggering charm to the Mult badge — a thin gradient bar rotated and
+            stretched to span the two points, only shown when that charm actually raised Mult.
+            Two nested spans, same reason as the tile chip popup below: the outer one holds the
+            static fixed position + rotation, the inner one owns the scaleX/opacity animation —
+            a CSS animation on `transform` fully overwrites any inline `transform`, so the
+            rotation has to live on an element the animation never touches. */}
+        {charmMultBeam && (
+          <span
+            key={charmMultBeam.key}
+            className="fixed pointer-events-none z-[9996]"
+            style={{
+              left: charmMultBeam.x1,
+              top: charmMultBeam.y1,
+              width: charmMultBeam.length,
+              height: 3,
+              transform: `rotate(${charmMultBeam.angle}deg)`,
+              transformOrigin: '0 50%',
+            }}
+          >
+            <span
+              className="block w-full h-full animate-charm-mult-beam"
+              style={{
+                transformOrigin: '0 50%',
+                background: 'linear-gradient(90deg, rgba(251,191,36,0.05), rgba(248,113,113,0.95))',
+                boxShadow: '0 0 8px 2px rgba(248,113,113,0.6)',
+                borderRadius: '999px',
+              }}
+            />
+          </span>
+        )}
 
         {/* Per-tile "+N" chip callout during the stone-by-stone scoring reveal. Two nested spans:
             the outer one holds the fixed left/top positioning (untouched by the animation), the

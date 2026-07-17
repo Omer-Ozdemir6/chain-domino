@@ -40,10 +40,13 @@ interface PipsProps {
    *  doesn't follow the theme (e.g. the Ivory seal's near-white face stays white in dark mode
    *  too, so its dots must stay dark instead of flipping to the usual dark-mode light dots). */
   dotColorClass?: string;
+  /** True for the one tile currently being tallied during the stone-by-stone scoring reveal —
+   *  each dot briefly blooms into a glowing 5-point star instead of staying a plain circle. */
+  sparkle?: boolean;
 }
 
 /** Small or large classic domino-pip grid (0-6 only; higher values render nothing). */
-export default function Pips({ value, large, dotColorClass }: PipsProps) {
+export default function Pips({ value, large, dotColorClass, sparkle }: PipsProps) {
   const positions = LAYOUTS[value];
   if (!positions) return null;
 
@@ -60,7 +63,9 @@ export default function Pips({ value, large, dotColorClass }: PipsProps) {
             className={[
               active ? (dotColorClass ?? 'bg-slate-800 dark:bg-slate-100') : '',
               dotSize,
+              active && sparkle ? 'animate-pip-to-star' : '',
             ].join(' ')}
+            style={active && sparkle ? { animationDelay: `${i * 35}ms` } : undefined}
           />
         );
       })}

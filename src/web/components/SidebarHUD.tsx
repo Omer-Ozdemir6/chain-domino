@@ -153,7 +153,7 @@ export default function SidebarHUD({
             <span className={`text-white font-pixel font-black ${scoring ? 'text-xl' : 'text-base'}`}>{previewScore ? Math.round(previewScore.chips) : 0}</span>
           </div>
           <span className="text-slate-400 font-pixel text-base">X</span>
-          <div key={`tm-${previewScore?.mult ?? 1}`} className={`balatro-badge-red flex flex-col items-center animate-number-pop ${scoring ? 'px-4 py-2.5' : 'px-3 py-1.5'}`}>
+          <div data-mult-badge key={`tm-${previewScore?.mult ?? 1}`} className={`balatro-badge-red flex flex-col items-center animate-number-pop ${scoring ? 'px-4 py-2.5' : 'px-3 py-1.5'}`}>
             <span className={`text-white font-pixel font-black ${scoring ? 'text-xl' : 'text-base'}`}>{previewScore ? Math.round(previewScore.mult) : 1}</span>
           </div>
         </div>
@@ -285,7 +285,7 @@ export default function SidebarHUD({
             </span>
           </div>
           <span className="text-slate-400 font-pixel text-lg font-black">X</span>
-          <div key={`m-${previewScore?.mult ?? 1}`} className={`balatro-badge-red flex items-center justify-center min-w-20 animate-number-pop transition-[padding] ${scoring ? 'px-5 py-4' : 'px-4 py-2.5'}`}>
+          <div data-mult-badge key={`m-${previewScore?.mult ?? 1}`} className={`balatro-badge-red flex items-center justify-center min-w-20 animate-number-pop transition-[padding] ${scoring ? 'px-5 py-4' : 'px-4 py-2.5'}`}>
             <span className={`text-white font-pixel font-black leading-none transition-[font-size] ${scoring ? 'text-3xl lg:text-4xl' : 'text-xl lg:text-2xl'}`}>
               {previewScore ? Math.round(previewScore.mult) : 1}
             </span>
