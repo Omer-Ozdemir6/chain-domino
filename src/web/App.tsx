@@ -27,22 +27,36 @@ const HAND_TYPE_LABEL: Record<HandType, string> = {
 };
 
 /**
- * Custom hooks to detect viewport changes.
+ * The game is designed at one of exactly two fixed resolutions — never an open-ended set of CSS
+ * breakpoints — and uniformly scaled (via a JS-computed transform) to fit the real viewport. A
+ * landscape screen (desktop, tablet-landscape) always gets the wide canvas; a portrait screen
+ * (phone, tablet-portrait) always gets the tall one. Every device in the same orientation bucket
+ * renders pixel-identical, just scaled — which is what actually guarantees a full, uncropped fit:
+ * `w-full h-full`/`md:`/`lg:` breakpoints alone can't promise every element ends up on-screen for
+ * every viewport size, but scaling a single known-good layout down (or up) to fit always can.
  */
-function useIsPortrait(): boolean {
-  const [isPortrait, setIsPortrait] = useState(window.innerHeight > window.innerWidth);
+const LANDSCAPE_CANVAS = { width: 1440, height: 900 };
+const PORTRAIT_CANVAS = { width: 480, height: 900 };
+
+/** Picks the matching design canvas for the real viewport's orientation and computes its fit scale. */
+function useCanvasScale(): { scale: number; width: number; height: number; isPortrait: boolean } {
+  const [state, setState] = useState({ scale: 1, ...LANDSCAPE_CANVAS, isPortrait: false });
   useEffect(() => {
     function update() {
-      setIsPortrait(window.innerHeight > window.innerWidth);
+      const isPortrait = window.innerHeight > window.innerWidth;
+      const canvas = isPortrait ? PORTRAIT_CANVAS : LANDSCAPE_CANVAS;
+      const scale = Math.min(window.innerWidth / canvas.width, window.innerHeight / canvas.height);
+      setState({ scale, ...canvas, isPortrait });
     }
+    update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
-  return isPortrait;
+  return state;
 }
 
 export default function App() {
-  const isPortrait = useIsPortrait();
+  const { scale, width: canvasWidth, height: canvasHeight, isPortrait } = useCanvasScale();
   const { run, act, shop, reset } = useRunState(RUN_CONFIG);
   const [selection, setSelection] = useState<Selection>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -1098,7 +1112,17 @@ export default function App() {
         <p className="text-2xl tracking-widest">Ekranı Yatay Çevir</p>
         <p className="text-sm text-emerald-500/60">Bu oyun yatay modda oynanır</p>
       </div>
-      <div className="w-full h-full relative overflow-hidden select-none">
+      {/* Fixed-resolution design canvas, uniformly scaled to fit the real viewport exactly —
+          this is what guarantees nothing (like the sidebar's bottom edge) ever gets cropped,
+          regardless of the actual browser window size. Centered via absolute top/left 50% +
+          translate(-50%,-50%) rather than flex centering: browsers apply "safe" alignment
+          fallbacks to flex-centered items that are larger than their container (which this
+          canvas always is pre-scale), silently collapsing `justify-center`/`items-center`
+          into edge-anchored positioning — the translate+scale combo sidesteps that entirely. */}
+      <div
+        className="absolute top-1/2 left-1/2 overflow-hidden select-none"
+        style={{ width: canvasWidth, height: canvasHeight, transform: `translate(-50%, -50%) scale(${scale})` }}
+      >
         {content}
 
         {/* Score-flow flying particles layer */}

@@ -67,6 +67,8 @@ export class GameState {
   private checkStuck(): void {
     if (this.status !== 'PLAYING') return;
     if (this.hasAnyLegalMove() || this.stoneDeck.remaining > 0) return;
+    // If the hand is completely empty but we have unfrozen nodes on the board, let the player submit!
+    if (this.hand.length === 0 && this.board.getNodes().some((n) => !n.frozen)) return;
 
     this.status = this.score >= this.config.targetScore ? 'WON' : 'LOST';
     if (this.status === 'LOST') this.lossReason = 'NO_MOVES';
