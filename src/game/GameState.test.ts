@@ -75,7 +75,7 @@ describe('GameState', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('submitChain sums the natural pip total of every placed stone, root included', () => {
+  it('submitChain sums the natural pip total of every placed stone, root included, then clears the table', () => {
     const game = new GameState(baseConfig);
     game.hand = [stone('s1', 3, 4), stone('s2', 4, 2)];
 
@@ -88,7 +88,9 @@ describe('GameState', () => {
     expect(result.scoreGained).toBe(3 + 4 + 4 + 2); // 13, matching the design's own worked example
     expect(game.score).toBe(13);
     expect(game.turn).toBe(2);
-    expect(game.board.length).toBe(3); // 2 nodes + 1 edge, stays on the board
+    // "Gönder ve Sil": the submitted chain is fully removed from the board, not left frozen on it.
+    expect(game.board.length).toBe(0);
+    expect(game.board.getRootNodeId()).toBeNull();
   });
 
   it('a lone root stone still counts its own pip value', () => {
@@ -103,55 +105,54 @@ describe('GameState', () => {
     expect(game.score).toBe(7);
   });
 
-  it('a later submit only scores newly-added stones, never re-scoring frozen ones', () => {
+  it('each submitted hand starts on a fresh, empty table and only scores that hand\'s own stones', () => {
     const game = new GameState(baseConfig);
     game.hand = [stone('s1', 3, 4), stone('s2', 4, 2)];
 
     game.playStone('s1');
     game.playStone('s2');
     const first = game.submitChain(); // 3+4+4+2 = 13
+    expect(game.board.length).toBe(0); // table cleared before the next hand
 
-    // s1 still has one open slot left (its 3 side); branch off it again.
-    const s1Slot = game.board.getSlots('s1').find((s) => s.state === 'OPEN')!.slotId;
-    game.hand = [stone('s3', 3, 5)];
-    game.playStone('s3', s1Slot);
-
+    // A brand new chain, unrelated to s1/s2 (which no longer exist on the board at all).
+    game.hand = [stone('s3', 7, 7), stone('s4', 7, 1)];
+    game.playStone('s3');
+    game.playStone('s4');
     const second = game.submitChain();
 
     expect(first.scoreGained).toBe(13);
     expect(second.ok).toBe(true);
-    expect(second.scoreGained).toBe(3 + 5); // only the new stone, not 13+8
-    expect(game.score).toBe(13 + 8);
-    expect(game.board.length).toBe(5); // 3 nodes + 2 edges
+    expect(second.scoreGained).toBe(7 + 7 + 7 + 1); // 22, entirely independent of the first hand
+    expect(game.score).toBe(13 + 22);
+    expect(game.board.length).toBe(0);
   });
 
-  it("skipTurn only discards this turn's unscored growth, leaving the frozen graph on the board", () => {
+  it("skipTurn discards this turn's unscored placements, leaving the (already-cleared) table empty", () => {
     const game = new GameState(baseConfig);
     game.hand = [stone('s1', 3, 4), stone('s2', 4, 2)];
     game.playStone('s1');
     game.playStone('s2');
-    game.submitChain(); // freezes s1/s2/edge, score 13
+    game.submitChain(); // scores 13, clears the table
 
-    const s1Slot = game.board.getSlots('s1').find((s) => s.state === 'OPEN')!.slotId;
     game.hand = [stone('s3', 3, 1)];
-    game.playStone('s3', s1Slot); // not yet submitted
+    game.playStone('s3'); // not yet submitted
 
     game.skipTurn();
 
     expect(game.score).toBe(13); // unchanged, nothing new was scored
-    expect(game.board.length).toBe(3); // only the frozen s1/s2/edge remain
+    expect(game.board.length).toBe(0); // s3's unsubmitted placement was discarded
   });
 
-  it('undoLastMove cannot reach elements from a previously submitted (frozen) turn', () => {
+  it('undoLastMove has nothing to reach once a hand has been submitted (the table is already empty)', () => {
     const game = new GameState(baseConfig);
     game.hand = [stone('s1', 3, 4)];
     game.playStone('s1');
-    game.submitChain(); // freezes s1
+    game.submitChain(); // scores, then clears the table
 
     const result = game.undoLastMove();
 
     expect(result.ok).toBe(false);
-    expect(game.board.length).toBe(1);
+    expect(game.board.length).toBe(0);
   });
 
   it('reaches WON status once score meets the target', () => {

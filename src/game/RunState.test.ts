@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RunState, SHOP_UPGRADES } from './RunState.js';
+import { RunState, SHOP_UPGRADES, BOOSTER_PACKS, RUNE_PACKS, RUNE_POOL } from './RunState.js';
 import { CHARMS } from '../models/CharmRegistry.js';
 import type { DominoStone } from '../models/types.js';
 
@@ -150,8 +150,67 @@ describe('RunState', () => {
     const result = run.rerollShop();
     expect(result.ok).toBe(true);
     expect(run.money).toBe(8);
-    // shopSize (2 charms + 1 upgrade) plus 1 permanent Voucher slot, 1 Booster Pack slot, and 1 Theorem Book slot.
-    expect(run.shopOffers).toHaveLength(run.config.shopSize + 3);
+    // shopSize (2 charms + 1 upgrade) plus 1 Voucher, 1 Booster Pack, 1 Rune Pack, and 1 Theorem Book slot.
+    expect(run.shopOffers).toHaveLength(run.config.shopSize + 4);
+  });
+
+  it('booster pack drafting can be skipped without drafting a stone', () => {
+    const run = new RunState();
+    run.initializeRun('RED', 'WHITE');
+    run.phase = 'SHOP';
+    run.money = 20;
+    run.shopOffers = [{ type: 'BOOSTER', item: BOOSTER_PACKS[0] }];
+    const deckSizeBefore = run.customDeck.length;
+
+    expect(run.buyItem(BOOSTER_PACKS[0].id).ok).toBe(true);
+    expect(run.draftOffers).toHaveLength(3);
+
+    expect(run.skipDraft().ok).toBe(true);
+    expect(run.draftOffers).toHaveLength(0);
+    expect(run.activeBoosterId).toBeNull();
+    expect(run.customDeck).toHaveLength(deckSizeBefore); // nothing was added
+  });
+
+  it('rune pack: buy -> pick 1 of 3 -> apply to K existing deck stones -> back to normal shop', () => {
+    const run = new RunState();
+    run.initializeRun('RED', 'WHITE');
+    run.phase = 'SHOP';
+    run.money = 20;
+    run.customDeck = [stone('d1', 1, 1), stone('d2', 2, 2), stone('d3', 3, 3)];
+    run.shopOffers = [{ type: 'RUNE_PACK', item: RUNE_PACKS[0] }];
+
+    expect(run.buyItem(RUNE_PACKS[0].id).ok).toBe(true);
+    expect(run.runeOffers).toHaveLength(3);
+    run.runeOffers[0] = { ...RUNE_POOL[0] }; // Force slot 0 to be Ivory to prevent test flakiness (25% fail rate)
+
+    const ivoryRune = run.runeOffers.find((r) => r.modifier === 'IVORY')!;
+    expect(run.chooseRuneOption(ivoryRune.id).ok).toBe(true);
+    expect(run.runeOffers).toHaveLength(0);
+    expect(run.pendingRune?.id).toBe(ivoryRune.id);
+
+    const applyFail = run.applyRune(['d1', 'd2', 'd3']); // exceeds targetCount (2)
+    expect(applyFail.ok).toBe(false);
+
+    const applyOk = run.applyRune(['d1', 'd2']);
+    expect(applyOk.ok).toBe(true);
+    expect(run.customDeck.find((s) => s.id === 'd1')!.modifier).toBe('IVORY');
+    expect(run.customDeck.find((s) => s.id === 'd2')!.modifier).toBe('IVORY');
+    expect(run.customDeck.find((s) => s.id === 'd3')!.modifier).toBeUndefined();
+    expect(run.pendingRune).toBeNull();
+  });
+
+  it('rune pack can be skipped either before or after picking an option, with no refund', () => {
+    const run = new RunState();
+    run.initializeRun('RED', 'WHITE');
+    run.phase = 'SHOP';
+    run.money = 20;
+    run.shopOffers = [{ type: 'RUNE_PACK', item: RUNE_PACKS[0] }];
+    run.buyItem(RUNE_PACKS[0].id);
+    const moneyAfterBuy = run.money;
+
+    expect(run.skipRunePack().ok).toBe(true);
+    expect(run.runeOffers).toHaveLength(0);
+    expect(run.money).toBe(moneyAfterBuy); // no refund
   });
 
   it('an owned charm actually modifies the chips×mult result of a real submission', () => {
@@ -177,7 +236,9 @@ describe('RunState', () => {
 
     expect(result.ok).toBe(true);
     // chips: 15 (base) + (2 + 3 + 5 + 7 + 9) = 41. mult: 1 (base) * 3 = 3 -> 123.
-    expect(result.scoreGained).toBe(123);
+    // Plus the +5 hand-emptied bonus: all 5 placed stones equal stonesPerTurn (5), so the whole
+    // hand was played out before submitting.
+    expect(result.scoreGained).toBe(128);
   });
 
   it('supports Consumable spells like Magnet, Breaker, and Gild', () => {
@@ -211,10 +272,16 @@ describe('RunState', () => {
     expect(submitRes.ok).toBe(true);
     expect(run.money).toBe(16);
 
-    // Use MAGNET to retrieve stone
-    const magnetRes = run.useConsumable(0, 's1');
+    // Use MAGNET to retrieve an unsubmitted leaf stone straight off the board. Under "Gönder ve
+    // Sil" nothing stays frozen on the board between hands (s1 is already gone — scored and
+    // cleared), so Magnet's real use case is pulling back a stone from the in-progress,
+    // not-yet-submitted chain, which works regardless of frozen state (removeNode() only cares
+    // whether the node is a leaf).
+    run.game.hand = [stone('s2', 5, 6)];
+    run.act((g) => g.playStone('s2'));
+    const magnetRes = run.useConsumable(0, 's2');
     expect(magnetRes.ok).toBe(true);
-    expect(run.game.hand.some((s) => s.id === 's1')).toBe(true);
+    expect(run.game.hand.some((s) => s.id === 's2')).toBe(true);
     expect(run.game.board.getRootNodeId()).toBeNull();
   });
 
@@ -378,8 +445,11 @@ describe('RunState', () => {
       expect(run.phase).toBe('PLAYING'); // rescued, not RUN_OVER_SCREEN
       expect(run.status).toBe('IN_PROGRESS');
       expect(run.game.status).toBe('PLAYING');
-      expect(run.game.board.getRootNodeId()).toBeNull(); // the placed stone was rewound
-      expect(run.game.hand).toHaveLength(2); // s1 returned by the rewind + 1 free draw
+      // s1 was already scored and cleared by submitChain's own "Gönder ve Sil" — there's nothing
+      // left on the board to claw back. The rescue instead refunds the turn itself + a free draw.
+      expect(run.game.board.getRootNodeId()).toBeNull();
+      expect(run.game.turn).toBe(6); // incremented to 7 by submitChain, then refunded by the rescue
+      expect(run.game.hand).toHaveLength(1); // just the 1 free draw
     });
   });
 
@@ -479,6 +549,39 @@ describe('RunState', () => {
       expect(useRes.ok).toBe(true);
       expect(run.game.hand[0].isGolden).toBe(true);
       expect(run.game.hand[1].isGolden).toBe(true);
+    });
+
+    it('supports new spell Geliştirme Parşömeni (consumable_upgrade) to add +2 points up to max 6', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.startBlind('SMALL');
+      run.game.hand = [stone('s1', 2, 5)];
+      run.customDeck = [stone('s1', 2, 5)];
+      
+      run.consumables = ['consumable_upgrade'];
+      const useRes = run.useConsumable(0, 's1');
+      expect(useRes.ok).toBe(true);
+      expect(run.game.hand[0].leftVal).toBe(4);
+      expect(run.game.hand[0].rightVal).toBe(6); // 5 + 2 capped at 6 -> 6!
+      expect((run.game.hand[0] as any).leftUpgrade).toBe(2);
+      expect((run.game.hand[0] as any).rightUpgrade).toBe(1); // capped at 6, so added 1
+    });
+  });
+
+  describe('Faz 11: previewScoreSteps stone-by-stone reveal', () => {
+    it('builds a running chip total one stone at a time, matching computeStoneChips exactly', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.startBlind('SMALL');
+
+      const stones = [stone('s1', 3, 4), stone('s2', 1, 2)]; // chips: 7, then 3 -> running 7, 10
+      const result = run.previewScoreSteps(stones);
+
+      expect(result.stoneSteps).toHaveLength(2);
+      expect(result.stoneSteps[0]).toMatchObject({ id: 's1', chipDelta: 7, chipsAfter: result.handStartChips + 7 });
+      expect(result.stoneSteps[1]).toMatchObject({ id: 's2', chipDelta: 3, chipsAfter: result.handStartChips + 10 });
+      // The last stone step's running total must match the aggregate baseChips calculateScore produces.
+      expect(result.stoneSteps[result.stoneSteps.length - 1].chipsAfter).toBe(result.baseChips);
     });
   });
 });

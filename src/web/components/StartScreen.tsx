@@ -148,7 +148,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
       ))}
 
       {/* ── Top watermark ── */}
-      <div className="flex justify-between items-center text-[10px] text-emerald-700/50 font-bold uppercase tracking-[0.25em] z-10">
+      <div className="flex justify-between items-center text-[12px] text-emerald-700/50 font-bold uppercase tracking-[0.25em] z-10">
         <span>Chain Domino</span>
         <span>v1.2.0</span>
       </div>
@@ -192,7 +192,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           </h1>
 
           {/* Tagline */}
-          <p className="mt-4 text-[11px] md:text-xs text-emerald-500/60 font-medium tracking-[0.3em] uppercase font-pixel animate-fade-in" style={{ animationDelay: '600ms' }}>
+          <p className="mt-4 text-[13px] md:text-sm text-emerald-500/60 font-medium tracking-[0.3em] uppercase font-pixel animate-fade-in" style={{ animationDelay: '600ms' }}>
             Zincirini Kur · Puanını Yükselt
           </p>
         </div>
@@ -210,9 +210,9 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-emerald-600/60 bg-gradient-to-b from-emerald-900/50 to-emerald-950/80 cursor-pointer select-none"
           style={{ animationDelay: '400ms', '--glow': 'rgba(16,185,129,0.4)' } as React.CSSProperties}
         >
-          <span className="text-3xl">🎮</span>
-          <span className="font-pixel text-sm font-black text-emerald-300 tracking-wider">BAŞLAT</span>
-          <span className="text-[9px] text-emerald-500/70 leading-tight text-center">Yeni bir maceraya başla</span>
+          <span className="text-4xl">🎮</span>
+          <span className="font-pixel text-base font-black text-emerald-300 tracking-wider">BAŞLAT</span>
+          <span className="text-[11px] text-emerald-500/70 leading-tight text-center">Yeni bir maceraya başla</span>
         </button>
 
         {/* DESTE Card */}
@@ -222,9 +222,9 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-sky-700/50 bg-gradient-to-b from-sky-950/50 to-slate-950/80 cursor-pointer select-none"
           style={{ animationDelay: '480ms', '--glow': 'rgba(14,165,233,0.3)' } as React.CSSProperties}
         >
-          <span className="text-3xl">🃏</span>
-          <span className="font-pixel text-sm font-black text-sky-300 tracking-wider">DESTE</span>
-          <span className={`text-[9px] ${DECK_INFO[deck].color} font-bold leading-tight text-center`}>{DECK_INFO[deck].name}</span>
+          <span className="text-4xl">🃏</span>
+          <span className="font-pixel text-base font-black text-sky-300 tracking-wider">DESTE</span>
+          <span className={`text-[11px] ${DECK_INFO[deck].color} font-bold leading-tight text-center`}>{DECK_INFO[deck].name}</span>
         </button>
 
         {/* ZORLUK Card */}
@@ -234,9 +234,9 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-rose-700/50 bg-gradient-to-b from-rose-950/50 to-slate-950/80 cursor-pointer select-none"
           style={{ animationDelay: '560ms', '--glow': 'rgba(244,63,94,0.3)' } as React.CSSProperties}
         >
-          <span className="text-3xl">🏆</span>
-          <span className="font-pixel text-sm font-black text-rose-300 tracking-wider">ZORLUK</span>
-          <span className={`text-[9px] ${STAKE_INFO[stake].color} font-bold leading-tight text-center`}>{STAKE_INFO[stake].name}</span>
+          <span className="text-4xl">🏆</span>
+          <span className="font-pixel text-base font-black text-rose-300 tracking-wider">ZORLUK</span>
+          <span className={`text-[11px] ${STAKE_INFO[stake].color} font-bold leading-tight text-center`}>{STAKE_INFO[stake].name}</span>
         </button>
 
         {/* MÜCADELE Card */}
@@ -246,9 +246,9 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-fuchsia-700/50 bg-gradient-to-b from-fuchsia-950/50 to-slate-950/80 cursor-pointer select-none"
           style={{ animationDelay: '640ms', '--glow': 'rgba(192,38,211,0.3)' } as React.CSSProperties}
         >
-          <span className="text-3xl">⚔️</span>
-          <span className="font-pixel text-sm font-black text-fuchsia-300 tracking-wider">MÜCADELE</span>
-          <span className="text-[9px] text-fuchsia-500/70 font-bold leading-tight text-center">4 Mücadele Aktif</span>
+          <span className="text-4xl">⚔️</span>
+          <span className="font-pixel text-base font-black text-fuchsia-300 tracking-wider">MÜCADELE</span>
+          <span className="text-[11px] text-fuchsia-500/70 font-bold leading-tight text-center">4 Mücadele Aktif</span>
         </button>
       </div>
 
@@ -260,7 +260,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
       {tab === 'DECK_SELECT' && (
         <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-fade-in">
           <div className="w-full max-w-xl bg-slate-900 border-4 border-slate-950 rounded-3xl p-6 shadow-2xl text-white flex flex-col">
-            <h2 className="text-center text-xl font-bold font-pixel tracking-widest text-amber-400 uppercase border-b border-slate-800 pb-2">
+            <h2 className="text-center text-2xl font-bold font-pixel tracking-widest text-amber-400 uppercase border-b border-slate-800 pb-2">
               DESTE SEÇİMİ
             </h2>
             
@@ -275,10 +275,10 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                     className={`menu-card flex flex-col justify-between p-3 rounded-xl border-2 text-center h-40 cursor-pointer select-none ${isActive ? info.borderActive : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}
                     style={{ '--glow': 'transparent' } as React.CSSProperties}
                   >
-                    <span className={`text-3xl font-bold ${info.color}`}>{info.icon}</span>
-                    <span className={`text-xs font-bold ${info.color} leading-none`}>{info.name}</span>
-                    <span className="text-[10px] text-slate-300 leading-tight">{info.desc}</span>
-                    {isActive && <span className="text-[9px] font-bold text-emerald-400 bg-emerald-900/30 px-2 py-0.5 rounded">✓ SEÇİLİ</span>}
+                    <span className={`text-4xl font-bold ${info.color}`}>{info.icon}</span>
+                    <span className={`text-sm font-bold ${info.color} leading-none`}>{info.name}</span>
+                    <span className="text-[12px] text-slate-300 leading-tight">{info.desc}</span>
+                    {isActive && <span className="text-[11px] font-bold text-emerald-400 bg-emerald-900/30 px-2 py-0.5 rounded">✓ SEÇİLİ</span>}
                   </button>
                 );
               })}
@@ -287,7 +287,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             <button
               type="button"
               onClick={() => setTab('MAIN')}
-              className="mt-5 w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-xs transition cursor-pointer select-none"
+              className="mt-5 w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-sm transition cursor-pointer select-none"
             >
               TAMAM
             </button>
@@ -299,7 +299,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
       {tab === 'STAKE_SELECT' && (
         <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-fade-in">
           <div className="w-full max-w-lg bg-slate-900 border-4 border-slate-950 rounded-3xl p-6 shadow-2xl text-white flex flex-col">
-            <h2 className="text-center text-xl font-bold font-pixel tracking-widest text-red-400 uppercase border-b border-slate-800 pb-2">
+            <h2 className="text-center text-2xl font-bold font-pixel tracking-widest text-red-400 uppercase border-b border-slate-800 pb-2">
               ZORLUK SEÇİMİ
             </h2>
 
@@ -314,14 +314,14 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                     className={`menu-card flex flex-col items-center gap-2 p-4 rounded-xl border-2 text-center transition cursor-pointer select-none ${isActive ? info.borderActive : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}
                     style={{ '--glow': 'transparent' } as React.CSSProperties}
                   >
-                    <div className={`w-10 h-10 rounded-full border-4 flex items-center justify-center font-pixel text-sm font-black shadow ${
+                    <div className={`w-10 h-10 rounded-full border-4 flex items-center justify-center font-pixel text-base font-black shadow ${
                       s === 'WHITE' ? 'border-slate-400 bg-white text-slate-800' : 'border-red-700 bg-red-500 text-white animate-pulse'
                     }`}>
                       {s === 'WHITE' ? 'W' : 'R'}
                     </div>
-                    <span className={`text-xs font-bold ${info.color}`}>{info.name}</span>
-                    <span className="text-[10px] text-slate-400 leading-tight">{info.desc}</span>
-                    {isActive && <span className="text-[9px] font-bold text-emerald-400 bg-emerald-900/30 px-2 py-0.5 rounded">✓ SEÇİLİ</span>}
+                    <span className={`text-sm font-bold ${info.color}`}>{info.name}</span>
+                    <span className="text-[12px] text-slate-400 leading-tight">{info.desc}</span>
+                    {isActive && <span className="text-[11px] font-bold text-emerald-400 bg-emerald-900/30 px-2 py-0.5 rounded">✓ SEÇİLİ</span>}
                   </button>
                 );
               })}
@@ -330,7 +330,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             <button
               type="button"
               onClick={() => setTab('MAIN')}
-              className="mt-5 w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-xs transition cursor-pointer select-none"
+              className="mt-5 w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-sm transition cursor-pointer select-none"
             >
               TAMAM
             </button>
@@ -342,10 +342,10 @@ export default function StartScreen({ onStart }: StartScreenProps) {
       {tab === 'CHALLENGES' && (
         <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-fade-in">
           <div className="w-full max-w-2xl bg-slate-900 border-4 border-slate-950 rounded-3xl p-6 shadow-2xl text-white flex flex-col max-h-[90vh] overflow-y-auto">
-            <h2 className="text-center text-xl font-bold font-pixel tracking-widest text-fuchsia-400 uppercase border-b border-slate-800 pb-2">
+            <h2 className="text-center text-2xl font-bold font-pixel tracking-widest text-fuchsia-400 uppercase border-b border-slate-800 pb-2">
               MÜCADELELER
             </h2>
-            <p className="text-center text-[10px] text-slate-500 mt-1.5 mb-4">
+            <p className="text-center text-[12px] text-slate-500 mt-1.5 mb-4">
               Özel kurallarla oyna, becerinle sınırlarını zorla!
             </p>
 
@@ -361,11 +361,11 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                 >
                   {/* Header */}
                   <div className="flex items-center gap-2.5">
-                    <span className="text-2xl">{ch.icon}</span>
+                    <span className="text-3xl">{ch.icon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-pixel text-xs font-black text-slate-100 truncate">{ch.name}</span>
-                        <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border ${ch.diffColor} border-current/30 bg-current/5`}>
+                        <span className="font-pixel text-sm font-black text-slate-100 truncate">{ch.name}</span>
+                        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${ch.diffColor} border-current/30 bg-current/5`}>
                           {ch.difficulty}
                         </span>
                       </div>
@@ -373,12 +373,12 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                   </div>
 
                   {/* Description */}
-                  <p className="text-[10px] text-slate-400 leading-relaxed">{ch.description}</p>
+                  <p className="text-[12px] text-slate-400 leading-relaxed">{ch.description}</p>
 
                   {/* Rule badge */}
                   <div className="flex items-center gap-1.5 bg-slate-950/60 border border-slate-800 rounded-lg px-2.5 py-1.5">
-                    <span className="text-[9px] text-amber-500 font-bold">KURAL:</span>
-                    <span className="text-[9px] text-slate-300">{ch.rule}</span>
+                    <span className="text-[11px] text-amber-500 font-bold">KURAL:</span>
+                    <span className="text-[11px] text-slate-300">{ch.rule}</span>
                   </div>
 
                   {/* Play button */}
@@ -389,14 +389,14 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                         // For now, start a normal run — challenge modifiers can be integrated later
                         onStart(deck, stake, selectedChest);
                       }}
-                      className="w-full py-2 rounded-lg bg-fuchsia-700 hover:bg-fuchsia-600 text-[10px] font-bold font-pixel text-white uppercase tracking-wider shadow border-b-2 border-fuchsia-900 transition cursor-pointer"
+                      className="w-full py-2 rounded-lg bg-fuchsia-700 hover:bg-fuchsia-600 text-[12px] font-bold font-pixel text-white uppercase tracking-wider shadow border-b-2 border-fuchsia-900 transition cursor-pointer"
                     >
                       MÜCADELEYE BAŞLA
                     </button>
                   )}
 
                   {!ch.unlocked && (
-                    <div className="text-center text-[10px] text-slate-600 font-pixel">🔒 Kilitli</div>
+                    <div className="text-center text-[12px] text-slate-600 font-pixel">🔒 Kilitli</div>
                   )}
                 </div>
               ))}
@@ -405,7 +405,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             <button
               type="button"
               onClick={() => setTab('MAIN')}
-              className="mt-5 w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-xs transition cursor-pointer select-none"
+              className="mt-5 w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-sm transition cursor-pointer select-none"
             >
               KAPAT
             </button>
@@ -417,24 +417,24 @@ export default function StartScreen({ onStart }: StartScreenProps) {
       {tab === 'SETUP' && (
         <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-chain-place">
           <div className="w-full max-w-lg bg-slate-900 border-4 border-slate-950 rounded-3xl p-5 shadow-2xl text-white flex flex-col max-h-full overflow-y-auto">
-            <h2 className="text-center text-xl font-bold font-pixel tracking-widest text-emerald-400 uppercase border-b border-slate-800 pb-2">
+            <h2 className="text-center text-2xl font-bold font-pixel tracking-widest text-emerald-400 uppercase border-b border-slate-800 pb-2">
               SEFER KURULUMU
             </h2>
 
             <div className="mt-4 flex flex-col gap-3">
               <div className="flex justify-between items-center bg-slate-950/40 p-2.5 rounded-lg border border-slate-850">
-                <span className="text-xs text-slate-400 font-medium">Seçili Deste:</span>
-                <span className={`text-xs font-bold ${DECK_INFO[deck].color}`}>{DECK_INFO[deck].name}</span>
+                <span className="text-sm text-slate-400 font-medium">Seçili Deste:</span>
+                <span className={`text-sm font-bold ${DECK_INFO[deck].color}`}>{DECK_INFO[deck].name}</span>
               </div>
               <div className="flex justify-between items-center bg-slate-950/40 p-2.5 rounded-lg border border-slate-850">
-                <span className="text-xs text-slate-400 font-medium">Zorluk Seviyesi:</span>
-                <span className={`text-xs font-bold ${STAKE_INFO[stake].color}`}>{STAKE_INFO[stake].name}</span>
+                <span className="text-sm text-slate-400 font-medium">Zorluk Seviyesi:</span>
+                <span className={`text-sm font-bold ${STAKE_INFO[stake].color}`}>{STAKE_INFO[stake].name}</span>
               </div>
             </div>
 
             {/* Chest Selection */}
             <div className="mt-4">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">🏴 Başlangıç Sandığı Seç</p>
+              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">🏴 Başlangıç Sandığı Seç</p>
               <div className="grid grid-cols-2 gap-2">
                 {STARTING_CHESTS.map((chest) => {
                   const isSelected = selectedChest === chest.id;
@@ -451,27 +451,27 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                       ].join(' ')}
                       style={{ '--glow': 'rgba(251,191,36,0.3)' } as React.CSSProperties}
                     >
-                      <span className="text-3xl">{chest.icon}</span>
-                      <span className={`text-[11px] font-pixel font-bold text-center leading-tight ${isSelected ? 'text-amber-300' : 'text-slate-200'}`}>
+                      <span className="text-4xl">{chest.icon}</span>
+                      <span className={`text-[13px] font-pixel font-bold text-center leading-tight ${isSelected ? 'text-amber-300' : 'text-slate-200'}`}>
                         {chest.name}
                       </span>
-                      <span className="text-[9px] text-slate-400 text-center leading-tight">
+                      <span className="text-[11px] text-slate-400 text-center leading-tight">
                         {chest.description}
                       </span>
                       {isSelected && (
-                        <span className="text-[9px] font-bold text-amber-400 bg-amber-900/30 px-2 py-0.5 rounded">✓ SEÇİLDİ</span>
+                        <span className="text-[11px] font-bold text-amber-400 bg-amber-900/30 px-2 py-0.5 rounded">✓ SEÇİLDİ</span>
                       )}
                     </button>
                   );
                 })}
               </div>
-              <p className="text-[9px] text-slate-500 mt-2 text-center">Sandık seçimi opsiyoneldir.</p>
+              <p className="text-[11px] text-slate-500 mt-2 text-center">Sandık seçimi opsiyoneldir.</p>
             </div>
 
             <button
               type="button"
               onClick={() => onStart(deck, stake, selectedChest)}
-              className="mt-5 w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:translate-y-0.5 text-xs font-bold text-white shadow border-b-4 border-emerald-800 transition cursor-pointer select-none uppercase font-pixel tracking-widest"
+              className="mt-5 w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:translate-y-0.5 text-sm font-bold text-white shadow border-b-4 border-emerald-800 transition cursor-pointer select-none uppercase font-pixel tracking-widest"
             >
               🚀 Macerayı Başlat
             </button>
@@ -479,7 +479,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             <button
               type="button"
               onClick={() => setTab('MAIN')}
-              className="mt-3.5 w-full py-2 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-xs transition cursor-pointer select-none"
+              className="mt-3.5 w-full py-2 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-sm transition cursor-pointer select-none"
             >
               GERİ DÖN
             </button>

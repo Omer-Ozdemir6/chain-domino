@@ -1,6 +1,25 @@
+import { useEffect, useRef, useState } from 'react';
 import type { GameStatus } from '../../game/GameState.js';
 import type { HandType } from '../../models/types.js';
 import { BOSS_BLINDS } from '../../game/RunState.js';
+
+/** True for a brief window right after `value` drops — drives a floating "-1" callout beside a
+ *  countdown badge (turns left, discards left) so the player actually sees it tick down, instead
+ *  of the number just silently being different next render. */
+function useDecrementFlash(value: number): boolean {
+  const prevRef = useRef(value);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (value < prevRef.current) {
+      setFlash(true);
+      const timer = setTimeout(() => setFlash(false), 650);
+      prevRef.current = value;
+      return () => clearTimeout(timer);
+    }
+    prevRef.current = value;
+  }, [value]);
+  return flash;
+}
 
 interface SidebarHUDProps {
   round: number;
@@ -32,6 +51,17 @@ interface SidebarHUDProps {
   activeBossId?: string | null;
   activeBlind?: 'SMALL' | 'BIG' | 'BOSS' | null;
   previewScore?: { chips: number; mult: number } | null;
+  /** The current hand's running score (chips×mult) while it's actively being calculated —
+   *  null/0 outside that window, in which case this counter renders nothing at all (not even
+   *  "0"). Once the hand resolves this value flies up into `score` and the counter hides again. */
+  handScore?: number | null;
+  /** True for the ~480ms window the hand-score accumulator is flying up into `score` — swaps its
+   *  pop animation for a translate-and-fade-out so the transfer reads as one continuous motion. */
+  handScoreFlyUp?: boolean;
+  /** A separate, finer-grained counter than `round`/`totalRounds` (which is the Ante number and
+   *  only advances once per Boss Blind clear) — this ticks up by one on every single blind. */
+  overallRound?: number;
+  maxOverallRounds?: number;
   layout?: 'sidebar' | 'topbar';
 }
 
@@ -78,7 +108,17 @@ export default function SidebarHUD({
   activeBossId = null,
   activeBlind = null,
   previewScore = null,
+  handScore = null,
+  handScoreFlyUp = false,
+  overallRound = 0,
+  maxOverallRounds = 0,
 }: SidebarHUDProps) {
+  // Counts DOWN from maxTurns instead of the raw (1-indexed, and briefly maxTurns+1 the instant
+  // the final turn is spent) `turn` counter — "6 hamle kaldı, sonra 5..." reads far more clearly
+  // than "1/6" ticking up, and never flashes a confusing "7/6" right as the round ends.
+  const turnsLeft = Math.max(0, maxTurns - turn + 1);
+  const turnFlash = useDecrementFlash(turnsLeft);
+  const discardFlash = useDecrementFlash(discardsLeft);
   const activeBoss = activeBossId ? BOSS_BLINDS.find((b) => b.id === activeBossId) ?? null : null;
   const bossWarning = activeBoss ? activeBoss.ruleLabel : null;
   const bossTierColor = activeBoss?.tier === 'LETHAL'
@@ -88,44 +128,56 @@ export default function SidebarHUD({
       : 'text-orange-400 bg-orange-950/30 border-orange-700/50';
 
   const handTypeStrip = handType ? (
-    <div className="flex items-center gap-1.5 text-[10px] font-pixel font-bold text-amber-300 uppercase tracking-wide">
+    <div className="flex items-center gap-1.5 text-[12px] font-pixel font-bold text-amber-300 uppercase tracking-wide">
       {HAND_TYPE_LABEL[handType]} (Lvl {handLevels[handType] ?? 1})
     </div>
   ) : null;
 
   if (layout === 'topbar') {
     return (
-      <div className="w-full bg-[#0d261e] border-b-4 border-[#071712] px-2 py-1 md:px-3 md:py-2 flex items-center justify-between gap-3 text-white select-none shrink-0 shadow-lg">
-        {/* Left: Score readout */}
+      <div className="w-full bg-[#0d261e] border-b-4 border-[#071712] px-3 py-2 sm:px-4 sm:py-2.5 flex items-center justify-between gap-3 text-white select-none shrink-0 shadow-lg">
+        {/* Left: Score readout + hidden hand-score accumulator (only exists while a hand resolves) */}
         <div className="flex flex-col leading-tight shrink-0">
-          <span className="font-pixel text-xl md:text-2xl text-white skor-lcd-glow leading-none">{score}</span>
-          <span className="text-[9px] text-rose-400 font-bold uppercase font-pixel mt-0.5">Hedef: {targetScore}</span>
+          <span className="font-pixel text-3xl sm:text-4xl text-white skor-lcd-glow leading-none">{score}</span>
+          <span className="text-sm text-rose-400 font-bold uppercase font-pixel mt-0.5">Hedef: {targetScore}</span>
+          {Boolean(handScore) && (
+            <span key={handScore} className={`font-pixel text-lg text-emerald-350 hand-score-glow leading-none mt-0.5 ${handScoreFlyUp ? 'animate-hand-score-flyup' : 'animate-number-pop'}`}>
+              +{handScore}
+            </span>
+          )}
         </div>
 
         {/* Center: Live preview chips/mult badges */}
-        <div className="flex items-center gap-1 select-none scale-90">
-          <div className="balatro-badge-blue px-2 py-0.5 flex flex-col items-center">
-            <span className="text-[8px] text-white font-pixel font-black">{previewScore ? previewScore.chips : 0}</span>
+        <div className="flex items-center gap-1.5 select-none">
+          <div key={`tc-${previewScore?.chips ?? 0}`} className={`balatro-badge-blue flex flex-col items-center animate-number-pop ${scoring ? 'px-4 py-2.5' : 'px-3 py-1.5'}`}>
+            <span className={`text-white font-pixel font-black ${scoring ? 'text-xl' : 'text-base'}`}>{previewScore ? Math.round(previewScore.chips) : 0}</span>
           </div>
-          <span className="text-slate-400 font-pixel text-xs">X</span>
-          <div className="balatro-badge-red px-2 py-0.5 flex flex-col items-center">
-            <span className="text-[8px] text-white font-pixel font-black">{previewScore ? previewScore.mult : 1}</span>
+          <span className="text-slate-400 font-pixel text-base">X</span>
+          <div key={`tm-${previewScore?.mult ?? 1}`} className={`balatro-badge-red flex flex-col items-center animate-number-pop ${scoring ? 'px-4 py-2.5' : 'px-3 py-1.5'}`}>
+            <span className={`text-white font-pixel font-black ${scoring ? 'text-xl' : 'text-base'}`}>{previewScore ? Math.round(previewScore.mult) : 1}</span>
           </div>
         </div>
 
         {/* Right: Round details */}
         <div className="flex gap-1.5 text-center shrink-0">
-          <div className="border border-slate-800 rounded bg-slate-900/40 px-2 py-0.5">
-            <span className="block text-[7px] text-slate-500 uppercase font-bold leading-none">Ante</span>
-            <span className="font-pixel text-xs text-slate-200">{round}/{totalRounds}</span>
+          <div className="border border-slate-800 rounded bg-slate-900/40 px-2 py-1">
+            <span className="block text-[12px] text-slate-500 uppercase font-bold leading-none">Ante</span>
+            <span className="font-pixel text-base text-slate-200">{round}/{totalRounds}</span>
           </div>
-          <div className="border border-slate-800 rounded bg-slate-900/40 px-2 py-0.5">
-            <span className="block text-[7px] text-slate-500 uppercase font-bold leading-none">Tur</span>
-            <span className="font-pixel text-xs text-amber-400">{turn}/{maxTurns}</span>
+          <div className="border border-slate-800 rounded bg-slate-900/40 px-2 py-1">
+            <span className="block text-[12px] text-slate-500 uppercase font-bold leading-none">Raunt</span>
+            <span className="font-pixel text-base text-sky-300">{overallRound}/{maxOverallRounds}</span>
           </div>
-          <div className="border border-slate-800 rounded bg-slate-900/40 px-2 py-0.5">
-            <span className="block text-[7px] text-slate-500 uppercase font-bold leading-none">Cüzdan</span>
-            <span className="font-pixel text-xs text-emerald-450">${money}</span>
+          <div className="border border-slate-800 rounded bg-slate-900/40 px-2 py-1 relative">
+            <span className="block text-[12px] text-slate-500 uppercase font-bold leading-none">Tur</span>
+            <span key={turnsLeft} className="font-pixel text-base text-amber-400 inline-block animate-number-pop">{turnsLeft}</span>
+            {turnFlash && (
+              <span className="absolute -top-2 right-0 font-pixel text-xs text-rose-400 font-black animate-tile-chip-pop pointer-events-none">-1</span>
+            )}
+          </div>
+          <div className="border border-slate-800 rounded bg-slate-900/40 px-2 py-1">
+            <span className="block text-[12px] text-slate-500 uppercase font-bold leading-none">Cüzdan</span>
+            <span className="font-pixel text-base text-emerald-400">${money}</span>
           </div>
         </div>
       </div>
@@ -133,55 +185,54 @@ export default function SidebarHUD({
   }
 
   return (
-    <aside className="w-48 lg:w-56 xl:w-72 bg-slate-900 border-r-4 border-slate-950 p-2 lg:p-3 xl:p-4 flex flex-col gap-2 lg:gap-3 text-white shrink-0 select-none h-full shadow-[5px_0_15px_rgba(0,0,0,0.5)] z-20 balatro-panel">
-      {/* 1. Ante & Blind Row */}
-      <div className="flex gap-2 items-center justify-between shrink-0">
-        <div className="flex-1 bg-slate-950/70 border border-slate-800 rounded-xl px-2.5 py-1.5 text-center shadow-inner">
-          <span className="block text-[10px] text-sky-400 font-bold uppercase tracking-widest font-pixel leading-none mb-0.5">Safha</span>
-          <span className="font-pixel text-lg text-sky-200 font-black">{round} / {totalRounds}</span>
+    <aside className="w-56 lg:w-64 xl:w-80 bg-slate-900 border-r-4 border-slate-950 p-3 lg:p-4 xl:p-5 flex flex-col gap-3 lg:gap-4 text-white shrink-0 select-none h-full shadow-[5px_0_15px_rgba(0,0,0,0.5)] z-20 balatro-panel">
+      {/* 1. Ante & Raunt Row */}
+      <div className="flex gap-2.5 items-center justify-between shrink-0">
+        <div className="flex-1 bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-center shadow-inner">
+          <span className="block text-sm lg:text-base text-sky-400 font-bold uppercase tracking-widest font-pixel leading-none mb-1">Safha</span>
+          <span className="font-pixel text-2xl lg:text-3xl text-sky-200 font-black">{round} / {totalRounds}</span>
         </div>
-        {activeBlind && (
-          <div className={`flex-1 rounded-xl border py-1.5 text-center font-pixel text-[11px] font-black uppercase tracking-wider text-white ${BLIND_BADGE[activeBlind].className}`}>
-            {BLIND_BADGE[activeBlind].label}
-          </div>
-        )}
+        <div className="flex-1 bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-center shadow-inner">
+          <span className="block text-sm lg:text-base text-sky-400 font-bold uppercase tracking-widest font-pixel leading-none mb-1">Raunt</span>
+          <span className="font-pixel text-2xl lg:text-3xl text-sky-200 font-black">{overallRound} / {maxOverallRounds}</span>
+        </div>
       </div>
+
+      {activeBlind && (
+        <div className={`rounded-xl border py-2 text-center font-pixel text-sm lg:text-base font-black uppercase tracking-wider text-white shrink-0 ${BLIND_BADGE[activeBlind].className}`}>
+          {BLIND_BADGE[activeBlind].label}
+        </div>
+      )}
 
       {/* 2. Neon LCD Score Monitor */}
       <div
         className={[
-          'lcd-panel p-3 text-center flex flex-col gap-1.5 shrink-0 transition relative overflow-hidden',
+          'lcd-panel p-4 text-center flex flex-col gap-2 shrink-0 transition relative overflow-hidden',
           scoring ? 'animate-score-pulse ring-2 ring-emerald-500/50' : '',
         ].join(' ')}
       >
-        <div className="flex justify-between items-center text-[11px] text-slate-400 font-bold uppercase tracking-widest font-pixel border-b border-slate-800/40 pb-1.5">
+        <div className="flex justify-between items-center text-sm lg:text-base text-slate-400 font-bold uppercase tracking-widest font-pixel border-b border-slate-800/40 pb-2">
           <span>El Skoru</span>
-          <span className="text-rose-450 font-black font-pixel text-[13px] drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]">HEDEF: {targetScore}</span>
+          <span className="text-rose-455 font-black font-pixel text-base lg:text-lg drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]">HEDEF: {targetScore}</span>
         </div>
 
-        <div className="font-pixel text-3xl lg:text-4xl xl:text-5xl text-white skor-lcd-glow leading-none my-2.5 tracking-widest font-black">
+        <div className="font-pixel text-5xl lg:text-6xl xl:text-6xl text-white skor-lcd-glow leading-none my-3 tracking-widest font-black">
           {score}
         </div>
 
-        {/* Live chips × mult box */}
-        <div className="flex items-center justify-center gap-1.5 mt-1 select-none">
-          <div className="balatro-badge-blue px-3 py-1 flex flex-col items-center justify-center min-w-16">
-            <span className="text-[9px] text-sky-200 font-pixel leading-none">CHIPS</span>
-            <span className="text-sm text-white font-pixel font-black leading-none mt-0.5">
-              {previewScore ? previewScore.chips : 0}
+        {/* Hidden hand-score accumulator: nothing renders (not even "0") until a hand is
+            actively being calculated — then it holds the running total until it flies up into
+            the score above and disappears again for the next hand. */}
+        {Boolean(handScore) && (
+          <div key={handScore} className={`flex items-center justify-center gap-2 ${handScoreFlyUp ? 'animate-hand-score-flyup' : 'animate-number-pop'}`}>
+            <span className="font-pixel text-2xl lg:text-3xl text-emerald-350 hand-score-glow font-black tracking-wide">
+              +{handScore}
             </span>
           </div>
-          <span className="text-slate-400 font-pixel text-sm font-black mx-1">X</span>
-          <div className="balatro-badge-red px-3 py-1 flex flex-col items-center justify-center min-w-16">
-            <span className="text-[9px] text-rose-200 font-pixel leading-none">MULT</span>
-            <span className="text-sm text-white font-pixel font-black leading-none mt-0.5">
-              {previewScore ? previewScore.mult : 1}
-            </span>
-          </div>
-        </div>
+        )}
 
         {bossWarning && activeBoss && (
-          <div className={`border text-[10px] font-bold uppercase py-1.5 px-2.5 rounded-lg inline-flex items-center gap-1.5 mx-auto mt-1.5 animate-pulse ${bossTierColor}`}>
+          <div className={`border text-sm font-bold uppercase py-2 px-3 rounded-lg inline-flex items-center gap-2 mx-auto mt-2 animate-pulse ${bossTierColor}`}>
             <span>{activeBoss.icon}</span>
             <span>{bossWarning}</span>
           </div>
@@ -190,58 +241,55 @@ export default function SidebarHUD({
 
       {/* 3. Counters (Turns, Discards, Coins) */}
       <div className="grid grid-cols-3 gap-2 shrink-0">
-        <div className="flex flex-col items-center justify-center bg-slate-950/70 border border-slate-800 rounded-2xl py-2 shadow-inner">
-          <span className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider font-pixel mb-1">TUR</span>
-          <div className="w-11 h-11 rounded-full border-2 border-amber-500/80 flex items-center justify-center bg-amber-950/15 shadow-[0_0_8px_rgba(245,158,11,0.2)]">
-            <span className="font-pixel text-base text-amber-400 font-black">{turn}/{maxTurns}</span>
+        <div className="flex flex-col items-center justify-center bg-slate-950/70 border border-slate-800 rounded-2xl py-2.5 shadow-inner relative">
+          <span className="text-sm lg:text-base text-slate-500 uppercase font-extrabold tracking-wider font-pixel mb-1.5">TUR</span>
+          <div className="w-13 h-13 rounded-full border-2 border-amber-500/80 flex items-center justify-center bg-amber-950/15 shadow-[0_0_8px_rgba(245,158,11,0.2)] relative">
+            <span key={turnsLeft} className="font-pixel text-xl text-amber-400 font-black inline-block animate-number-pop">{turnsLeft}</span>
+            {turnFlash && (
+              <span className="absolute -top-3 -right-1 font-pixel text-sm text-rose-400 font-black animate-tile-chip-pop pointer-events-none">-1</span>
+            )}
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center bg-slate-950/70 border border-slate-800 rounded-2xl py-2 shadow-inner">
-          <span className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider font-pixel mb-1">ISKARTA</span>
-          <div className="w-11 h-11 rounded-full border-2 border-rose-500/80 flex items-center justify-center bg-rose-950/15 shadow-[0_0_8px_rgba(239,68,68,0.2)]">
-            <span className="font-pixel text-base text-rose-500 font-black">{discardsLeft}</span>
+        <div className="flex flex-col items-center justify-center bg-slate-950/70 border border-slate-800 rounded-2xl py-2.5 shadow-inner">
+          <span className="text-sm lg:text-base text-slate-500 uppercase font-extrabold tracking-wider font-pixel mb-1.5">ISKARTA</span>
+          <div className="w-13 h-13 rounded-full border-2 border-rose-500/80 flex items-center justify-center bg-rose-950/15 shadow-[0_0_8px_rgba(239,68,68,0.2)] relative">
+            <span key={discardsLeft} className="font-pixel text-xl text-rose-500 font-black inline-block animate-number-pop">{discardsLeft}</span>
+            {discardFlash && (
+              <span className="absolute -top-3 -right-1 font-pixel text-sm text-rose-400 font-black animate-tile-chip-pop pointer-events-none">-1</span>
+            )}
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center bg-slate-950/70 border border-slate-800 rounded-2xl py-2 shadow-inner">
-          <span className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider font-pixel mb-1">CÜZDAN</span>
-          <div className="w-11 h-11 rounded-full border-2 border-emerald-500/80 flex items-center justify-center bg-emerald-950/15 shadow-[0_0_8px_rgba(16,185,129,0.2)]">
-            <span className="font-pixel text-base text-emerald-450 font-black">${money}</span>
+        <div className="flex flex-col items-center justify-center bg-slate-950/70 border border-slate-800 rounded-2xl py-2.5 shadow-inner">
+          <span className="text-sm lg:text-base text-slate-500 uppercase font-extrabold tracking-wider font-pixel mb-1.5">CÜZDAN</span>
+          <div className="w-13 h-13 rounded-full border-2 border-emerald-500/80 flex items-center justify-center bg-emerald-950/15 shadow-[0_0_8px_rgba(16,185,129,0.2)]">
+            <span className="font-pixel text-xl text-emerald-400 font-black">${money}</span>
           </div>
         </div>
       </div>
 
-      {/* 4. Active Hand Level / Upgrades Panel */}
-      <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-2.5 shrink-0 text-center">
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-900/60 pb-1.5 mb-1.5 font-pixel">
-          El Türü Seviyeleri
+      {/* 4. Balatro-style "El Kartı": hand-type name + level as title, live Chips×Mult badges as
+          body — this is the SAME data `previewScore` always carried, just relocated out of the
+          LCD panel into its own card, matching the reference screenshot's "Full House lvl.1"
+          layout. Feeds from idle board preview while placing stones AND from the hand-preview
+          buildup while a submission resolves — App.tsx switches the source, this card doesn't care. */}
+      <div className="bg-slate-950/60 border-2 border-slate-800 rounded-2xl p-3.5 shrink-0 text-center">
+        <div className="font-pixel text-amber-300 uppercase tracking-wide text-sm lg:text-base font-black mb-2 drop-shadow-[0_0_4px_rgba(251,191,36,0.4)]">
+          {handType ? `${HAND_TYPE_LABEL[handType]} Lvl.${handLevels[handType] ?? 1}` : 'Masa Boş'}
         </div>
-        <div className="font-pixel text-amber-300 uppercase tracking-wide">
-          {handType ? (
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[10.5px] text-slate-500">Aktif El Türü:</span>
-              <span className="text-sm font-black text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.4)]">
-                {HAND_TYPE_LABEL[handType]}
-              </span>
-              <span className="text-xs text-slate-350 font-pixel">Seviye {handLevels[handType] ?? 1}</span>
-            </div>
-          ) : (
-            <div className="text-[10px] flex justify-around gap-1.5 font-bold">
-              <div className="bg-slate-950/70 px-2 py-1 rounded border border-slate-800 flex-1">
-                <span className="block text-slate-500 mb-0.5">Düz</span>
-                <span className="text-amber-400 text-xs">L{handLevels['STRAIGHT'] ?? 1}</span>
-              </div>
-              <div className="bg-slate-950/70 px-2 py-1 rounded border border-slate-800 flex-1">
-                <span className="block text-slate-500 mb-0.5">Çatal</span>
-                <span className="text-amber-400 text-xs">L{handLevels['BRANCHED'] ?? 1}</span>
-              </div>
-              <div className="bg-slate-950/70 px-2 py-1 rounded border border-slate-800 flex-1">
-                <span className="block text-slate-500 mb-0.5">Döngü</span>
-                <span className="text-amber-400 text-xs">L{handLevels['LOOP'] ?? 1}</span>
-              </div>
-            </div>
-          )}
+        <div className="flex items-center justify-center gap-2.5 select-none">
+          <div key={`c-${previewScore?.chips ?? 0}`} className={`balatro-badge-blue flex items-center justify-center min-w-20 animate-number-pop transition-[padding] ${scoring ? 'px-5 py-4' : 'px-4 py-2.5'}`}>
+            <span className={`text-white font-pixel font-black leading-none transition-[font-size] ${scoring ? 'text-3xl lg:text-4xl' : 'text-xl lg:text-2xl'}`}>
+              {previewScore ? Math.round(previewScore.chips) : 0}
+            </span>
+          </div>
+          <span className="text-slate-400 font-pixel text-lg font-black">X</span>
+          <div key={`m-${previewScore?.mult ?? 1}`} className={`balatro-badge-red flex items-center justify-center min-w-20 animate-number-pop transition-[padding] ${scoring ? 'px-5 py-4' : 'px-4 py-2.5'}`}>
+            <span className={`text-white font-pixel font-black leading-none transition-[font-size] ${scoring ? 'text-3xl lg:text-4xl' : 'text-xl lg:text-2xl'}`}>
+              {previewScore ? Math.round(previewScore.mult) : 1}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -252,7 +300,7 @@ export default function SidebarHUD({
           onClick={onSubmit}
           disabled={!canSubmit}
           className={[
-            'btn-arcade btn-arcade-green w-full py-4 rounded-xl text-sm font-black text-white transition disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none disabled:animate-none uppercase font-pixel',
+            'btn-arcade btn-arcade-green w-full py-4 rounded-xl text-base font-black text-white transition disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none disabled:animate-none uppercase font-pixel',
             formulaReady && canSubmit
               ? 'animate-pulse ring-2 ring-emerald-300/50'
               : '',
@@ -266,7 +314,7 @@ export default function SidebarHUD({
             type="button"
             onClick={onDiscard}
             disabled={!canRecover || discardsLeft <= 0}
-            className="btn-arcade btn-arcade-red py-2.5 rounded-xl text-[11px] font-black text-white uppercase font-pixel"
+            className="btn-arcade btn-arcade-red py-2.5 rounded-xl text-[13px] font-black text-white uppercase font-pixel"
           >
             ISKARTA ET
           </button>
@@ -275,7 +323,7 @@ export default function SidebarHUD({
             type="button"
             onClick={onUndo}
             disabled={!canRecover || !canUndo}
-            className="btn-arcade btn-arcade-slate py-2.5 rounded-xl text-[11px] font-black text-slate-100 uppercase font-pixel"
+            className="btn-arcade btn-arcade-slate py-2.5 rounded-xl text-[13px] font-black text-slate-100 uppercase font-pixel"
           >
             GERİ AL
           </button>
@@ -285,7 +333,7 @@ export default function SidebarHUD({
           type="button"
           onClick={onSkip}
           disabled={!canRecover}
-          className="btn-arcade btn-arcade-slate w-full py-2 rounded-xl text-[10px] font-black text-rose-355 uppercase font-pixel"
+          className="btn-arcade btn-arcade-slate w-full py-2 rounded-xl text-[12px] font-black text-rose-355 uppercase font-pixel"
         >
           TURU ATLA
         </button>

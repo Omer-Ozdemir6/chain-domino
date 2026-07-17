@@ -36,10 +36,14 @@ const LAYOUTS: Record<number, Array<[number, number]>> = {
 interface PipsProps {
   value: number;
   large?: boolean;
+  /** Overrides the default light/dark-adaptive dot color — needed for tiles whose background
+   *  doesn't follow the theme (e.g. the Ivory seal's near-white face stays white in dark mode
+   *  too, so its dots must stay dark instead of flipping to the usual dark-mode light dots). */
+  dotColorClass?: string;
 }
 
 /** Small or large classic domino-pip grid (0-6 only; higher values render nothing). */
-export default function Pips({ value, large }: PipsProps) {
+export default function Pips({ value, large, dotColorClass }: PipsProps) {
   const positions = LAYOUTS[value];
   if (!positions) return null;
 
@@ -54,7 +58,7 @@ export default function Pips({ value, large }: PipsProps) {
           <span
             key={i}
             className={[
-              active ? 'bg-slate-800 dark:bg-slate-100' : '',
+              active ? (dotColorClass ?? 'bg-slate-800 dark:bg-slate-100') : '',
               dotSize,
             ].join(' ')}
           />

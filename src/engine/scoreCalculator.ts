@@ -14,6 +14,15 @@ export interface ScoreCalculationResult {
   steps: string[];
 }
 
+/** A single stone's own chip contribution (base pip sum + IVORY bonus) — the exact per-stone
+ *  math `calculateScore()`'s loop applies, factored out so a stone-by-stone reveal animation
+ *  can reuse the identical formula instead of re-deriving it and risking drift. */
+export function computeStoneChips(stone: DominoStone): number {
+  const base = stone.leftVal + stone.rightVal;
+  const bonus = stone.modifier === 'IVORY' ? 15 : 0;
+  return base + bonus;
+}
+
 export function calculateScore(
   unfrozenStones: DominoStone[],
   unfrozenEdges: GraphEdge[],
@@ -27,17 +36,15 @@ export function calculateScore(
   steps.push(`El Türü: ${handTypeName} (Seviye Başlangıcı: ${handStats.chips} Chip, ${handStats.mult} Çarpan)`);
 
   unfrozenStones.forEach((stone) => {
-    const base = stone.leftVal + stone.rightVal;
     const stoneModifier = stone.modifier ?? 'NORMAL';
+    const chips = computeStoneChips(stone);
 
-    let bonusPoints = 0;
     if (stoneModifier === 'IVORY') {
-      bonusPoints = 15;
       steps.push(`Fildişi Mührü [${stone.leftVal}|${stone.rightVal}] (+15 Taban Puan)`);
     }
 
-    state.chips += base + bonusPoints;
-    steps.push(`[${stone.leftVal}|${stone.rightVal}] → +${base} Chip`);
+    state.chips += chips;
+    steps.push(`[${stone.leftVal}|${stone.rightVal}] → +${stone.leftVal + stone.rightVal} Chip`);
 
     if (stoneModifier === 'OBSIDIAN') {
       state.mult *= 2;

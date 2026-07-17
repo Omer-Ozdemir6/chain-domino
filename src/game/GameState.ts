@@ -1,5 +1,5 @@
 import { Board } from '../models/Board.js';
-import type { SlotId } from '../models/Board.js';
+import type { SlotId, GraphNode } from '../models/Board.js';
 import { Deck } from '../models/Deck.js';
 import type { DominoStone } from '../models/types.js';
 import { calculateScore } from '../engine/scoreCalculator.js';
@@ -40,6 +40,10 @@ export class GameState {
   readonly board = new Board();
 
   hand: DominoStone[] = [];
+  /** Every stone scored this round, across all submitted hands — the board itself is emptied
+   *  after each submission, so round-end charms that need to scan "everything played this round"
+   *  (e.g. money-per-double-on-the-board) read this instead of the (now always empty) board. */
+  playedNodesThisRound: GraphNode[] = [];
 
   turn = 1;
   score = 0;
@@ -137,16 +141,17 @@ export class GameState {
     if (this.status !== 'PLAYING') return { ok: false, error: 'Oyun sona erdi.' };
 
     // Map board unfrozen nodes to DominoStone records
-    const unfrozenStones: DominoStone[] = this.board.getNodes()
-      .filter((n) => !n.frozen)
-      .map((n) => ({
-        id: n.nodeId,
-        leftVal: n.leftVal,
-        rightVal: n.rightVal,
-        isGolden: n.isGolden,
-        modifier: n.modifier,
-        tags: n.tags,
-      }));
+    const unfrozenNodes = this.board.getNodes().filter((n) => !n.frozen);
+    const unfrozenStones: DominoStone[] = unfrozenNodes.map((n) => ({
+      id: n.nodeId,
+      leftVal: n.leftVal,
+      rightVal: n.rightVal,
+      isGolden: n.isGolden,
+      modifier: n.modifier,
+      tags: n.tags,
+      leftUpgrade: n.leftUpgrade,
+      rightUpgrade: n.rightUpgrade,
+    }));
 
     const result = calculateScore(unfrozenStones, this.board.getUnfrozenEdges(), activeCharms, handStats, handTypeName);
 
@@ -167,7 +172,8 @@ export class GameState {
       this.hand.length === 0 && newStonesThisTurn >= this.config.stonesPerTurn ? HAND_EMPTIED_BONUS : 0;
 
     this.score += result.score + handEmptiedBonus;
-    this.board.freeze();
+    this.playedNodesThisRound.push(...unfrozenNodes);
+    this.board.drainAll(); // "Gönder ve Sil": the table is fully cleared for the next hand
     this.turn += 1;
 
     this.updateStatus();

@@ -17,10 +17,12 @@ interface TileProps {
   vertical?: boolean;
   isGolden?: boolean;
   highlighted?: boolean;
-  spellEffect?: 'GILD' | 'MAGNET' | 'BLUE' | 'RED' | null;
+  spellEffect?: 'GILD' | 'MAGNET' | 'BLUE' | 'RED' | 'BLUE_SPARKLE' | null;
   modifier?: TileModifier;
   leftConnected?: boolean;
   rightConnected?: boolean;
+  leftUpgrade?: number;
+  rightUpgrade?: number;
 }
 
 /** Returns Tailwind border/shadow/bg classes for a tile based on its modifier. */
@@ -74,10 +76,18 @@ export default function Tile({
   modifier,
   leftConnected = false,
   rightConnected = false,
+  leftUpgrade,
+  rightUpgrade,
 }: TileProps) {
   const clickable = Boolean(onClick);
   const modifierClasses = getModifierClasses(modifier, isGolden, isDouble, selected, highlighted);
   const modifierIndicator = getModifierIndicator(modifier, isGolden);
+  // The Ivory seal's face stays near-white in both light AND dark mode, so the usual
+  // dark-mode-flips-to-light-text/dots logic would render numbers invisible on it — pin both
+  // to a dark color specifically for this modifier instead of following the theme.
+  const isIvory = modifier === 'IVORY';
+  const numberColorClass = isIvory ? 'text-slate-800' : 'text-slate-100';
+  const pipDotColorClass = isIvory ? 'bg-slate-800' : undefined;
 
   return (
     <button
@@ -98,9 +108,19 @@ export default function Tile({
       {modifier === 'OBSIDIAN' && <div className="obsidian-cracks" />}
       {modifier === 'IVORY' && <div className="ivory-runes" />}
       <span className={`flex h-14 w-10 md:h-16 md:w-11 lg:h-18 lg:w-13 flex-col items-center justify-center gap-0.5 md:gap-1 transition-colors ${leftConnected ? 'bg-amber-500/10' : ''}`}>
-        <span className={`text-xs md:text-sm lg:text-base font-pixel font-bold leading-none ${leftConnected ? 'text-amber-300 animate-pulse drop-shadow-[0_0_6px_#fbbf24]' : 'text-slate-100'}`}>{left}</span>
+        <span className={`text-xs md:text-sm lg:text-base font-pixel font-bold leading-none ${
+          leftConnected
+            ? 'text-amber-300 animate-pulse drop-shadow-[0_0_6px_#fbbf24]'
+            : (leftUpgrade && leftUpgrade > 0)
+              ? 'text-cyan-500 dark:text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.85)] font-black'
+              : numberColorClass
+        }`}>{left}</span>
         <div className={leftConnected ? 'animate-pulse drop-shadow-[0_0_8px_#fbbf24] saturate-200' : ''}>
-          <Pips value={left} large />
+          <Pips 
+            value={left} 
+            large 
+            dotColorClass={(leftUpgrade && leftUpgrade > 0) ? 'bg-cyan-500 dark:bg-cyan-300 shadow-[0_0_8px_#06b6d4]' : pipDotColorClass} 
+          />
         </div>
       </span>
       <span
@@ -110,17 +130,27 @@ export default function Tile({
         ].join(' ')}
       />
       <span className={`flex h-14 w-10 md:h-16 md:w-11 lg:h-18 lg:w-13 flex-col items-center justify-center gap-0.5 md:gap-1 transition-colors ${rightConnected ? 'bg-amber-500/10' : ''}`}>
-        <span className={`text-xs md:text-sm lg:text-base font-pixel font-bold leading-none ${rightConnected ? 'text-amber-300 animate-pulse drop-shadow-[0_0_6px_#fbbf24]' : 'text-slate-100'}`}>{right}</span>
+        <span className={`text-xs md:text-sm lg:text-base font-pixel font-bold leading-none ${
+          rightConnected
+            ? 'text-amber-300 animate-pulse drop-shadow-[0_0_6px_#fbbf24]'
+            : (rightUpgrade && rightUpgrade > 0)
+              ? 'text-cyan-500 dark:text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.85)] font-black'
+              : numberColorClass
+        }`}>{right}</span>
         <div className={rightConnected ? 'animate-pulse drop-shadow-[0_0_8px_#fbbf24] saturate-200' : ''}>
-          <Pips value={right} large />
+          <Pips 
+            value={right} 
+            large 
+            dotColorClass={(rightUpgrade && rightUpgrade > 0) ? 'bg-cyan-500 dark:bg-cyan-300 shadow-[0_0_8px_#06b6d4]' : pipDotColorClass} 
+          />
         </div>
       </span>
       {spellEffect && (
         <div className={`absolute inset-0 z-50 pointer-events-none rounded-lg spell-particle-${spellEffect.toLowerCase()}`}>
-          <span className={`absolute top-1/4 left-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : spellEffect === 'RED' ? 'bg-purple-400' : 'bg-sky-350'} animate-[spark-1_0.8s_ease-out_forwards]`} />
-          <span className={`absolute top-1/4 right-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : spellEffect === 'RED' ? 'bg-purple-400' : 'bg-sky-350'} animate-[spark-2_0.8s_ease-out_forwards]`} />
-          <span className={`absolute bottom-1/4 left-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : spellEffect === 'RED' ? 'bg-purple-400' : 'bg-sky-350'} animate-[spark-3_0.8s_ease-out_forwards]`} />
-          <span className={`absolute bottom-1/4 right-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : spellEffect === 'RED' ? 'bg-purple-400' : 'bg-sky-350'} animate-[spark-4_0.8s_ease-out_forwards]`} />
+          <span className={`absolute top-1/4 left-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : spellEffect === 'RED' ? 'bg-purple-400' : spellEffect === 'BLUE_SPARKLE' ? 'bg-cyan-400 animate-pulse' : 'bg-sky-350'} animate-[spark-1_0.8s_ease-out_forwards]`} />
+          <span className={`absolute top-1/4 right-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : spellEffect === 'RED' ? 'bg-purple-400' : spellEffect === 'BLUE_SPARKLE' ? 'bg-cyan-400 animate-pulse' : 'bg-sky-350'} animate-[spark-2_0.8s_ease-out_forwards]`} />
+          <span className={`absolute bottom-1/4 left-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : spellEffect === 'RED' ? 'bg-purple-400' : spellEffect === 'BLUE_SPARKLE' ? 'bg-cyan-400 animate-pulse' : 'bg-sky-350'} animate-[spark-3_0.8s_ease-out_forwards]`} />
+          <span className={`absolute bottom-1/4 right-1/4 w-1.5 h-1.5 rounded-full ${spellEffect === 'GILD' ? 'bg-amber-350' : spellEffect === 'RED' ? 'bg-purple-400' : spellEffect === 'BLUE_SPARKLE' ? 'bg-cyan-400 animate-pulse' : 'bg-sky-350'} animate-[spark-4_0.8s_ease-out_forwards]`} />
           <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white opacity-85 animate-[ping_0.6s_ease-out_infinite]" />
         </div>
       )}

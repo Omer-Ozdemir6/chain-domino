@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateScore } from './scoreCalculator.js';
+import { calculateScore, computeStoneChips } from './scoreCalculator.js';
 import type { DominoStone } from '../models/types.js';
 import { E } from '../test-utils/edges.js';
 import type { CharmHooks } from '../models/Charm.js';
@@ -29,6 +29,12 @@ describe('scoreCalculator', () => {
 
   const DEFAULT_STATS = { chips: 0, mult: 1 };
   const DEFAULT_NAME = 'Düz Zincir';
+
+  it('computeStoneChips returns the base pip sum, plus 15 for an Ivory stone', () => {
+    expect(computeStoneChips({ id: 's1', leftVal: 3, rightVal: 4 })).toBe(7);
+    expect(computeStoneChips({ id: 's2', leftVal: 3, rightVal: 4, modifier: 'IVORY' })).toBe(22);
+    expect(computeStoneChips({ id: 's3', leftVal: 6, rightVal: 6, modifier: 'OBSIDIAN' })).toBe(12); // no chip bonus, just base
+  });
 
   it('sums a lone root stone\'s own pip values as chips', () => {
     const stone = normalStone('s1', 3, 4);

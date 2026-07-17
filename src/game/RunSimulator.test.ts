@@ -3,6 +3,85 @@ import { RunState } from './RunState.js';
 import { CHARMS } from '../models/CharmRegistry.js';
 import type { ChestId } from './RunState.js';
 
+function getCharmValue(id: string, currentCharms: string[]): number {
+  let baseScore = 25;
+
+  if (id === 'twin_souls') {
+    const hasBoth = currentCharms.includes('division_master') && currentCharms.includes('subtract_master');
+    baseScore = hasBoth ? 120 : 5;
+  } else if (id === 'multiplier_resonance') {
+    const hasBoth = currentCharms.includes('multiplier_frenzy') && currentCharms.includes('symmetry_bonus');
+    baseScore = hasBoth ? 120 : 5;
+  } else if (id.startsWith('fusion_')) {
+    baseScore = 150; // Fusion charms are elite
+  } else {
+    // Scoring charms
+    const scoring = [
+      'flat_bonus_common', 'flat_bonus_uncommon', 'flat_bonus_rare',
+      'add_master', 'subtract_master', 'division_master',
+      'zero_hero', 'unlucky_thirteen', 'node_counter',
+      'double_hunter', 'symmetry_bonus', 'multiplier_frenzy'
+    ];
+    if (scoring.includes(id)) {
+      baseScore = 85;
+    } else {
+      // Economy/Utility
+      const economy = [
+        'loan_shark', 'generous_trader', 'early_finisher', 
+        'speed_demon', 'debt_collector', 'thrifty_phantom'
+      ];
+      if (economy.includes(id)) {
+        const ecoCount = currentCharms.filter(c => economy.includes(c)).length;
+        baseScore = ecoCount >= 2 ? 10 : 45;
+      }
+    }
+  }
+
+  // If we have empty slots, make charms extremely attractive!
+  if (currentCharms.length < 5) {
+    baseScore += 60; // Adds 60 to the score, so even a default charm (25 + 60 = 85) beats Theorems (70)
+  }
+
+  return baseScore;
+}
+
+function getOfferScore(offer: any, currentCharms: string[]): number {
+  if (offer.type === 'CHARM') {
+    return getCharmValue(offer.item.id, currentCharms);
+  }
+  if (offer.type === 'THEOREM') {
+    return 70; // Great scaling
+  }
+  if (offer.type === 'VOUCHER') {
+    return 60; // Nice passive
+  }
+  if (offer.type === 'BOOSTER') {
+    return 55; // Good deck upgrade
+  }
+  return 30; // Spells/Consumables
+}
+
+function getCharmCategory(id: string): number {
+  const charm = CHARMS.find(c => c.id === id);
+  if (!charm) return 2; // Default to middle
+  const desc = charm.description.toLowerCase();
+  
+  // If it multiplies mult (X Mult)
+  if (desc.includes('çarpanı') && (desc.includes('katına') || desc.includes('çarpar') || desc.includes('katlar') || desc.includes('ile çarpar') || desc.includes('x'))) {
+    return 3;
+  }
+  // If it adds mult
+  if (desc.includes('çarpanı') || desc.includes('mult')) {
+    return 2;
+  }
+  // If it adds chips
+  if (desc.includes('çip') || desc.includes('puan') || desc.includes('chips')) {
+    return 1;
+  }
+  
+  return 2; // Default
+}
+
 // Helper to simulate a single run
 function simulateSingleRun(runIndex: number) {
   const run = new RunState();
@@ -113,12 +192,11 @@ function simulateSingleRun(runIndex: number) {
         boughtSomething = false;
         const affordable = run.shopOffers.filter((o) => o.item.cost <= run.money);
         if (affordable.length > 0) {
-          // Sort charms first, then vouchers, then boosters
+          // Sort using our heuristic helper function
           affordable.sort((a, b) => {
-            const priority = { CHARMS: 3, VOUCHER: 2, BOOSTER: 1 };
-            const pA = priority[a.type as keyof typeof priority] || 0;
-            const pB = priority[b.type as keyof typeof priority] || 0;
-            if (pA !== pB) return pB - pA;
+            const scoreA = getOfferScore(a, run.ownedCharmIds);
+            const scoreB = getOfferScore(b, run.ownedCharmIds);
+            if (scoreA !== scoreB) return scoreB - scoreA;
             return b.item.cost - a.item.cost; // expensive first
           });
 
@@ -142,6 +220,9 @@ function simulateSingleRun(runIndex: number) {
       if (run.draftOffers.length > 0) {
         run.draftStone(run.draftOffers[0].id);
       }
+
+      // Sort owned charms in optimal order: Chips -> Mult -> X Mult
+      run.ownedCharmIds.sort((a, b) => getCharmCategory(a) - getCharmCategory(b));
 
       // Leave shop
       if (run.phase === 'SHOP') {
@@ -332,10 +413,9 @@ describe('Chain Domino Simulation Plays', () => {
           const affordable = run.shopOffers.filter((o) => o.item.cost <= run.money);
           if (affordable.length > 0) {
             affordable.sort((a, b) => {
-              const priority = { CHARMS: 3, VOUCHER: 2, BOOSTER: 1 };
-              const pA = priority[a.type as keyof typeof priority] || 0;
-              const pB = priority[b.type as keyof typeof priority] || 0;
-              if (pA !== pB) return pB - pA;
+              const scoreA = getOfferScore(a, run.ownedCharmIds);
+              const scoreB = getOfferScore(b, run.ownedCharmIds);
+              if (scoreA !== scoreB) return scoreB - scoreA;
               return b.item.cost - a.item.cost;
             });
 
@@ -360,6 +440,9 @@ describe('Chain Domino Simulation Plays', () => {
           console.log(`  -> Drafting stone: [${run.draftOffers[0].leftVal}|${run.draftOffers[0].rightVal}]`);
           run.draftStone(run.draftOffers[0].id);
         }
+
+        // Sort owned charms in optimal order: Chips -> Mult -> X Mult
+        run.ownedCharmIds.sort((a, b) => getCharmCategory(a) - getCharmCategory(b));
 
         console.log(`Leaving shop. Owned Charms: ${run.ownedCharmIds.join(', ')}`);
         run.leaveShop();

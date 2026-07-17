@@ -32,6 +32,8 @@ export interface GraphNode {
   isGolden?: boolean;
   modifier?: TileModifier;
   tags?: string[];
+  leftUpgrade?: number;
+  rightUpgrade?: number;
 }
 
 /** A single stone-to-stone domino connection — pure topology, no operator involved. */
@@ -53,8 +55,29 @@ export interface GraphEdge {
  */
 function orientStone(stone: DominoStone, requiredValue: number): DominoStone | null {
   if (stone.leftVal === requiredValue) return stone;
-  if (stone.rightVal === requiredValue) return { ...stone, leftVal: stone.rightVal, rightVal: stone.leftVal, isGolden: stone.isGolden };
+  if (stone.rightVal === requiredValue) {
+    return { ...stone, leftVal: stone.rightVal, rightVal: stone.leftVal, isGolden: stone.isGolden, leftUpgrade: stone.rightUpgrade, rightUpgrade: stone.leftUpgrade };
+  }
   return null;
+}
+
+// Four cardinal directions a connection can grow in — the same geometry ChainBoard.tsx renders
+// the board with. Only doubles (spinners) ever use more than two of them; a plain stone always
+// attaches on one side and continues straight ahead. Exported so ChainBoard.tsx's layout uses
+// this exact assignment instead of a separately-maintained copy that could drift out of sync
+// with `detectHandType()`'s branching geometry.
+export type Dir = 'E' | 'S' | 'W' | 'N';
+export const OPPOSITE: Record<Dir, Dir> = { E: 'W', W: 'E', S: 'N', N: 'S' };
+export const ALL_DIRS: Dir[] = ['E', 'S', 'W', 'N'];
+
+/** Assigns each of a node's slots a direction: for the root, both ends of a plain stone point
+ *  opposite ways (still one straight line), a root spinner gets all 4; for a child, slot 0 always
+ *  faces back toward its parent (`attach`), a plain stone's other slot continues straight ahead
+ *  (`incoming`), and a spinner's other 3 slots get the remaining directions. */
+export function assignDirections(isDouble: boolean, incoming: Dir | null): Dir[] {
+  if (incoming === null) return isDouble ? ALL_DIRS : ['E', 'W'];
+  const attach = OPPOSITE[incoming];
+  return isDouble ? [attach, ...ALL_DIRS.filter((d) => d !== attach)] : [attach, incoming];
 }
 
 /** "Kozmik Karadelik" mode: a slot's `value` is still "the number the next stone must present",
@@ -62,7 +85,9 @@ function orientStone(stone: DominoStone, requiredValue: number): DominoStone | n
 function orientStoneSequence(stone: DominoStone, requiredValue: number): DominoStone | null {
   const next = requiredValue + 1;
   if (stone.leftVal === next) return stone;
-  if (stone.rightVal === next) return { ...stone, leftVal: stone.rightVal, rightVal: stone.leftVal, isGolden: stone.isGolden };
+  if (stone.rightVal === next) {
+    return { ...stone, leftVal: stone.rightVal, rightVal: stone.leftVal, isGolden: stone.isGolden, leftUpgrade: stone.rightUpgrade, rightUpgrade: stone.leftUpgrade };
+  }
   return null;
 }
 
@@ -78,6 +103,8 @@ interface InternalNode {
   isGolden?: boolean;
   modifier?: TileModifier;
   tags?: string[];
+  leftUpgrade?: number;
+  rightUpgrade?: number;
 }
 
 interface Move {
@@ -126,6 +153,8 @@ export class Board {
       isGolden: n.isGolden,
       modifier: n.modifier,
       tags: n.tags,
+      leftUpgrade: n.leftUpgrade,
+      rightUpgrade: n.rightUpgrade,
     }));
   }
 
@@ -175,6 +204,8 @@ export class Board {
       isGolden: stone.isGolden,
       modifier: stone.modifier,
       tags: stone.tags,
+      leftUpgrade: stone.leftUpgrade,
+      rightUpgrade: stone.rightUpgrade,
     };
   }
 
@@ -202,6 +233,8 @@ export class Board {
       isGolden: oriented.isGolden,
       modifier: oriented.modifier,
       tags: oriented.tags,
+      leftUpgrade: oriented.leftUpgrade,
+      rightUpgrade: oriented.rightUpgrade,
     };
   }
 
@@ -280,6 +313,8 @@ export class Board {
       isGolden: childNode.isGolden,
       modifier: childNode.modifier,
       tags: childNode.tags,
+      leftUpgrade: childNode.leftUpgrade,
+      rightUpgrade: childNode.rightUpgrade,
     };
     this.nodes.delete(move.childNodeId);
 
@@ -307,6 +342,8 @@ export class Board {
         isGolden: node.isGolden,
         modifier: node.modifier,
         tags: node.tags,
+        leftUpgrade: node.leftUpgrade,
+        rightUpgrade: node.rightUpgrade,
       });
     }
     this.nodes = new Map();
@@ -332,6 +369,8 @@ export class Board {
       isGolden: node.isGolden,
       modifier: node.modifier,
       tags: node.tags,
+      leftUpgrade: node.leftUpgrade,
+      rightUpgrade: node.rightUpgrade,
     };
 
     this.nodes.delete(nodeId);
@@ -446,21 +485,27 @@ export class Board {
 
   /**
    * Classifies the shape of the currently unfrozen chain — straight, branched, or loop.
+   * Only considers unfrozen nodes/edges: a shape frozen in an earlier turn (already scored,
+   * left on the board) must never influence this turn's classification.
    */
   detectHandType(): HandType {
     if (this.rootNodeId === null) return 'STRAIGHT';
 
+    const unfrozenNodes = [...this.nodes.values()].filter((n) => !n.frozen);
+    const unfrozenEdges = this.edges.filter((e) => !e.frozen);
+    const rootNode = this.nodes.get(this.rootNodeId);
+    if (!rootNode || rootNode.frozen) return 'STRAIGHT';
+
     // Loop check: If the root's first slot (slot #0, which attaches to nothing) value
     // matches the exposed value of any active leaf node, and chain size is >= 4
-    const rootNode = this.nodes.get(this.rootNodeId);
-    if (rootNode && this.nodes.size >= 4) {
+    if (unfrozenNodes.length >= 4) {
       const startSlot = rootNode.slots[0];
       if (startSlot && startSlot.state === 'OPEN') {
         const startVal = startSlot.value;
         // Check all leaves
-        for (const node of this.nodes.values()) {
+        for (const node of unfrozenNodes) {
           if (node.nodeId === this.rootNodeId) continue;
-          const childEdges = this.edges.filter((e) => e.parentNodeId === node.nodeId);
+          const childEdges = unfrozenEdges.filter((e) => e.parentNodeId === node.nodeId);
           if (childEdges.length === 0) {
             // Leaf node: check open slot value
             const openSlot = node.slots.find((s) => s.state === 'OPEN');
@@ -472,11 +517,24 @@ export class Board {
       }
     }
 
-    // Branched check: if any node has more than one child connected to it
-    for (const node of this.nodes.values()) {
-      const childCount = this.edges.filter((e) => e.parentNodeId === node.nodeId).length;
-      if (childCount > 1) return 'BRANCHED';
-    }
+    // Branched check: walks the same E/S/W/N geometry the board renders with (see
+    // `assignDirections` below) — a node only counts as a genuine fork if its children's
+    // directions aren't just the two opposite ends of one line. A plain (non-double) root stone
+    // growing from BOTH its ends, or a spinner's chain passing straight through one of its axes,
+    // is still one straight line — raw "more than one child" alone can't tell those apart from
+    // an actual turn, which was misclassifying dominoes like [1|6]-[6|4] with a third stone
+    // attached back onto the root's other end as BRANCHED even though it renders as one straight row.
+    const slotIndexOf = (slotId: SlotId): number => Number(slotId.slice(slotId.lastIndexOf('#') + 1));
+    const walk = (nodeId: string, incoming: Dir | null): boolean => {
+      const node = this.nodes.get(nodeId)!;
+      const dirs = assignDirections(node.isDouble, incoming);
+      const childEdges = unfrozenEdges.filter((e) => e.parentNodeId === nodeId);
+      const childDirs = childEdges.map((e) => dirs[slotIndexOf(e.parentSlotId)]);
+      const isForkHere = childDirs.length >= 2 && !(childDirs.length === 2 && OPPOSITE[childDirs[0]] === childDirs[1]);
+      if (isForkHere) return true;
+      return childEdges.some((e) => walk(e.childNodeId, dirs[slotIndexOf(e.parentSlotId)]));
+    };
+    if (walk(this.rootNodeId, null)) return 'BRANCHED';
 
     return 'STRAIGHT';
   }

@@ -138,6 +138,46 @@ describe('Board', () => {
     expect(board.detectHandType()).toBe('BRANCHED');
   });
 
+  it('detectHandType ignores a frozen shape left over from an earlier turn — only the current unfrozen extension counts', () => {
+    const board = new Board();
+    board.addStoneAt(stone('d1', 6, 6), 'ROOT');
+    const [slotA, slotB] = board.getSlots('d1').map((s) => s.slotId);
+    board.addStoneAt(stone('branchA', 6, 2), slotA);
+    board.addStoneAt(stone('branchB', 6, 1), slotB); // d1 branches into 2 children
+    board.freeze(); // committed from a previous turn (this is the "old leftover stones" scenario)
+
+    // This turn's actual placement: a single straight extension off branchA. Without filtering
+    // by frozen state, d1's two frozen child-edges alone would still misreport BRANCHED.
+    const branchASlot = board.getSlots('branchA').find((s) => s.state === 'OPEN')!.slotId;
+    board.addStoneAt(stone('s1', 2, 5), branchASlot);
+
+    expect(board.detectHandType()).toBe('STRAIGHT');
+  });
+
+  it('a plain (non-double) root stone growing from BOTH its ends is still STRAIGHT, not BRANCHED — matches a live-reported bug where [1|6]-[6|4]-[4|1] (a straight-looking row) was misclassified as branched', () => {
+    const board = new Board();
+    board.addStoneAt(stone('d1', 1, 6), 'ROOT'); // plain root: slot 0 -> E, slot 1 -> W (opposite, collinear)
+    const [slot0, slot1] = board.getSlots('d1').map((s) => s.slotId);
+    board.addStoneAt(stone('d2', 6, 4), slot0); // extends "east"
+    expect(board.detectHandType()).toBe('STRAIGHT');
+
+    board.addStoneAt(stone('d3', 4, 1), slot1); // extends "west" — root's OTHER end, not a real fork
+    expect(board.detectHandType()).toBe('STRAIGHT');
+  });
+
+  it('a root spinner using two PERPENDICULAR ends (e.g. E and S) is a real fork; using two OPPOSITE ends (E and W) is not', () => {
+    const board = new Board();
+    board.addStoneAt(stone('d1', 6, 6), 'ROOT'); // double root: 4 slots -> E, S, W, N
+    const slots = board.getSlots('d1').map((s) => s.slotId); // [E, S, W, N] in that order
+
+    board.addStoneAt(stone('east', 6, 2), slots[0]); // E
+    board.addStoneAt(stone('west', 6, 3), slots[2]); // W — opposite of E, still one straight line
+    expect(board.detectHandType()).toBe('STRAIGHT');
+
+    board.addStoneAt(stone('south', 6, 4), slots[1]); // S — perpendicular to the E/W line: real fork
+    expect(board.detectHandType()).toBe('BRANCHED');
+  });
+
   describe('branching at double stones', () => {
     it('a root double stone gets 4 OPEN slots; a root non-double gets 2', () => {
       const board = new Board();

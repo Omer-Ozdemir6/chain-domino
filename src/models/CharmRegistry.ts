@@ -1296,6 +1296,50 @@ const SIGNATURE_CHARMS: readonly CharmDef[] = [
   },
 ];
 
+/** Group 1 — Doğal Taş ve Nokta Manipülasyonu: react to the "Geliştirme Parşömeni" mystic upgrade
+ *  points and the Fildişi seal, mirroring Balatro's Odd Todd/Fibonacci/Bloodstone family. */
+const MYSTIC_CHARMS: readonly CharmDef[] = [
+  {
+    id: 'ancient_inkwell',
+    name: 'Antik Mürekkep Hokkası',
+    description: 'Zincirdeki her parıldayan mistik yükseltme noktası için +20 Taban Puan.',
+    cost: 6,
+    rarity: 'UNCOMMON',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const points = chain.reduce((sum, s) => sum + (s.leftUpgrade ?? 0) + (s.rightUpgrade ?? 0), 0);
+        return points > 0 ? { ...state, chips: state.chips + points * 20 } : state;
+      },
+    }),
+  },
+  {
+    id: 'cosmic_dice',
+    name: 'Kozmik Zar',
+    description: 'Zincirde Açık 5 veya Açık 6 değerine sahip bir taş varsa +8 Çarpan.',
+    cost: 5,
+    rarity: 'COMMON',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const hasFiveOrSix = chain.some((s) => [5, 6].includes(s.leftVal) || [5, 6].includes(s.rightVal));
+        return hasFiveOrSix ? { ...state, mult: state.mult + 8 } : state;
+      },
+    }),
+  },
+  {
+    id: 'noble_ivory_chest',
+    name: 'Asil Fildişi Sandığı',
+    description: 'Zincirde kalıcı bir Fildişi Mühür taşıyan taş varsa Çarpanı x2 katına çıkarır.',
+    cost: 7,
+    rarity: 'RARE',
+    createHooks: () => ({
+      onCalculate: (state, chain) => {
+        const hasIvory = chain.some((s) => s.modifier === 'IVORY');
+        return hasIvory ? { ...state, mult: state.mult * 2 } : state;
+      },
+    }),
+  },
+];
+
 export const CHARMS: readonly CharmDef[] = [
   ...CORE_CHARMS,
   ...GENERATED_CHARMS,
@@ -1308,4 +1352,5 @@ export const CHARMS: readonly CharmDef[] = [
   ...BASE_FUSION_COMPONENTS,
   ...FUSION_CHARMS,
   ...SIGNATURE_CHARMS,
+  ...MYSTIC_CHARMS,
 ];

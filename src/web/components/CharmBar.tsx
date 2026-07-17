@@ -117,6 +117,26 @@ export function renderCharmIcon(id: string) {
   return genericCharmGlyph(id);
 }
 
+function CracksOverlay({ ratio }: { ratio: number }) {
+  if (ratio > 0.75) return null;
+  return (
+    <svg className="absolute inset-0 w-full h-full pointer-events-none stroke-red-800/50 dark:stroke-red-400/40 fill-none z-20" viewBox="0 0 100 150">
+      {/* Light cracks (ratio <= 0.75) */}
+      <path d="M 12,25 L 22,35 L 18,52 M 88,28 L 73,42 L 78,63" strokeWidth="1" />
+      
+      {/* Medium cracks (ratio <= 0.50) */}
+      {ratio <= 0.50 && (
+        <path d="M 22,35 L 42,32 L 48,18 M 73,42 L 58,52 L 63,72 L 48,82" strokeWidth="1.2" strokeLinecap="round" />
+      )}
+      
+      {/* Heavy cracks (ratio <= 0.25) */}
+      {ratio <= 0.25 && (
+        <path d="M 48,18 L 33,48 L 43,72 L 28,102 L 13,115 M 63,72 L 53,95 L 68,120 L 88,135 M 8,72 L 23,78 L 18,92" strokeWidth="1.5" strokeLinecap="round" />
+      )}
+    </svg>
+  );
+}
+
 interface CharmBarProps {
   charms: CharmDef[];
   maxCharmSlots?: number;
@@ -212,17 +232,24 @@ export default function CharmBar({
           const isUsedUp = Boolean(charm.interactive) && activatedCharmIds.includes(charm.id);
           const isArmed = armedCharmId === charm.id;
           const isClickable = Boolean(charm.interactive) && !isUsedUp && Boolean(onActivateCharm);
+          
+          const durabilityVal = hasDurability ? charmDurability[charm.id] : 999;
+          const durRatio = hasDurability ? durabilityVal / (charm.maxDurability ?? 4) : 1;
+          const isUnstable = hasDurability && durabilityVal === 1;
+
           return (
-            <InfoTooltip key={charm.id} text={tooltipContent} widthClass="w-56" side="bottom">
+            <InfoTooltip key={charm.id} text={tooltipContent} widthClass="w-56" side="right">
               <div
                 onClick={isClickable ? () => onActivateCharm!(charm.id) : undefined}
-                className={`balatro-card relative flex flex-col justify-between w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 p-2.5 rounded-lg border-2 text-center transition select-none shrink-0 ${entranceClass} ${cardClass} ${isScoringActive ? `scale-110 -translate-y-3 z-30 animate-pulse ${signatureGlow || 'ring-4 ring-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.9)]'}` : ''} ${isClickable ? 'cursor-pointer' : 'cursor-help'} ${isClickable && !isArmed ? 'ring-2 ring-violet-400/70 animate-pulse' : ''} ${isArmed ? 'scale-105 ring-4 ring-violet-400 shadow-[0_0_18px_rgba(167,139,250,0.8)]' : ''} ${isUsedUp ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
+                className={`balatro-card relative flex flex-col justify-between w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 p-2.5 rounded-lg border-2 text-center transition select-none shrink-0 ${entranceClass} ${cardClass} ${isScoringActive ? `scale-110 -translate-y-3 z-30 animate-pulse ${signatureGlow || 'ring-4 ring-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.9)]'}` : ''} ${isClickable ? 'cursor-pointer' : 'cursor-help'} ${isClickable && !isArmed ? 'ring-2 ring-violet-400/70 animate-pulse' : ''} ${isArmed ? 'scale-105 ring-4 ring-violet-400 shadow-[0_0_18px_rgba(167,139,250,0.8)]' : ''} ${isUsedUp ? 'opacity-40 grayscale cursor-not-allowed' : ''} ${isUnstable ? 'animate-card-unstable' : ''}`}
                 style={{ animationDelay: isScoringActive ? undefined : `${i * 110}ms` }}
               >
+                {/* Visual cracks based on durability */}
+                {hasDurability && <CracksOverlay ratio={durRatio} />}
                 {/* Floating score text directly below the card on trigger (no container box, matching screenshot!) */}
                 {isScoringActive && activeCharmPopupText && (
                   <div 
-                    className={`absolute -bottom-10 left-1/2 transform -translate-x-1/2 pointer-events-none z-50 font-pixel text-xl md:text-2xl font-black tracking-widest whitespace-nowrap animate-score-step-pop ${
+                    className={`absolute -bottom-12 left-1/2 transform -translate-x-1/2 pointer-events-none z-50 font-pixel text-2xl md:text-3xl font-black tracking-widest whitespace-nowrap animate-score-step-pop ${
                       activeCharmPopupText.toLowerCase().includes('mult') ? 'text-white' :
                       activeCharmPopupText.toLowerCase().includes('chip') ? 'text-[#00c2ff]' : 'text-amber-300'
                     }`}

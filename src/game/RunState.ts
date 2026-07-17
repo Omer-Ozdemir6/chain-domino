@@ -2,7 +2,7 @@ import { GameState, type GameConfig } from './GameState.js';
 import { CHARMS } from '../models/CharmRegistry.js';
 import type { CharmDef, CharmHooks, RoundEndContext } from '../models/Charm.js';
 import type { DominoStone, TileModifier, HandType } from '../models/types.js';
-import { calculateScore, type ScoreCalculationResult, type PlayState } from '../engine/scoreCalculator.js';
+import { calculateScore, computeStoneChips, type ScoreCalculationResult, type PlayState } from '../engine/scoreCalculator.js';
 
 export type RunStatus = 'IN_PROGRESS' | 'WON' | 'LOST';
 export type RunPhase =
@@ -64,10 +64,10 @@ export interface RunConfig {
 }
 
 // Halved relative to the original curve: the natural-sum + hand-type-level scoring engine (plus
-// stonesPerTurn now at 5, up from 3) still leaves Ante 1's Small Blind out of reach for a
-// first-time, charm-less run at the old 300/800/2000/... numbers. Halving keeps the same growth
-// shape (so late-game charm/level scaling still ramps the same way) while giving new players a
-// realistic shot at clearing Ante 1 on natural sums alone.
+// stonesPerTurn at 5) still leaves Ante 1's Small Blind out of reach for a first-time, charm-less
+// run at the old 300/800/2000/... numbers. Halving keeps the same growth shape (so late-game
+// charm/level scaling still ramps the same way) while giving new players a realistic shot at
+// clearing Ante 1 on natural sums alone.
 export const ANTE_TARGETS: Record<number, number> = {
   1: 300,
   2: 800,
@@ -84,7 +84,7 @@ const DEFAULT_RUN_CONFIG: RunConfig = {
   startingTarget: 300,
   targetGrowthFactor: 2.2,
   baseTurns: 6,
-  stonesPerTurn: 7,
+  stonesPerTurn: 5,
   startingMoney: 4,
   maxCharmSlots: 5,
   shopSize: 3,
@@ -154,7 +154,8 @@ export type ShopUpgradeId =
   | 'consumable_scissors'
   | 'consumable_magnifier'
   | 'consumable_transmute'
-  | 'consumable_clover';
+  | 'consumable_clover'
+  | 'consumable_upgrade';
 
 export interface ShopUpgradeDef {
   id: ShopUpgradeId;
@@ -165,7 +166,7 @@ export interface ShopUpgradeDef {
 }
 
 export const SHOP_UPGRADES: readonly ShopUpgradeDef[] = [
-  { id: 'consumable_magnet', name: 'Mıknatıs', description: 'Tahtadaki dondurulmuş bir yaprak (uçta kalan) domino taşını söküp elinize geri alır.', cost: 3, type: 'CONSUMABLE' },
+  { id: 'consumable_magnet', name: 'Mıknatıs', description: 'Tahtadaki bir yaprak (uçta kalan) domino taşını söküp elinize geri alır.', cost: 3, type: 'CONSUMABLE' },
   { id: 'consumable_gild', name: 'Yaldız', description: 'Elinizdeki bir taşı Altın Taş yapar. Altın taşlar oynandığında +$3 kazandırır.', cost: 4, type: 'CONSUMABLE' },
   { id: 'consumable_ivory', name: 'Fildişi Rünü', description: 'Elinizdeki bir taşı kalıcı olarak Fildişi yapar (+15 Taban Puan).', cost: 4, type: 'CONSUMABLE' },
   { id: 'consumable_obsidian', name: 'Obsidyen Rünü', description: 'Elinizdeki bir taşı kalıcı olarak Obsidyen yapar (Çarpan x2, %25 kırılma şansı).', cost: 5, type: 'CONSUMABLE' },
@@ -175,6 +176,7 @@ export const SHOP_UPGRADES: readonly ShopUpgradeDef[] = [
   { id: 'consumable_magnifier', name: 'Tozlu Büyüteç', description: 'Elinizdeki bir domino taşının üzerindeki sayıları o el için geçici olarak ikiye katlar.', cost: 4, type: 'CONSUMABLE' },
   { id: 'consumable_transmute', name: 'Dönüşüm İksiri', description: 'Elinizdeki bir domino taşının sol ve sağ sayılarını birbirine eşitler (çift/spinner yapar).', cost: 4, type: 'CONSUMABLE' },
   { id: 'consumable_clover', name: 'Uğurlu Yonca', description: 'Elinizdeki tüm taşları o el için altın taş yapar (+3 dolar kazanç).', cost: 5, type: 'CONSUMABLE' },
+  { id: 'consumable_upgrade', name: 'Geliştirme Parşömeni', description: 'Elinizdeki bir taşın her iki tarafına da +2 ekler (Maks 6). Geliştirilen taraflar mavi parlar.', cost: 4, type: 'CONSUMABLE' },
 ];
 
 export type VoucherId =
@@ -247,6 +249,8 @@ export interface BoosterPackDef {
   description: string;
   cost: number;
   modifier: TileModifier;
+  /** JUMBO packs offer 5 stone choices instead of the standard 3 (still pick 1) — a bigger, pricier kese. */
+  size?: 'STANDARD' | 'JUMBO';
 }
 
 export const BOOSTER_PACKS: readonly BoosterPackDef[] = [
@@ -254,6 +258,41 @@ export const BOOSTER_PACKS: readonly BoosterPackDef[] = [
   { id: 'booster_obsidian', name: 'Obsidyen Kesesi', description: '3 adet Obsidyen taşı içeren kese; 1 tanesini destenize seçersiniz.', cost: 8, modifier: 'OBSIDIAN' },
   { id: 'booster_ivory', name: 'Fildişi Kesesi', description: '3 adet Fildişi taşı içeren kese; 1 tanesini destenize seçersiniz.', cost: 7, modifier: 'IVORY' },
   { id: 'booster_amber', name: 'Kehribar Kesesi', description: '3 adet Kehribar taşı içeren kese; 1 tanesini destenize seçersiniz.', cost: 6, modifier: 'AMBER' },
+  { id: 'booster_jumbo_standard', name: 'Jumbo Taş Kesesi', description: '5 adet rastgele normal domino taşı içeren devasa kese; 1 tanesini destenize seçersiniz.', cost: 7, modifier: 'NORMAL', size: 'JUMBO' },
+  { id: 'booster_jumbo_obsidian', name: 'Jumbo Obsidyen Kesesi', description: '5 adet Obsidyen taşı içeren devasa kese; 1 tanesini destenize seçersiniz.', cost: 12, modifier: 'OBSIDIAN', size: 'JUMBO' },
+];
+
+export interface RuneOptionDef {
+  id: string;
+  name: string;
+  description: string;
+  /** How many customDeck stones this rune can be applied to at once. */
+  targetCount: number;
+  modifier?: TileModifier;
+  /** Yaldız rünü: sets isGolden instead of a modifier. */
+  gild?: boolean;
+}
+
+export const RUNE_POOL: readonly RuneOptionDef[] = [
+  { id: 'rune_ivory_2', name: 'Çifte Fildişi Mührü', description: '2 seçili taşı kalıcı olarak Fildişi yapar (+15 Taban Puan).', targetCount: 2, modifier: 'IVORY' },
+  { id: 'rune_obsidian_2', name: 'Obsidyen İkilisi', description: '2 seçili taşı kalıcı olarak Obsidyen yapar (Çarpan x2).', targetCount: 2, modifier: 'OBSIDIAN' },
+  { id: 'rune_amber_2', name: 'Kehribar Bağı', description: '2 seçili taşı kalıcı olarak Kehribar yapar (komşu taş sayılarını eşitler).', targetCount: 2, modifier: 'AMBER' },
+  { id: 'rune_gild_3', name: 'Altın Yağmuru', description: '3 seçili taşı Altın Taş yapar (oynandığında +$3 kazandırır).', targetCount: 3, gild: true },
+  { id: 'rune_obsidian_3', name: 'Üçlü Obsidyen Yağması', description: '3 seçili taşı kalıcı olarak Obsidyen yapar (Çarpan x2).', targetCount: 3, modifier: 'OBSIDIAN' },
+];
+
+export interface RunePackDef {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  /** JUMBO rune packs offer 5 options instead of 3 (still pick 1) — a bigger, pricier kese. */
+  size?: 'STANDARD' | 'JUMBO';
+}
+
+export const RUNE_PACKS: readonly RunePackDef[] = [
+  { id: 'rune_pack_standard', name: 'Rün Kesesi', description: '3 rastgele rün seçeneği sunar; birini seçip birden fazla taşınıza uygulayabilirsiniz.', cost: 9 },
+  { id: 'rune_pack_jumbo', name: 'Jumbo Rün Kesesi', description: '5 rastgele rün seçeneği sunar; birini seçip birden fazla taşınıza uygulayabilirsiniz.', cost: 14, size: 'JUMBO' },
 ];
 
 export type ShopOffer =
@@ -261,7 +300,8 @@ export type ShopOffer =
   | { type: 'UPGRADE'; item: ShopUpgradeDef }
   | { type: 'VOUCHER'; item: VoucherDef }
   | { type: 'BOOSTER'; item: BoosterPackDef }
-  | { type: 'THEOREM'; item: TheoremBookDef };
+  | { type: 'THEOREM'; item: TheoremBookDef }
+  | { type: 'RUNE_PACK'; item: RunePackDef };
 
 // ─────────────────────────────────────────────────────────────
 // BOSS BLINDS
@@ -472,6 +512,11 @@ export class RunState {
   draftOffers: DominoStone[] = [];
   activeBoosterId: string | null = null;
 
+  // Rün Kesesi (Rune Pack): buy -> pick 1 of 3 -> pick K existing customDeck stones -> apply.
+  runeOffers: RuneOptionDef[] = [];
+  activeRunePackId: string | null = null;
+  pendingRune: RuneOptionDef | null = null;
+
   // Consumables
   consumables: string[] = [];
   discardsLeft = 2;
@@ -609,13 +654,12 @@ export class RunState {
     this.startRound();
   }
 
-  /** The absolute score this blind requires — the running cumulative total plus this blind's own increment,
-   *  since score carries over across the whole run instead of resetting to 0 each blind. */
+  /** The score this blind requires — each blind (Small/Big/Boss) is independent and starts fresh
+   *  from 0, matching Balatro's actual blind structure (score never carries over between blinds). */
   getBlindTarget(blindType: 'SMALL' | 'BIG' | 'BOSS'): number {
     const multiplier = this.selectedStake === 'RED' ? 1.25 : 1.0;
     const factor = blindType === 'SMALL' ? 0.6 : blindType === 'BIG' ? 1.0 : 1.5;
-    const increment = Math.round(this.currentTarget * factor * multiplier);
-    return this.cumulativeScore + increment;
+    return Math.round(this.currentTarget * factor * multiplier);
   }
 
   skipBlind(blindType: 'SMALL' | 'BIG'): void {
@@ -703,7 +747,7 @@ export class RunState {
       target: this.getBlindTarget(this.activeBlind!),
       turnsUsed: this.game.turn - 1,
       turnsLeft: Math.max(0, (this.selectedDeck === 'BLUE' ? 7 : 6) - (this.game.turn - 1)),
-      nodes: this.game.board.getNodes(),
+      nodes: this.game.playedNodesThisRound,
     };
 
     for (let idx = 0; idx < this.ownedCharmIds.length; idx++) {
@@ -712,11 +756,10 @@ export class RunState {
       const result = hooks.onSubmitFail(roundEndCtx);
       if (!result) continue;
 
-      // submitChain() already froze the board before this runs, so the usual undo-log
-      // (undoLastMove) can no longer reach the placed stones — drain the whole board back
-      // into hand instead, and give the turn itself back too, for a genuine "second try".
+      // submitChain() already scored and cleared the table before this runs ("Gönder ve Sil"),
+      // so there's nothing left on the board to claw back — the score from that hand stands.
+      // "Rewind" instead gives the turn itself back, for a genuine extra shot at the target.
       if (result.rewind) {
-        this.game.hand.push(...this.game.board.drainAll());
         this.game.turn = Math.max(1, this.game.turn - 1);
       }
       if (result.freeDraw) this.game.hand.push(...this.game.stoneDeck.draw(result.freeDraw));
@@ -781,7 +824,11 @@ export class RunState {
     } else if (offer.type === 'BOOSTER') {
       this.money -= offer.item.cost;
       this.activeBoosterId = offer.item.id;
-      this.generateDraftOffers(offer.item.modifier);
+      this.generateDraftOffers(offer.item.modifier, offer.item.size === 'JUMBO' ? 5 : 3);
+    } else if (offer.type === 'RUNE_PACK') {
+      this.money -= offer.item.cost;
+      this.activeRunePackId = offer.item.id;
+      this.generateRuneOffers(offer.item.size === 'JUMBO' ? 5 : 3);
     } else if (offer.type === 'THEOREM') {
       this.money -= offer.item.cost;
       const handType = offer.item.handType;
@@ -809,10 +856,10 @@ export class RunState {
     return { ok: true };
   }
 
-  private generateDraftOffers(modifier: TileModifier): void {
+  private generateDraftOffers(modifier: TileModifier, count = 3): void {
     this.draftOffers = [];
     const maxPips = this.config.maxPips ?? 6;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < count; i++) {
       const left = Math.floor(Math.random() * (maxPips + 1));
       const right = Math.floor(Math.random() * (maxPips + 1 - left)) + left;
       const randId = Math.random().toString(36).substring(2, 6);
@@ -839,6 +886,55 @@ export class RunState {
     this.customDeck.push(permanentStone);
     this.draftOffers = [];
     this.activeBoosterId = null;
+    return { ok: true };
+  }
+
+  /** Walks away from a booster pack's card offer without drafting anything (money already spent). */
+  skipDraft(): ShopActionResult {
+    if (this.draftOffers.length === 0) return { ok: false, error: 'Açık bir kese yok.' };
+    this.draftOffers = [];
+    this.activeBoosterId = null;
+    return { ok: true };
+  }
+
+  private generateRuneOffers(count = 3): void {
+    const shuffled = [...RUNE_POOL].sort(() => Math.random() - 0.5);
+    this.runeOffers = shuffled.slice(0, Math.min(count, shuffled.length)).map((r) => ({ ...r }));
+  }
+
+  chooseRuneOption(optionId: string): ShopActionResult {
+    const selected = this.runeOffers.find((r) => r.id === optionId);
+    if (!selected) return { ok: false, error: 'Seçilen rün bulunamadı.' };
+    this.pendingRune = selected;
+    this.runeOffers = [];
+    this.activeRunePackId = null;
+    return { ok: true };
+  }
+
+  /** Walks away from an open rune pack (either the 1-of-3 pick screen or the target-selection
+   *  screen) without applying anything — money already spent, no refund. */
+  skipRunePack(): ShopActionResult {
+    if (this.runeOffers.length === 0 && !this.pendingRune) return { ok: false, error: 'Açık bir rün kesesi yok.' };
+    this.runeOffers = [];
+    this.activeRunePackId = null;
+    this.pendingRune = null;
+    return { ok: true };
+  }
+
+  applyRune(stoneIds: string[]): ShopActionResult {
+    if (!this.pendingRune) return { ok: false, error: 'Uygulanacak bir rün seçilmedi.' };
+    if (stoneIds.length < 1 || stoneIds.length > this.pendingRune.targetCount) {
+      return { ok: false, error: `1 ile ${this.pendingRune.targetCount} arası taş seçmelisin.` };
+    }
+    const targets = stoneIds.map((id) => this.customDeck.find((s) => s.id === id));
+    if (targets.some((t) => !t)) return { ok: false, error: 'Seçilen taşlardan biri destede bulunamadı.' };
+
+    const rune = this.pendingRune;
+    targets.forEach((stone) => {
+      if (rune.gild) stone!.isGolden = true;
+      if (rune.modifier) stone!.modifier = rune.modifier;
+    });
+    this.pendingRune = null;
     return { ok: true };
   }
 
@@ -968,6 +1064,25 @@ export class RunState {
       this.game.hand.forEach((stone) => {
         stone.isGolden = true;
       });
+    } else if (item === 'consumable_upgrade') {
+      const stone = this.game.hand.find((s) => s.id === targetId);
+      if (!stone) return { ok: false, error: 'Taş elinizde bulunamadı.' };
+      
+      const leftAdd = Math.min(2, 6 - stone.leftVal);
+      stone.leftVal += leftAdd;
+      stone.leftUpgrade = (stone.leftUpgrade || 0) + leftAdd;
+
+      const rightAdd = Math.min(2, 6 - stone.rightVal);
+      stone.rightVal += rightAdd;
+      stone.rightUpgrade = (stone.rightUpgrade || 0) + rightAdd;
+
+      const deckStone = this.customDeck.find((s) => s.id === targetId);
+      if (deckStone) {
+        deckStone.leftVal = stone.leftVal;
+        deckStone.rightVal = stone.rightVal;
+        deckStone.leftUpgrade = stone.leftUpgrade;
+        deckStone.rightUpgrade = stone.rightUpgrade;
+      }
     } else {
       return { ok: false, error: 'Bilinmeyen büyü türü.' };
     }
@@ -1058,7 +1173,9 @@ export class RunState {
       target: blindTarget,
       turnsUsed,
       turnsLeft,
-      nodes: this.game.board.getNodes(),
+      // The board itself is emptied after every submitted hand ("Gönder ve Sil") — round-end
+      // charms that scan "everything played this round" need the accumulated history instead.
+      nodes: this.game.playedNodesThisRound,
     };
 
     // Itemize every owned charm's onRoundEnd contribution individually (skipping zero-payout
@@ -1094,7 +1211,7 @@ export class RunState {
       moneyAfter: this.money,
     };
 
-    // Carry the total forward — the next blind's target builds on top of this instead of a reset to 0.
+    // Informational only now (blinds no longer carry score forward) — kept for diagnostics/logging.
     this.cumulativeScore = this.game.score;
 
     this.history.push({
@@ -1168,8 +1285,7 @@ export class RunState {
     const bossReducesHand = this.activeBossId === 'boss_blind_chainbreaker';
     const effectiveStonesPerTurn = bossReducesHand ? 3 : this.config.stonesPerTurn;
 
-    // Score carries over across the whole run instead of resetting each blind — blindTarget is
-    // already the absolute cumulative threshold (see getBlindTarget), not a reset-to-0 amount.
+    // Every blind (Small/Big/Boss) starts fresh from 0 — score never carries over between them.
     const gameConfig: GameConfig = {
       targetScore: blindTarget,
       maxTurns: maxTurnsVal,
@@ -1177,7 +1293,6 @@ export class RunState {
       maxPips: this.config.maxPips,
     };
     this.game = new GameState(gameConfig);
-    this.game.score = this.cumulativeScore;
     if (this.customDeck.length > 0) {
       this.game.stoneDeck.getStones().length = 0;
       this.game.stoneDeck.discard(JSON.parse(JSON.stringify(this.customDeck)));
@@ -1335,6 +1450,9 @@ export class RunState {
    * charm visibly triggers one at a time in the exact order it will actually apply.
    */
   previewScoreSteps(stones: DominoStone[]): {
+    handStartChips: number;
+    handStartMult: number;
+    stoneSteps: { id: string; leftVal: number; rightVal: number; chipDelta: number; chipsAfter: number }[];
     baseChips: number;
     baseMult: number;
     steps: { id: string; name: string; before: PlayState; after: PlayState }[];
@@ -1345,6 +1463,16 @@ export class RunState {
     const handStats = getHandStats(handType, handLevel);
     const handTypeName = handType === 'STRAIGHT' ? 'Düz Zincir' : handType === 'BRANCHED' ? 'Çatallı Zincir' : 'Sonsuz Döngü';
 
+    // Stone-by-stone chip buildup (Faz 11 LCD reveal) — mirrors calculateScore()'s own per-stone
+    // loop exactly via the shared computeStoneChips() helper, starting from the hand-type's own
+    // base chips so the very first stone's popup shows the true running total, not just its own value.
+    let runningChips = handStats.chips;
+    const stoneSteps = stones.map((stone) => {
+      const chipDelta = computeStoneChips(stone);
+      runningChips += chipDelta;
+      return { id: stone.id, leftVal: stone.leftVal, rightVal: stone.rightVal, chipDelta, chipsAfter: runningChips };
+    });
+
     const activeCharms = this.buildActiveCharms(stones);
     const baseResult = calculateScore(stones, this.game.board.getUnfrozenEdges(), [], handStats, handTypeName);
     let state: PlayState = { chips: baseResult.chips, mult: baseResult.mult };
@@ -1354,7 +1482,15 @@ export class RunState {
       state = after;
       return { id: charm.id, name: charm.name, before, after };
     });
-    return { baseChips: baseResult.chips, baseMult: baseResult.mult, steps, final: this.previewScore(stones) };
+    return {
+      handStartChips: handStats.chips,
+      handStartMult: handStats.mult,
+      stoneSteps,
+      baseChips: baseResult.chips,
+      baseMult: baseResult.mult,
+      steps,
+      final: this.previewScore(stones),
+    };
   }
 
   private computePayout(finalScore: number, target: number, turnsLeft: number): number {
@@ -1395,6 +1531,12 @@ export class RunState {
     const shuffledBoosters = [...BOOSTER_PACKS].sort(() => Math.random() - 0.5);
     if (shuffledBoosters[0]) {
       offers.push({ type: 'BOOSTER', item: { ...shuffledBoosters[0] } as any });
+    }
+
+    // 1 Rune Pack
+    const shuffledRunePacks = [...RUNE_PACKS].sort(() => Math.random() - 0.5);
+    if (shuffledRunePacks[0]) {
+      offers.push({ type: 'RUNE_PACK', item: { ...shuffledRunePacks[0] } as any });
     }
 
     // 1 Theorem Book

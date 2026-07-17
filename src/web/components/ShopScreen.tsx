@@ -1,24 +1,50 @@
 import type { CharmDef } from '../../models/Charm.js';
-import type { ShopOffer, FusionRecipe, SkipTag } from '../../game/RunState.js';
+import type { ShopOffer, SkipTag, RuneOptionDef } from '../../game/RunState.js';
 import { FUSION_RECIPES } from '../../game/RunState.js';
 import { CHARMS } from '../../models/CharmRegistry.js';
 import { renderCharmIcon } from './CharmBar.js';
 import { VOUCHER_ICON_MAP, CONSUMABLE_ICON_MAP } from './charmIconMap.js';
-import InfoTooltip from './InfoTooltip.js';
-import type { TileModifier } from '../../models/types.js';
-import { useState } from 'react';
+import type { DominoStone } from '../../models/types.js';
+import { useEffect, useState } from 'react';
 
-function renderBoosterIcon(id: string) {
+function renderBoosterIcon(id: string, size?: 'STANDARD' | 'JUMBO') {
   let color = 'from-blue-500 to-indigo-700';
-  if (id === 'booster_obsidian') color = 'from-purple-800 to-slate-900 border-purple-600/50 shadow-[0_0_10px_rgba(147,51,234,0.4)]';
-  else if (id === 'booster_ivory') color = 'from-slate-100 to-stone-300 border-stone-400';
-  else if (id === 'booster_amber') color = 'from-amber-500 to-orange-700 border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.4)]';
+  if (id.includes('obsidian')) color = 'from-purple-800 to-slate-900 border-purple-600/50 shadow-[0_0_10px_rgba(147,51,234,0.4)]';
+  else if (id.includes('ivory')) color = 'from-slate-100 to-stone-300 border-stone-400';
+  else if (id.includes('amber')) color = 'from-amber-500 to-orange-700 border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.4)]';
+  const isJumbo = size === 'JUMBO';
 
   return (
-    <div className={`w-14 h-20 rounded-xl bg-gradient-to-br ${color} flex flex-col items-center justify-between border-2 border-white/20 shadow-lg relative overflow-hidden select-none`}>
+    <div className={`${isJumbo ? 'w-18 h-24' : 'w-14 h-20'} rounded-xl bg-gradient-to-br ${color} flex flex-col items-center justify-between border-2 border-white/20 shadow-lg relative overflow-hidden select-none`}>
       <div className="absolute inset-0 bg-opacity-20 bg-white swirl-felt pointer-events-none" />
-      <span className="font-pixel text-[8px] text-white font-extrabold rotate-12 drop-shadow-md mt-4">PAKET</span>
+      {isJumbo && (
+        <span className="absolute top-1 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-950 text-[9px] font-pixel font-black px-1.5 py-0.5 rounded shadow z-10 tracking-widest">JUMBO</span>
+      )}
+      <span className="font-pixel text-[10px] text-white font-extrabold rotate-12 drop-shadow-md mt-6">PAKET</span>
       <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping mb-3" />
+    </div>
+  );
+}
+
+function renderRuneIcon(size?: 'STANDARD' | 'JUMBO') {
+  const isJumbo = size === 'JUMBO';
+  return (
+    <div className={`${isJumbo ? 'w-18 h-24' : 'w-14 h-20'} rounded-xl bg-gradient-to-br from-rose-700 to-fuchsia-900 border-rose-500/50 shadow-[0_0_10px_rgba(225,29,72,0.4)] flex flex-col items-center justify-between border-2 border-white/20 shadow-lg relative overflow-hidden select-none`}>
+      <div className="absolute inset-0 bg-opacity-20 bg-white swirl-felt pointer-events-none" />
+      {isJumbo && (
+        <span className="absolute top-1 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-950 text-[9px] font-pixel font-black px-1.5 py-0.5 rounded shadow z-10 tracking-widest">JUMBO</span>
+      )}
+      <span className="font-pixel text-[10px] text-white font-extrabold rotate-12 drop-shadow-md mt-6">RÜN</span>
+      <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-300 animate-ping mb-3" />
+    </div>
+  );
+}
+
+/** Balatro-style floating price pill, half-overlapping the top edge of an offer card. */
+function renderPriceBadge(cost: number) {
+  return (
+    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full px-2.5 py-0.5 bg-amber-900 border-2 border-amber-600 text-sm font-pixel font-black text-amber-100 z-20 shadow-[0_0_10px_rgba(245,158,11,0.4)] whitespace-nowrap">
+      ${cost}
     </div>
   );
 }
@@ -38,9 +64,17 @@ interface ShopScreenProps {
   deckSize: number;
   draftOffers: any[];
   onDraftSelect: (stoneId: string) => void;
+  onSkipDraft: () => void;
   onFuse?: (charmAId: string, charmBId: string) => void;
   fusedCharmIds?: string[];
   activeTag?: SkipTag | null;
+  /** Rün Kesesi (Rune Pack) flow: buy -> pick 1 of 3 -> pick K existing customDeck stones -> apply. */
+  runeOffers: RuneOptionDef[];
+  onChooseRune: (optionId: string) => void;
+  onSkipRunePack: () => void;
+  pendingRune: RuneOptionDef | null;
+  customDeck: DominoStone[];
+  onApplyRune: (stoneIds: string[]) => void;
 }
 
 const RARITY_BORDER: Record<CharmDef['rarity'], string> = {
@@ -59,13 +93,6 @@ const GEM_CLASS: Record<CharmDef['rarity'], string> = {
   LEGENDARY: 'bg-amber-400 shadow-[0_0_10px_#fbbf24] animate-pulse',
 };
 const CURSE_GEM = 'bg-fuchsia-500 shadow-[0_0_10px_#d946ef] animate-pulse';
-
-const RARITY_LABEL_CLASS: Record<CharmDef['rarity'], string> = {
-  COMMON: 'text-stone-500',
-  UNCOMMON: 'text-teal-500 font-semibold',
-  RARE: 'text-red-500 font-bold',
-  LEGENDARY: 'text-amber-400 font-bold animate-pulse',
-};
 
 function renderVoucherIcon(id: string) {
   const artwork = VOUCHER_ICON_MAP[id];
@@ -193,6 +220,17 @@ export function renderUpgradeIcon(id: string) {
       </svg>
     );
   }
+  if (id === 'consumable_upgrade') {
+    return (
+      <svg className="w-10 h-14 animate-pulse" viewBox="0 0 100 130">
+        <path d="M30 30 h40 a10 10 0 0 1 10 10 v60 a10 10 0 0 1 -10 10 h-40 a10 10 0 0 1 -10 -10 v-60 a10 10 0 0 1 10 -10 z" fill="#0891B2" stroke="#083344" strokeWidth="4" />
+        <path d="M25 25 h50 a5 5 0 0 1 5 5 v5 a5 5 0 0 1 -5 5 h-50 a5 5 0 0 1 -5 -5 v-5 a5 5 0 0 1 5 -5 z" fill="#22D3EE" stroke="#083344" strokeWidth="3" />
+        <path d="M25 100 h50 a5 5 0 0 1 5 5 v5 a5 5 0 0 1 -5 5 h-50 a5 5 0 0 1 -5 -5 v-5 a5 5 0 0 1 5 -5 z" fill="#22D3EE" stroke="#083344" strokeWidth="3" />
+        <path d="M50 45 L50 85 M30 65 L70 65" stroke="#ECFEFF" strokeWidth="5" strokeLinecap="round" />
+        <circle cx="50" cy="65" r="5" fill="#ECFEFF" />
+      </svg>
+    );
+  }
   return null;
 }
 
@@ -209,14 +247,51 @@ export default function ShopScreen({
   deckSize,
   draftOffers,
   onDraftSelect,
+  onSkipDraft,
   onFuse,
   fusedCharmIds,
   activeTag,
+  runeOffers,
+  onChooseRune,
+  onSkipRunePack,
+  pendingRune,
+  customDeck,
+  onApplyRune,
 }: ShopScreenProps) {
   const slotsFull = ownedCharms.length >= maxCharmSlots;
 
   const [fuseA, setFuseA] = useState<string | null>(null);
   const [fuseB, setFuseB] = useState<string | null>(null);
+  const [hoveredDetails, setHoveredDetails] = useState<{
+    name: string;
+    type: string;
+    description: string;
+    rarity?: string;
+    cost?: number;
+    id: string;
+    locked?: boolean;
+    rect: { top: number; left: number; right: number; bottom: number };
+  } | null>(null);
+
+  function handleCardEnter(e: React.MouseEvent<HTMLElement>, details: { name: string; type: string; description: string; rarity?: string; cost?: number; id: string }) {
+    const r = e.currentTarget.getBoundingClientRect();
+    const rect = { top: r.top, left: r.left, right: r.right, bottom: r.bottom };
+    setHoveredDetails((prev) => {
+      if (prev?.locked && prev.id === details.id) return prev;
+      return { ...details, locked: false, rect };
+    });
+  }
+  function handleCardLeave() {
+    setHoveredDetails((prev) => (prev?.locked ? prev : null));
+  }
+  function handleCardClick(e: React.MouseEvent<HTMLElement>, details: { name: string; type: string; description: string; rarity?: string; cost?: number; id: string }) {
+    const r = e.currentTarget.getBoundingClientRect();
+    const rect = { top: r.top, left: r.left, right: r.right, bottom: r.bottom };
+    setHoveredDetails((prev) => {
+      if (prev?.locked && prev.id === details.id) return null;
+      return { ...details, locked: true, rect };
+    });
+  }
 
   const handleFuseCharmSelect = (charmId: string) => {
     if (fuseA === charmId) {
@@ -258,95 +333,132 @@ export default function ShopScreen({
     return true;
   });
 
-  const cardOffers = offers.filter((o) => o.type === 'CHARM' || o.type === 'UPGRADE' || o.type === 'THEOREM');
-  const packageOffers = offers.filter((o) => o.type === 'BOOSTER' || o.type === 'VOUCHER');
+  // Split into one labeled section per offer type — instead of two broad rows, each kind of
+  // item gets its own clearly-titled area so the player can scan by category rather than a single
+  // undifferentiated row of mixed cards.
+  const charmOffers = offers.filter((o) => o.type === 'CHARM');
+  const upgradeOffers = offers.filter((o) => o.type === 'UPGRADE');
+  const theoremOffers = offers.filter((o) => o.type === 'THEOREM');
+  const boosterOffers = offers.filter((o) => o.type === 'BOOSTER');
+  const runePackOffers = offers.filter((o) => o.type === 'RUNE_PACK');
+  const voucherOffers = offers.filter((o) => o.type === 'VOUCHER');
 
-  function renderOfferCard(offer: ShopOffer) {
+  // A bounded, self-contained "frame" for one grid cell of the shop rack — Balatro never shows
+  // more than a small fixed number of slots at once (2 cards + 2 packs + 1 voucher), so instead
+  // of an ever-growing stacked list, every category gets its OWN fixed-size area; cards wrap and
+  // shrink slightly to fit within it rather than pushing the page taller.
+  function renderPanel(icon: string, title: string, borderClass: string, list: ShopOffer[]) {
+    return (
+      <div key={title} className={`bg-slate-950/40 rounded-xl border-2 ${borderClass} flex flex-col min-h-0 p-2 md:p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]`}>
+        <div className="flex items-center gap-1.5 border-b border-slate-800/60 pb-1 mb-1.5 shrink-0">
+          <span className="text-sm leading-none">{icon}</span>
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest font-pixel">{title}</span>
+        </div>
+        <div className="flex-1 flex flex-row flex-wrap content-start gap-2 items-start justify-center overflow-y-auto min-h-0">
+          {list.length === 0
+            ? <span className="text-[11px] font-mono text-slate-655 italic self-center">Boş</span>
+            : list.map(renderOfferCard)}
+        </div>
+      </div>
+    );
+  }
+
+  const [selectedRuneTargets, setSelectedRuneTargets] = useState<string[]>([]);
+  useEffect(() => {
+    if (!pendingRune) setSelectedRuneTargets([]);
+  }, [pendingRune]);
+
+  function toggleRuneTarget(stoneId: string) {
+    setSelectedRuneTargets((prev) => {
+      if (prev.includes(stoneId)) return prev.filter((id) => id !== stoneId);
+      if (!pendingRune || prev.length >= pendingRune.targetCount) return prev;
+      return [...prev, stoneId];
+    });
+  }  function renderOfferCard(offer: ShopOffer) {
     if (offer.type === 'CHARM') {
       const charm = offer.item as CharmDef;
       const disabled = money < charm.cost || slotsFull;
       const borderClass = charm.curse ? CURSE_BORDER : RARITY_BORDER[charm.rarity];
-      
-      const tooltipContent = (
-        <div className="flex flex-col gap-1.5 p-1 select-none text-left leading-normal font-sans">
-          <div className="flex items-center justify-between border-b border-amber-800/40 pb-1">
-            <span className="font-bold text-xs text-amber-200">{charm.name}</span>
-            <span className={`text-[8.5px] uppercase font-extrabold ${RARITY_LABEL_CLASS[charm.rarity]}`}>
-              {charm.curse ? 'LANETLİ' : charm.rarity}
-            </span>
-          </div>
-          <p className="text-[10px] text-slate-200 leading-relaxed">
-            {charm.description}
-          </p>
-          <div className="flex justify-between items-center text-[9px] text-amber-400/80 border-t border-amber-800/20 pt-1">
-            <span>Maliyet: ${charm.cost}</span>
-          </div>
-        </div>
-      );
-
       const gemClass = charm.curse ? CURSE_GEM : GEM_CLASS[charm.rarity];
 
+      const itemDetails = {
+        name: charm.name,
+        type: 'Tılsım',
+        description: charm.description,
+        rarity: charm.rarity,
+        cost: charm.cost,
+        id: charm.id
+      };
+
       return (
-        <InfoTooltip key={charm.id} text={tooltipContent} widthClass="w-64" side="right">
-          <div
-            className={`balatro-card relative flex flex-col justify-between w-22 h-34 md:w-24 md:h-38 p-2 rounded-xl border-2 transition shrink-0 ${borderClass}`}
-          >
-            <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-slate-950/40 z-10 ${gemClass}`} title={charm.curse ? 'Lanetli' : charm.rarity} />
+        <div
+          key={charm.id}
+          onMouseEnter={(e) => handleCardEnter(e, itemDetails)}
+          onMouseLeave={handleCardLeave}
+          onClick={(e) => handleCardClick(e, itemDetails)}
+          className={`balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${borderClass}`}
+        >
+          {renderPriceBadge(charm.cost)}
+          <div className={`absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 ${gemClass}`} title={charm.curse ? 'Lanetli' : charm.rarity} />
 
-            <div className="flex-1 flex items-center justify-center transform scale-[1.25] origin-center my-auto pointer-events-none">
-              {renderCharmIcon(charm.id)}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => onBuy(charm.id)}
-              disabled={disabled}
-              className="w-full py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-[9px] md:text-[10px] font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition"
-            >
-              SATIN AL ${charm.cost}
-            </button>
+          <div className="flex-1 flex items-center justify-center transform scale-[1.3] origin-center my-auto pointer-events-none">
+            {renderCharmIcon(charm.id)}
           </div>
-        </InfoTooltip>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onBuy(charm.id);
+            }}
+            disabled={disabled}
+            className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition cursor-pointer"
+          >
+            SATIN AL
+          </button>
+        </div>
       );
     }
 
     if (offer.type === 'VOUCHER') {
       const voucher = offer.item;
       const disabled = money < voucher.cost;
-      
-      const tooltipContent = (
-        <div className="flex flex-col gap-1.5 p-1 select-none text-left leading-normal font-sans">
-          <div className="flex items-center justify-between border-b border-amber-800/40 pb-1">
-            <span className="font-bold text-xs text-amber-200">{voucher.name}</span>
-            <span className="text-[8.5px] uppercase font-extrabold text-amber-500">FERMAN</span>
-          </div>
-          <p className="text-[10px] text-slate-200 leading-relaxed">
-            {voucher.description}
-          </p>
-        </div>
-      );
+
+      const itemDetails = {
+        name: voucher.name,
+        type: 'Ferman',
+        description: voucher.description,
+        cost: voucher.cost,
+        id: voucher.id
+      };
 
       return (
-        <InfoTooltip key={voucher.id} text={tooltipContent} widthClass="w-64" side="right">
-          <div
-            className="balatro-card relative flex flex-col justify-between w-22 h-34 md:w-24 md:h-38 p-2 rounded-xl border-2 border-amber-600/80 bg-amber-950/20 shadow-[0_0_10px_rgba(217,119,6,0.3)] transition shrink-0"
-          >
-            <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-slate-950/40 z-10 bg-amber-500 shadow-[0_0_8px_#d97706]" title="Ferman" />
+        <div
+          key={voucher.id}
+          onMouseEnter={(e) => handleCardEnter(e, itemDetails)}
+          onMouseLeave={handleCardLeave}
+          onClick={(e) => handleCardClick(e, itemDetails)}
+          className="balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 border-amber-600/80 bg-amber-950/20 shadow-[0_0_10px_rgba(217,119,6,0.3)] transition shrink-0 cursor-pointer hover:scale-105 active:scale-95"
+        >
+          {renderPriceBadge(voucher.cost)}
+          <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 bg-amber-500 shadow-[0_0_8px_#d97706]" title="Ferman" />
 
-            <div className="flex-1 flex items-center justify-center transform scale-[1.25] origin-center my-auto pointer-events-none">
-              {renderVoucherIcon(voucher.id)}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => onBuy(voucher.id)}
-              disabled={disabled}
-              className="w-full py-1 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-30 disabled:pointer-events-none text-[9px] md:text-[10px] font-bold font-pixel text-white shadow border-b-2 border-amber-800 transition"
-            >
-              SATIN AL ${voucher.cost}
-            </button>
+          <div className="flex-1 flex items-center justify-center transform scale-[1.3] origin-center my-auto pointer-events-none">
+            {renderVoucherIcon(voucher.id)}
           </div>
-        </InfoTooltip>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onBuy(voucher.id);
+            }}
+            disabled={disabled}
+            className="w-full py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base font-bold font-pixel text-white shadow border-b-2 border-amber-800 transition cursor-pointer"
+          >
+            SATIN AL
+          </button>
+        </div>
       );
     }
 
@@ -354,17 +466,13 @@ export default function ShopScreen({
       const pack = offer.item;
       const disabled = money < pack.cost;
 
-      const tooltipContent = (
-        <div className="flex flex-col gap-1.5 p-1 select-none text-left leading-normal font-sans">
-          <div className="flex items-center justify-between border-b border-amber-800/40 pb-1">
-            <span className="font-bold text-xs text-amber-200">{pack.name}</span>
-            <span className="text-[8.5px] uppercase font-extrabold text-indigo-400 font-pixel">KESE</span>
-          </div>
-          <p className="text-[10px] text-slate-200 leading-relaxed font-sans">
-            {pack.description}
-          </p>
-        </div>
-      );
+      const itemDetails = {
+        name: pack.name,
+        type: 'Taş Kesesi',
+        description: pack.description,
+        cost: pack.cost,
+        id: pack.id
+      };
 
       let boosterBorder = 'border-indigo-600/80 bg-indigo-950/20';
       if (pack.id === 'booster_obsidian') boosterBorder = 'border-purple-600/80 bg-purple-950/20';
@@ -372,26 +480,74 @@ export default function ShopScreen({
       else if (pack.id === 'booster_amber') boosterBorder = 'border-amber-500/80 bg-amber-950/20';
 
       return (
-        <InfoTooltip key={pack.id} text={tooltipContent} widthClass="w-64" side="right">
-          <div
-            className={`balatro-card relative flex flex-col justify-between w-22 h-34 md:w-24 md:h-38 p-2 rounded-xl border-2 ${boosterBorder} transition shrink-0`}
-          >
-            <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-slate-950/40 z-10 bg-indigo-500 shadow-[0_0_8px_#6366f1]" title="Kese" />
+        <div
+          key={pack.id}
+          onMouseEnter={(e) => handleCardEnter(e, itemDetails)}
+          onMouseLeave={handleCardLeave}
+          onClick={(e) => handleCardClick(e, itemDetails)}
+          className={`balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${boosterBorder}`}
+        >
+          {renderPriceBadge(pack.cost)}
+          <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 bg-indigo-500 shadow-[0_0_8px_#6366f1]" title="Kese" />
 
-            <div className="flex-1 flex items-center justify-center transform scale-[0.8] origin-center my-auto pointer-events-none">
-              {renderBoosterIcon(pack.id)}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => onBuy(pack.id)}
-              disabled={disabled}
-              className="w-full py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:pointer-events-none text-[9px] md:text-[10px] font-bold font-pixel text-white shadow border-b-2 border-indigo-850 transition"
-            >
-              SATIN AL ${pack.cost}
-            </button>
+          <div className="flex-1 flex items-center justify-center transform scale-[0.9] origin-center my-auto pointer-events-none">
+            {renderBoosterIcon(pack.id)}
           </div>
-        </InfoTooltip>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onBuy(pack.id);
+            }}
+            disabled={disabled}
+            className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base font-bold font-pixel text-white shadow border-b-2 border-indigo-850 transition cursor-pointer"
+          >
+            SATIN AL
+          </button>
+        </div>
+      );
+    }
+
+    if (offer.type === 'RUNE_PACK') {
+      const pack = offer.item;
+      const disabled = money < pack.cost;
+
+      const itemDetails = {
+        name: pack.name,
+        type: 'Rün Kesesi',
+        description: pack.description,
+        cost: pack.cost,
+        id: pack.id
+      };
+
+      return (
+        <div
+          key={pack.id}
+          onMouseEnter={(e) => handleCardEnter(e, itemDetails)}
+          onMouseLeave={handleCardLeave}
+          onClick={(e) => handleCardClick(e, itemDetails)}
+          className="balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 border-rose-600/80 bg-rose-950/20 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95"
+        >
+          {renderPriceBadge(pack.cost)}
+          <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 bg-rose-500 shadow-[0_0_8px_#f43f5e]" title="Rün Kesesi" />
+
+          <div className="flex-1 flex items-center justify-center transform scale-[0.9] origin-center my-auto pointer-events-none">
+            {renderRuneIcon()}
+          </div>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onBuy(pack.id);
+            }}
+            disabled={disabled}
+            className="w-full py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base font-bold font-pixel text-white shadow border-b-2 border-rose-850 transition cursor-pointer"
+          >
+            SATIN AL
+          </button>
+        </div>
       );
     }
 
@@ -399,94 +555,93 @@ export default function ShopScreen({
       const book = offer.item;
       const disabled = money < book.cost;
       const borderClass = 'border-rose-600/80 bg-rose-950/20 shadow-[0_0_10px_rgba(244,63,94,0.25)]';
-      const labelColor = 'text-rose-400';
 
-      const tooltipContent = (
-        <div className="flex flex-col gap-1.5 p-1 select-none text-left leading-normal font-sans">
-          <div className="flex items-center justify-between border-b border-amber-800/40 pb-1">
-            <span className="font-bold text-xs text-amber-200">{book.name}</span>
-            <span className={`text-[8.5px] uppercase font-extrabold ${labelColor}`}>TEOREM</span>
-          </div>
-          <p className="text-[10px] text-slate-200 leading-relaxed font-sans">
-            {book.description}
-          </p>
-        </div>
-      );
+      const itemDetails = {
+        name: book.name,
+        type: 'Teorem Kitabı',
+        description: book.description,
+        cost: book.cost,
+        id: book.id
+      };
 
       return (
-        <InfoTooltip key={book.id} text={tooltipContent} widthClass="w-64" side="right">
-          <div
-            className={`balatro-card relative flex flex-col justify-between w-22 h-34 md:w-24 md:h-38 p-2 rounded-xl border-2 transition shrink-0 ${borderClass}`}
-          >
-            <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-slate-950/40 z-10 bg-rose-500 shadow-[0_0_8px_#f43f5e]" title="Teorem Kitabı" />
-            
-            <div className="flex-1 flex items-center justify-center text-2xl origin-center my-auto pointer-events-none text-rose-450 drop-shadow">
-              📖
-            </div>
+        <div
+          key={book.id}
+          onMouseEnter={(e) => handleCardEnter(e, itemDetails)}
+          onMouseLeave={handleCardLeave}
+          onClick={(e) => handleCardClick(e, itemDetails)}
+          className={`balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${borderClass}`}
+        >
+          {renderPriceBadge(book.cost)}
+          <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 bg-rose-500 shadow-[0_0_8px_#f43f5e]" title="Teorem Kitabı" />
 
-            <button
-              type="button"
-              onClick={() => onBuy(book.id)}
-              disabled={disabled}
-              className="w-full py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-[9px] md:text-[10px] font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition"
-            >
-              SATIN AL ${book.cost}
-            </button>
+          <div className="flex-1 flex items-center justify-center text-4xl origin-center my-auto pointer-events-none text-rose-450 drop-shadow">
+            📖
           </div>
-        </InfoTooltip>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onBuy(book.id);
+            }}
+            disabled={disabled}
+            className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition cursor-pointer"
+          >
+            SATIN AL
+          </button>
+        </div>
       );
     }
 
     const upgrade = offer.item;
     const disabled = money < upgrade.cost;
     const borderClass = 'border-teal-700/80 bg-teal-950/20';
-    const labelColor = 'text-teal-400';
-
-    const tooltipContent = (
-      <div className="flex flex-col gap-1.5 p-1 select-none text-left leading-normal font-sans">
-        <div className="flex items-center justify-between border-b border-amber-800/40 pb-1">
-          <span className="font-bold text-xs text-amber-200">{upgrade.name}</span>
-          <span className={`text-[8.5px] uppercase font-extrabold ${labelColor}`}>
-            BÜYÜ
-          </span>
-        </div>
-        <p className="text-[10px] text-slate-200 leading-relaxed">
-          {upgrade.description}
-        </p>
-      </div>
-    );
-
     const gemColor = 'bg-teal-400 shadow-[0_0_8px_#2dd4bf]';
 
+    const itemDetails = {
+      name: upgrade.name,
+      type: 'Büyü',
+      description: upgrade.description,
+      cost: upgrade.cost,
+      id: upgrade.id
+    };
+
     return (
-      <InfoTooltip key={upgrade.id} text={tooltipContent} widthClass="w-64" side="left">
-        <div
-          className={`balatro-card relative flex flex-col justify-between w-22 h-34 md:w-24 md:h-38 p-2 rounded-xl border-2 transition shrink-0 ${borderClass}`}
-        >
-          <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-slate-950/40 z-10 ${gemColor}`} title="Büyü" />
+      <div
+        key={upgrade.id}
+        onMouseEnter={(e) => handleCardEnter(e, itemDetails)}
+          onMouseLeave={handleCardLeave}
+          onClick={(e) => handleCardClick(e, itemDetails)}
+        className={`balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${borderClass}`}
+      >
+        {renderPriceBadge(upgrade.cost)}
+        <div className={`absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 ${gemColor}`} title="Büyü" />
 
-          <div className="flex-1 flex items-center justify-center transform scale-[1.25] origin-center my-auto pointer-events-none">
-            {renderUpgradeIcon(upgrade.id)}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onBuy(upgrade.id)}
-            disabled={disabled}
-            className="w-full py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-[9px] md:text-[10px] font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition"
-          >
-            SATIN AL ${upgrade.cost}
-          </button>
+        <div className="flex-1 flex items-center justify-center transform scale-[1.3] origin-center my-auto pointer-events-none">
+          {renderUpgradeIcon(upgrade.id)}
         </div>
-      </InfoTooltip>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onBuy(upgrade.id);
+          }}
+          disabled={disabled}
+          className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition cursor-pointer"
+        >
+          SATIN AL
+        </button>
+      </div>
     );
   }
 
   // Common Draft Kese Modal Overlay
   const draftOverlay = draftOffers && draftOffers.length > 0 && (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
-      <h2 className="text-xl md:text-2xl text-amber-300 mb-2 drop-shadow-[0_0_10px_#fbbf24] animate-pulse">KESE AÇILIYOR</h2>
-      <p className="text-xs text-slate-400 mb-8 font-sans">Taş kesesinden destenize kalıcı olarak eklemek için 1 adet taş seçin.</p>
+      <h2 className="text-2xl md:text-3xl text-amber-300 mb-2 drop-shadow-[0_0_10px_#fbbf24] animate-pulse">KESE AÇILIYOR</h2>
+      <p className="text-sm text-slate-400 mb-8 font-sans">Taş kesesinden destenize kalıcı olarak eklemek için 1 adet taş seçin.</p>
       
       <div className="flex gap-4 justify-center items-center mb-8">
         {draftOffers.map((stone) => {
@@ -509,26 +664,178 @@ export default function ShopScreen({
               onClick={() => onDraftSelect(stone.id)}
               className={`flex flex-col items-center justify-between p-3.5 w-24 h-36 md:w-30 md:h-44 rounded-2xl border-2 cursor-pointer transform hover:scale-105 active:scale-95 transition ${modifierBorder}`}
             >
-              <span className="text-[7.5px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-slate-950/80 mb-2 text-white">
+              <span className="text-[9.5px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-slate-950/80 mb-2 text-white">
                 {modifierLabel}
               </span>
               
               {/* Domino stone representation */}
               <div className="flex-1 flex flex-col justify-center items-center gap-1.5">
                 <div className="flex gap-1.5 items-center justify-center">
-                  <span className="text-base md:text-xl font-bold bg-slate-950/50 px-2 py-0.5 rounded">{stone.leftVal}</span>
+                  <span className="text-lg md:text-2xl font-bold bg-slate-950/50 px-2 py-0.5 rounded">{stone.leftVal}</span>
                   <span className="text-slate-400">|</span>
-                  <span className="text-base md:text-xl font-bold bg-slate-950/50 px-2 py-0.5 rounded">{stone.rightVal}</span>
+                  <span className="text-lg md:text-2xl font-bold bg-slate-950/50 px-2 py-0.5 rounded">{stone.rightVal}</span>
                 </div>
               </div>
               
-              <span className="text-[9px] text-emerald-400 font-bold mt-2">SEÇ</span>
+              <span className="text-[11px] text-emerald-400 font-bold mt-2">SEÇ</span>
             </div>
           );
         })}
       </div>
+
+      <button
+        type="button"
+        onClick={onSkipDraft}
+        className="px-6 py-2 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-sm font-pixel uppercase tracking-widest transition"
+      >
+        Atla
+      </button>
     </div>
   );
+
+  // Rün Kesesi — Step 1: pick exactly 1 of 3 random rune options.
+  const runePackOverlay = runeOffers.length > 0 && (
+    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
+      <h2 className="text-2xl md:text-3xl text-rose-350 mb-2 drop-shadow-[0_0_10px_#fb7185] animate-pulse">RÜN KESESİ AÇILIYOR</h2>
+      <p className="text-sm text-slate-400 mb-8 font-sans">Bir rün seçin — seçtiğiniz rün, birden fazla taşınıza birden uygulanabilir.</p>
+
+      <div className="flex gap-4 justify-center items-center mb-8 flex-wrap">
+        {runeOffers.map((rune) => (
+          <div
+            key={rune.id}
+            onClick={() => onChooseRune(rune.id)}
+            className="flex flex-col items-center justify-between p-3.5 w-32 h-44 md:w-36 md:h-48 rounded-2xl border-2 border-rose-600/70 bg-rose-950/30 shadow-[0_0_15px_rgba(225,29,72,0.3)] cursor-pointer transform hover:scale-105 active:scale-95 transition text-center"
+          >
+            <span className="text-[12px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-slate-950/80 text-rose-300">
+              {rune.targetCount} taşa uygulanır
+            </span>
+            <span className="flex-1 flex items-center justify-center text-base font-bold text-white leading-tight px-1">
+              {rune.name}
+            </span>
+            <p className="text-[11px] text-slate-300 font-sans leading-snug mb-2">{rune.description}</p>
+            <span className="text-[11px] text-emerald-400 font-bold">SEÇ</span>
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={onSkipRunePack}
+        className="px-6 py-2 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-sm font-pixel uppercase tracking-widest transition"
+      >
+        Atla
+      </button>
+    </div>
+  );
+
+  // Rün Kesesi — Step 2: pick up to `pendingRune.targetCount` existing customDeck stones to apply it to.
+  const runeTargetOverlay = pendingRune && (
+    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
+      <h2 className="text-2xl md:text-3xl text-rose-350 mb-1 drop-shadow-[0_0_10px_#fb7185]">{pendingRune.name}</h2>
+      <p className="text-sm text-slate-400 mb-4 font-sans text-center max-w-md">
+        Destenizden {pendingRune.targetCount} taşa kadar seçin ({selectedRuneTargets.length}/{pendingRune.targetCount} seçildi).
+      </p>
+
+      <div className="flex-1 min-h-0 w-full max-w-2xl overflow-y-auto flex flex-wrap gap-2 justify-center items-start content-start px-2 mb-4">
+        {customDeck.map((stone) => {
+          const isSelected = selectedRuneTargets.includes(stone.id);
+          return (
+            <div
+              key={stone.id}
+              onClick={() => toggleRuneTarget(stone.id)}
+              className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border-2 cursor-pointer transition select-none shrink-0 ${
+                isSelected ? 'border-rose-400 bg-rose-950/40 shadow-[0_0_10px_rgba(251,113,133,0.4)]' : 'border-slate-800 bg-slate-900/40 hover:border-slate-600'
+              }`}
+            >
+              <span className="text-base font-bold text-white bg-slate-950/60 px-1.5 py-0.5 rounded">{stone.leftVal}</span>
+              <span className="text-slate-500 text-sm">|</span>
+              <span className="text-base font-bold text-white bg-slate-950/60 px-1.5 py-0.5 rounded">{stone.rightVal}</span>
+              {stone.modifier && stone.modifier !== 'NORMAL' && (
+                <span className="text-[10px] text-amber-300 font-bold ml-1 uppercase">{stone.modifier}</span>
+              )}
+            </div>
+          );
+        })}
+        {customDeck.length === 0 && <span className="text-sm text-slate-500 font-sans">Destenizde taş yok.</span>}
+      </div>
+
+      <div className="flex gap-3 shrink-0">
+        <button
+          type="button"
+          onClick={onSkipRunePack}
+          className="px-6 py-2.5 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-sm font-pixel uppercase tracking-widest transition"
+        >
+          Vazgeç
+        </button>
+        <button
+          type="button"
+          disabled={selectedRuneTargets.length === 0}
+          onClick={() => onApplyRune(selectedRuneTargets)}
+          className="px-8 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-30 disabled:pointer-events-none text-sm font-pixel font-bold text-white shadow border-b-2 border-rose-850 uppercase tracking-widest transition"
+        >
+          Uygula
+        </button>
+      </div>
+    </div>
+  );
+
+  // Details panel: hovering (or clicking, to lock it open) a card's body — never the "SATIN AL"
+  // button, which stops propagation — opens this beside THAT specific card. Positioned via the
+  // card's own measured rect (captured on hover/click) rather than CSS-nested inside the card, so
+  // it always paints in front of every other card (a single top-level fixed element can't be
+  // occluded by unrelated sibling cards the way a nested per-card panel could).
+  const PANEL_WIDTH = 320;
+  const PANEL_GAP = 12;
+  let detailsPanel: React.ReactNode = null;
+  if (hoveredDetails) {
+    const isCharmDetails = hoveredDetails.type === 'Tılsım';
+    const overflowsRight = hoveredDetails.rect.right + PANEL_GAP + PANEL_WIDTH > window.innerWidth;
+    const left = overflowsRight
+      ? Math.max(8, hoveredDetails.rect.left - PANEL_WIDTH - PANEL_GAP)
+      : hoveredDetails.rect.right + PANEL_GAP;
+    const cardHeight = hoveredDetails.rect.bottom - hoveredDetails.rect.top;
+    const top = Math.min(
+      Math.max(8, hoveredDetails.rect.top + cardHeight / 2 - 140),
+      window.innerHeight - 300
+    );
+    detailsPanel = (
+      <div
+        className={`fixed z-[9999] w-80 bg-slate-950/95 border-3 rounded-2xl p-5 flex flex-col gap-3 font-sans select-none cursor-auto animate-fade-in ${
+          isCharmDetails ? 'border-amber-600/80 shadow-[0_0_30px_rgba(217,119,6,0.65)]' : 'border-cyan-500/80 shadow-[0_0_30px_rgba(6,182,212,0.65)]'
+        }`}
+        style={{ left, top }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={`flex flex-col gap-1 border-b pb-2 ${isCharmDetails ? 'border-amber-800/30' : 'border-cyan-800/30'}`}>
+          <span className={`font-pixel text-2xl font-black tracking-wider uppercase ${isCharmDetails ? 'text-amber-200' : 'text-cyan-400'}`}>
+            {hoveredDetails.name}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="bg-slate-900 px-2 py-0.5 rounded text-[12px] font-bold text-slate-400 border border-slate-800 uppercase tracking-widest">
+              {hoveredDetails.type}
+            </span>
+            {hoveredDetails.rarity && (
+              <span className={`text-[12px] font-extrabold tracking-widest uppercase ${
+                hoveredDetails.rarity === 'LEGENDARY' ? 'text-violet-400 shadow-[0_0_8px_rgba(167,139,250,0.5)]' :
+                hoveredDetails.rarity === 'RARE' ? 'text-red-400 shadow-[0_0_8px_rgba(248,113,113,0.5)]' :
+                hoveredDetails.rarity === 'UNCOMMON' ? 'text-teal-400' : 'text-slate-400'
+              }`}>
+                {hoveredDetails.rarity}
+              </span>
+            )}
+          </div>
+        </div>
+        <p className="text-base leading-relaxed text-slate-200 py-1 font-outfit">
+          {hoveredDetails.description}
+        </p>
+        {hoveredDetails.cost !== undefined && (
+          <div className={`flex items-center justify-between text-sm border-t pt-2 font-pixel ${isCharmDetails ? 'text-amber-400/80 border-amber-800/20' : 'text-cyan-400/80 border-cyan-800/20'}`}>
+            <span>Maliyet: ${hoveredDetails.cost}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (isPortrait) {
     return (
@@ -536,10 +843,10 @@ export default function ShopScreen({
         {/* Controls */}
         <div className="flex gap-3 shrink-0 flex-row items-center">
           <div className="rounded-xl border-4 border-amber-800 bg-linear-to-b from-amber-700 to-amber-900 text-center shadow-md flex-1 py-2">
-            <h2 className="font-black text-amber-50 font-pixel tracking-widest uppercase shop-neon text-xl">
+            <h2 className="font-black text-amber-50 font-pixel tracking-widest uppercase shop-neon text-2xl">
               MAĞAZA
             </h2>
-            <p className="text-[10px] font-pixel text-amber-200/80 mt-1">
+            <p className="text-[12px] font-pixel text-amber-200/80 mt-1">
               Deste: <span className="font-bold text-amber-100">{deckSize}</span> taş
             </p>
           </div>
@@ -548,7 +855,7 @@ export default function ShopScreen({
             <button
               type="button"
               onClick={onContinue}
-              className="btn-arcade btn-arcade-green px-5 py-3 rounded-xl text-sm font-pixel font-black text-white uppercase animate-pulse"
+              className="btn-arcade btn-arcade-green px-5 py-3 rounded-xl text-base font-pixel font-black text-white uppercase animate-pulse"
             >
               Sonraki Tur
             </button>
@@ -556,7 +863,7 @@ export default function ShopScreen({
               type="button"
               onClick={onReroll}
               disabled={money < rerollCost}
-              className="btn-arcade btn-arcade-slate px-5 py-3 rounded-xl text-sm font-pixel font-black text-white uppercase"
+              className="btn-arcade btn-arcade-slate px-5 py-3 rounded-xl text-base font-pixel font-black text-white uppercase"
             >
               Yenile (${rerollCost})
             </button>
@@ -565,12 +872,12 @@ export default function ShopScreen({
 
         {activeTag && (
           <div className="flex items-center gap-2.5 bg-slate-950/80 border border-amber-500/30 rounded-xl px-4 py-2 shadow-lg animate-pulse shrink-0 self-center">
-            <span className="text-3xl">{activeTag.icon}</span>
+            <span className="text-4xl">{activeTag.icon}</span>
             <div className="flex flex-col leading-tight select-none">
-              <span className="font-pixel text-xs font-black text-amber-300 uppercase tracking-widest">
+              <span className="font-pixel text-sm font-black text-amber-300 uppercase tracking-widest">
                 Aktif Etiket: {activeTag.name}
               </span>
-              <span className="text-[10px] text-slate-400 font-sans mt-0.5">
+              <span className="text-[12px] text-slate-400 font-sans mt-0.5">
                 {activeTag.description}
               </span>
             </div>
@@ -580,56 +887,42 @@ export default function ShopScreen({
         {/* Offers & Fusion stacked in Portrait */}
         <div className="flex-1 bg-slate-950/70 border border-slate-800/80 rounded-2xl p-4 flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Teklifler</h3>
+            <h3 className="text-base font-bold uppercase tracking-wider text-slate-400">Teklifler</h3>
             {slotsFull && (
-              <span className="text-[11px] text-amber-400 font-bold uppercase animate-pulse">Slotlar Dolu!</span>
+              <span className="text-[13px] text-amber-400 font-bold uppercase animate-pulse">Slotlar Dolu!</span>
             )}
           </div>
 
-          {/* Offers lists */}
-          <div className="flex flex-col gap-4">
-            <div className="bg-slate-950/30 p-2.5 rounded-xl border border-slate-900/50 flex flex-col">
-              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-900/50 pb-1 mb-2 font-pixel">
-                Tılsımlar & Sarf Malzemeleri
-              </div>
-              <div className="flex flex-row flex-wrap gap-2.5 items-center justify-center">
-                {cardOffers.map(renderOfferCard)}
-                {cardOffers.length === 0 && <span className="text-[10px] font-mono text-slate-655">Tümü satıldı.</span>}
-              </div>
-            </div>
-
-            <div className="bg-slate-950/30 p-2.5 rounded-xl border border-slate-900/50 flex flex-col">
-              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-900/50 pb-1 mb-2 font-pixel">
-                Taş Keseleri & Fermanlar
-              </div>
-              <div className="flex flex-row flex-wrap gap-2.5 items-center justify-center">
-                {packageOffers.map(renderOfferCard)}
-                {packageOffers.length === 0 && <span className="text-[10px] font-mono text-slate-655">Tümü satıldı.</span>}
-              </div>
-            </div>
+          {/* Offers rack — same fixed 2×2 panel grid as landscape, sized to never need its own
+              scroll (only the page around it, to reach the Fusion Forge below, may scroll). */}
+          <div className="grid grid-cols-2 grid-rows-2 gap-2.5 h-80 sm:h-96 shrink-0">
+            {renderPanel('🃏', 'Tılsımlar', 'border-amber-700/50', charmOffers)}
+            {renderPanel('✨', 'Özel Kartlar', 'border-teal-700/50', [...upgradeOffers, ...theoremOffers])}
+            {renderPanel('🎒', 'Keseler', 'border-indigo-700/50', [...boosterOffers, ...runePackOffers])}
+            {renderPanel('📜', 'Fermanlar', 'border-rose-700/50', voucherOffers)}
           </div>
 
           {/* Fusion in Portrait */}
           <div className="border-t border-slate-800/50 pt-3 mt-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-500 font-pixel mb-2">Garabet Füzyon Ocağı</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-amber-500 font-pixel mb-2">Garabet Füzyon Ocağı</h3>
             {ownedCharms.length < 2 ? (
-              <p className="text-[9.5px] text-slate-500 italic font-sans text-center">En az 2 tılsımınız olmalı.</p>
+              <p className="text-[11.5px] text-slate-500 italic font-sans text-center">En az 2 tılsımınız olmalı.</p>
             ) : (
               <div className="flex flex-col gap-3 bg-slate-950/30 p-3 rounded-xl border border-slate-900/50">
                 {/* Inventory */}
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Tılsım Seç:</span>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Tılsım Seç:</span>
                   <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
                     {eligibleOwnedCharms.map((charm) => (
                       <button
                         key={charm.id}
                         type="button"
                         onClick={() => handleFuseCharmSelect(charm.id)}
-                        className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-left text-[10px] transition ${
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-left text-[12px] transition ${
                           fuseA === charm.id || fuseB === charm.id ? 'border-amber-400 bg-amber-950/30 text-amber-300 font-bold' : 'border-slate-800 bg-slate-900/40 text-slate-400'
                         }`}
                       >
-                        <span className="text-xs">{renderCharmIcon(charm.id)}</span>
+                        <span className="text-sm">{renderCharmIcon(charm.id)}</span>
                         <span>{charm.name}</span>
                       </button>
                     ))}
@@ -638,15 +931,15 @@ export default function ShopScreen({
 
                 {/* Slots */}
                 <div className="flex justify-center items-center gap-2">
-                  <div className="w-12 h-14 border rounded flex items-center justify-center text-xs bg-slate-900 border-slate-800">
+                  <div className="w-12 h-14 border rounded flex items-center justify-center text-sm bg-slate-900 border-slate-800">
                     {fuseA ? renderCharmIcon(fuseA) : '?'}
                   </div>
                   <span className="text-slate-600 font-pixel">+</span>
-                  <div className="w-12 h-14 border rounded flex items-center justify-center text-xs bg-slate-900 border-slate-800">
+                  <div className="w-12 h-14 border rounded flex items-center justify-center text-sm bg-slate-900 border-slate-800">
                     {fuseB ? renderCharmIcon(fuseB) : '?'}
                   </div>
                   <span className="text-slate-600 font-pixel">=</span>
-                  <div className="w-12 h-14 border rounded flex items-center justify-center text-xs bg-slate-900 border-slate-800">
+                  <div className="w-12 h-14 border rounded flex items-center justify-center text-sm bg-slate-900 border-slate-800">
                     {resultCharm ? renderCharmIcon(resultCharm.id) : '?'}
                   </div>
                 </div>
@@ -661,7 +954,7 @@ export default function ShopScreen({
                       setFuseA(null);
                       setFuseB(null);
                     }}
-                    className={`w-full py-2.5 rounded-lg text-xs font-pixel font-bold text-white transition ${
+                    className={`w-full py-2.5 rounded-lg text-sm font-pixel font-bold text-white transition ${
                       canFuse ? 'bg-amber-600 hover:bg-amber-500 border-b-2 border-amber-800' : 'bg-slate-850 opacity-40'
                     }`}
                   >
@@ -674,6 +967,9 @@ export default function ShopScreen({
         </div>
 
         {draftOverlay}
+        {runePackOverlay}
+        {runeTargetOverlay}
+        {detailsPanel}
       </div>
     );
   }
@@ -687,27 +983,27 @@ export default function ShopScreen({
       <div className="w-28 md:w-32 lg:w-40 flex flex-col justify-between shrink-0 h-full">
         {/* Carved wooden shop sign */}
         <div className="rounded-xl border-4 border-amber-800 bg-linear-to-b from-amber-700 to-amber-900 text-center shadow-md p-3">
-          <h2 className="font-black text-amber-50 font-pixel tracking-widest uppercase shop-neon text-lg md:text-xl lg:text-2xl">
+          <h2 className="font-black text-amber-50 font-pixel tracking-widest uppercase shop-neon text-xl md:text-2xl lg:text-3xl">
             MAĞAZA
           </h2>
-          <p className="text-[10px] font-pixel text-amber-200/80 mt-1">
+          <p className="text-[12px] font-pixel text-amber-200/80 mt-1">
             Deste: <span className="font-bold text-amber-100">{deckSize}</span> taş
           </p>
         </div>
 
         {/* Balance Badge */}
         <div className="bg-slate-950/90 border border-slate-800 p-2.5 rounded-xl text-center shadow-inner">
-          <span className="block text-[8px] text-slate-500 font-pixel uppercase tracking-widest mb-0.5">Bakiye</span>
-          <span className="font-pixel text-xl md:text-2xl text-emerald-450 font-black">${money}</span>
+          <span className="block text-[10px] text-slate-500 font-pixel uppercase tracking-widest mb-0.5">Bakiye</span>
+          <span className="font-pixel text-2xl md:text-3xl text-emerald-400 font-black">💰 ${money}</span>
         </div>
 
         {/* Active Tag */}
         {activeTag && (
           <div className="bg-slate-950 border border-amber-500/25 p-2 rounded-xl text-center shadow-md animate-pulse">
-            <span className="block text-[7.5px] text-slate-500 font-pixel uppercase tracking-widest mb-0.5">Aktif Etiket</span>
-            <div className="text-xl my-1">{activeTag.icon}</div>
-            <span className="font-pixel text-[10px] text-amber-300 font-bold block leading-tight">{activeTag.name}</span>
-            <span className="text-[7.5px] text-slate-400 block leading-tight mt-1">{activeTag.description}</span>
+            <span className="block text-[9.5px] text-slate-500 font-pixel uppercase tracking-widest mb-0.5">Aktif Etiket</span>
+            <div className="text-2xl my-1">{activeTag.icon}</div>
+            <span className="font-pixel text-[12px] text-amber-300 font-bold block leading-tight">{activeTag.name}</span>
+            <span className="text-[9.5px] text-slate-400 block leading-tight mt-1">{activeTag.description}</span>
           </div>
         )}
 
@@ -716,7 +1012,7 @@ export default function ShopScreen({
           <button
             type="button"
             onClick={onContinue}
-            className="btn-arcade btn-arcade-green w-full py-2.5 md:py-3 lg:py-4 rounded-xl text-xs md:text-sm font-pixel font-black text-white uppercase animate-pulse"
+            className="btn-arcade btn-arcade-green w-full py-2.5 md:py-3 lg:py-4 rounded-xl text-sm md:text-base font-pixel font-black text-white uppercase animate-pulse"
           >
             Sonraki Tur
           </button>
@@ -726,66 +1022,47 @@ export default function ShopScreen({
             type="button"
             onClick={onReroll}
             disabled={money < rerollCost}
-            className="btn-arcade btn-arcade-slate w-full py-2.5 md:py-3 lg:py-4 rounded-xl text-xs md:text-sm font-pixel font-black text-white"
+            className="btn-arcade btn-arcade-slate w-full py-2.5 md:py-3 lg:py-4 rounded-xl text-sm md:text-base font-pixel font-black text-white"
           >
             Yenile (${rerollCost})
           </button>
         </div>
       </div>
 
-      {/* 2. Middle Column: Shop Offers Rack (Fits completely, scrollable internal lists only) */}
-      <div className="flex-1 bg-slate-950/75 border border-slate-800/80 rounded-2xl p-2 md:p-3 lg:p-4 flex flex-col h-full min-w-0 min-h-0">
+      {/* 2. Middle Column: Shop Offers Rack — a fixed 2×2 grid of framed panels (Balatro never
+          shows more than a small, constant number of slots at once: 2 cards + 2 packs + 1
+          voucher). Each panel gets its own bounded area, so the whole rack fits the column
+          without ever needing to scroll, instead of one long stacked list of sections. */}
+      <div className="flex-1 bg-slate-950/75 border border-slate-800/80 rounded-2xl p-2 md:p-3 lg:p-4 flex flex-col h-full min-w-0 min-h-0 shop-parchment-bg">
         <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Teklifler</h3>
+          <h3 className="text-base font-bold uppercase tracking-wider text-slate-400">Teklifler</h3>
           {slotsFull && (
-            <span className="text-[11px] text-amber-400 font-bold uppercase animate-pulse">
+            <span className="text-[13px] text-amber-400 font-bold uppercase animate-pulse">
               Tılsım Slotları Dolu!
             </span>
           )}
         </div>
 
-        {/* Offers shelves container - internally scrollable if the window is tiny */}
-        <div className="flex-1 mt-3 flex flex-col gap-4 overflow-y-auto min-h-0 pr-1">
-          {/* A. Üst Raf: Tılsımlar & Sarf Malzemeleri */}
-          <div className="bg-slate-950/30 p-3 rounded-xl border border-slate-900/50 flex flex-col shrink-0">
-            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-900/50 pb-1 mb-2 font-pixel">
-              Tılsımlar & Sarf Malzemeleri
-            </div>
-            <div className="flex flex-row flex-wrap gap-2.5 items-center justify-start min-h-0">
-              {cardOffers.map(renderOfferCard)}
-              {cardOffers.length === 0 && (
-                <span className="text-[10px] font-mono text-slate-655">Tüm kartlar satın alındı.</span>
-              )}
-            </div>
-          </div>
-
-          {/* B. Alt Raf: Taş Keseleri & Fermanlar */}
-          <div className="bg-slate-950/30 p-3 rounded-xl border border-slate-900/50 flex flex-col shrink-0">
-            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-900/50 pb-1 mb-2 font-pixel">
-              Taş Keseleri & Fermanlar
-            </div>
-            <div className="flex flex-row flex-wrap gap-2.5 items-center justify-start">
-              {packageOffers.map(renderOfferCard)}
-              {packageOffers.length === 0 && (
-                <span className="text-[10px] font-mono text-slate-655">Tüm paketler ve fermanlar satın alındı.</span>
-              )}
-            </div>
-          </div>
+        <div className="flex-1 mt-3 grid grid-cols-2 grid-rows-2 gap-2.5 md:gap-3 min-h-0">
+          {renderPanel('🃏', 'Tılsımlar', 'border-amber-700/50', charmOffers)}
+          {renderPanel('✨', 'Özel Kartlar', 'border-teal-700/50', [...upgradeOffers, ...theoremOffers])}
+          {renderPanel('🎒', 'Keseler', 'border-indigo-700/50', [...boosterOffers, ...runePackOffers])}
+          {renderPanel('📜', 'Fermanlar', 'border-rose-700/50', voucherOffers)}
         </div>
       </div>
 
       {/* 3. Right Column: Fusion Forge (Side-by-side setup) */}
       <div className="w-64 md:w-72 lg:w-80 xl:w-96 bg-slate-950/75 border border-slate-800/80 rounded-2xl p-2 md:p-3 lg:p-4 flex flex-col shrink-0 h-full min-h-0">
         <div className="flex items-center gap-2 border-b border-slate-800 pb-2 shrink-0 select-none">
-          <span className="text-base">🏛️</span>
-          <h3 className="text-[11px] font-bold uppercase tracking-wider text-amber-500 font-pixel">
+          <span className="text-lg">🏛️</span>
+          <h3 className="text-[13px] font-bold uppercase tracking-wider text-amber-500 font-pixel">
             Garabet Füzyon Ocağı
           </h3>
         </div>
 
         {ownedCharms.length < 2 ? (
           <div className="flex-1 flex items-center justify-center py-4 bg-slate-900/10 border border-slate-900/40 rounded-xl mt-3">
-            <p className="text-[10px] font-sans text-slate-500 italic text-center px-4 leading-normal">
+            <p className="text-[12px] font-sans text-slate-500 italic text-center px-4 leading-normal">
               Füzyon ocağını kullanmak için en az 2 tılsıma sahip olmalısınız.
             </p>
           </div>
@@ -793,12 +1070,12 @@ export default function ShopScreen({
           <div className="flex-1 flex flex-col mt-3 gap-3 min-h-0">
             {/* Charm Inventory Selector */}
             <div className="flex-1 flex flex-col min-h-0">
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block shrink-0">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block shrink-0">
                 1. Tılsımlarını Seç:
               </span>
               <div className="flex-1 overflow-y-auto mt-1 max-h-56 border border-slate-900 bg-slate-950/30 p-2.5 rounded-xl flex flex-col gap-1.5 animate-fade-in pr-1">
                 {eligibleOwnedCharms.length === 0 ? (
-                  <p className="text-[9.5px] text-slate-500 italic font-sans leading-relaxed">
+                  <p className="text-[11.5px] text-slate-500 italic font-sans leading-relaxed">
                     {fuseA
                       ? 'Seçilen tılsımla birleşebilecek başka uyumlu tılsımınız bulunmuyor.'
                       : 'Birleştirilebilir uyumlu tılsımınız bulunmuyor. Saat, Matruşka, Abaküs, Ayna vb. uyumlu çiftleri toplayın.'}
@@ -820,10 +1097,10 @@ export default function ShopScreen({
                             : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:bg-slate-800 hover:text-white',
                         ].join(' ')}
                       >
-                        <span className="text-sm shrink-0 leading-none">{renderCharmIcon(charm.id)}</span>
+                        <span className="text-base shrink-0 leading-none">{renderCharmIcon(charm.id)}</span>
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-pixel leading-tight">{charm.name}</span>
-                          <span className="text-[8px] text-slate-500 font-sans leading-none mt-0.5">
+                          <span className="text-[12px] font-pixel leading-tight">{charm.name}</span>
+                          <span className="text-[10px] text-slate-500 font-sans leading-none mt-0.5">
                             {charm.rarity} {isFused ? '(Füzyon)' : ''}
                           </span>
                         </div>
@@ -836,7 +1113,7 @@ export default function ShopScreen({
 
             {/* Selected slots & Recipe check */}
             <div className="border border-slate-900/80 bg-slate-950/40 p-2.5 rounded-xl shrink-0 flex flex-col items-center">
-              <span className="text-[9px] font-bold text-slate-455 uppercase tracking-wider block mb-1.5 text-center">
+              <span className="text-[11px] font-bold text-slate-455 uppercase tracking-wider block mb-1.5 text-center">
                 2. Sinerji Reçetesi
               </span>
               <div className="flex items-center gap-3">
@@ -847,17 +1124,17 @@ export default function ShopScreen({
                 ].join(' ')}>
                   {fuseA ? (
                     <>
-                      <span className="text-xs shrink-0 leading-none">{renderCharmIcon(fuseA)}</span>
-                      <span className="text-[7px] font-pixel text-slate-350 leading-tight truncate w-full mt-0.5">
+                      <span className="text-sm shrink-0 leading-none">{renderCharmIcon(fuseA)}</span>
+                      <span className="text-[9px] font-pixel text-slate-350 leading-tight truncate w-full mt-0.5">
                         {ownedCharms.find(c => c.id === fuseA)?.name}
                       </span>
                     </>
                   ) : (
-                    <span className="text-[8px] text-slate-650 font-pixel">Boş</span>
+                    <span className="text-[10px] text-slate-650 font-pixel">Boş</span>
                   )}
                 </div>
 
-                <span className="text-slate-650 font-bold font-pixel text-sm select-none">+</span>
+                <span className="text-slate-650 font-bold font-pixel text-base select-none">+</span>
 
                 {/* Slot B */}
                 <div className={[
@@ -866,17 +1143,17 @@ export default function ShopScreen({
                 ].join(' ')}>
                   {fuseB ? (
                     <>
-                      <span className="text-xs shrink-0 leading-none">{renderCharmIcon(fuseB)}</span>
-                      <span className="text-[7px] font-pixel text-slate-350 leading-tight truncate w-full mt-0.5">
+                      <span className="text-sm shrink-0 leading-none">{renderCharmIcon(fuseB)}</span>
+                      <span className="text-[9px] font-pixel text-slate-350 leading-tight truncate w-full mt-0.5">
                         {ownedCharms.find(c => c.id === fuseB)?.name}
                       </span>
                     </>
                   ) : (
-                    <span className="text-[8px] text-slate-650 font-pixel">Boş</span>
+                    <span className="text-[10px] text-slate-650 font-pixel">Boş</span>
                   )}
                 </div>
 
-                <span className="text-slate-650 font-bold font-pixel text-sm select-none">=</span>
+                <span className="text-slate-650 font-bold font-pixel text-base select-none">=</span>
 
                 {/* Result Preview */}
                 <div className={[
@@ -885,13 +1162,13 @@ export default function ShopScreen({
                 ].join(' ')}>
                   {resultCharm ? (
                     <>
-                      <span className="text-xs shrink-0 leading-none">{renderCharmIcon(resultCharm.id)}</span>
-                      <span className="text-[7px] font-pixel text-emerald-450 font-bold leading-tight truncate w-full mt-0.5">
+                      <span className="text-sm shrink-0 leading-none">{renderCharmIcon(resultCharm.id)}</span>
+                      <span className="text-[9px] font-pixel text-emerald-400 font-bold leading-tight truncate w-full mt-0.5">
                         {resultCharm.name}
                       </span>
                     </>
                   ) : (
-                    <span className="text-[8px] text-slate-650 font-pixel">?</span>
+                    <span className="text-[10px] text-slate-650 font-pixel">?</span>
                   )}
                 </div>
               </div>
@@ -902,8 +1179,8 @@ export default function ShopScreen({
               {resultCharm ? (
                 <div className="flex flex-col gap-2">
                   <div className="bg-slate-900/20 border border-slate-900 p-2 rounded-lg text-center">
-                    <span className="text-[8.5px] font-pixel text-emerald-400 font-bold block mb-0.5">YENİ HİBRİT TILSIM</span>
-                    <p className="text-[8px] text-slate-350 font-sans leading-tight">
+                    <span className="text-[10.5px] font-pixel text-emerald-400 font-bold block mb-0.5">YENİ HİBRİT TILSIM</span>
+                    <p className="text-[10px] text-slate-350 font-sans leading-tight">
                       {resultCharm.description}
                     </p>
                   </div>
@@ -916,7 +1193,7 @@ export default function ShopScreen({
                       setFuseB(null);
                     }}
                     className={[
-                      'w-full py-2.5 rounded-xl text-xs font-pixel font-bold text-white shadow border-b-2 transition cursor-pointer select-none',
+                      'w-full py-2.5 rounded-xl text-sm font-pixel font-bold text-white shadow border-b-2 transition cursor-pointer select-none',
                       canFuse
                         ? 'bg-amber-600 hover:bg-amber-500 border-amber-800 shadow-[0_0_8px_rgba(245,158,11,0.25)]'
                         : 'bg-slate-850 border-slate-950 opacity-40 cursor-default text-slate-400'
@@ -929,7 +1206,7 @@ export default function ShopScreen({
                 <button
                   type="button"
                   disabled
-                  className="w-full py-2.5 rounded-xl bg-slate-850 border-slate-950 opacity-40 text-xs font-pixel font-bold text-slate-500 cursor-default border-b-2"
+                  className="w-full py-2.5 rounded-xl bg-slate-850 border-slate-950 opacity-40 text-sm font-pixel font-bold text-slate-500 cursor-default border-b-2"
                 >
                   FÜZYON YAPILAMAZ
                 </button>
@@ -940,6 +1217,9 @@ export default function ShopScreen({
       </div>
 
       {draftOverlay}
+      {runePackOverlay}
+      {runeTargetOverlay}
+      {detailsPanel}
     </div>
   );
 }

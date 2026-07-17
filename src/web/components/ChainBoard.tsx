@@ -1,5 +1,7 @@
-import React, { useCallback, useRef, useState } from 'react';
-import type { Board, SlotId } from '../../models/Board.js';
+import React from 'react';
+import type { Board, SlotId, Dir } from '../../models/Board.js';
+import { assignDirections } from '../../models/Board.js';
+import { useElementSize } from '../hooks/useElementSize.js';
 import Tile from './Tile.js';
 
 export type SlotState = 'none' | 'legal' | 'illegal';
@@ -16,6 +18,10 @@ interface ChainBoardProps {
   onSelectNode?: (nodeId: string) => void;
   spellEffect?: { id: string; type: 'GILD' | 'MAGNET' } | null;
   isGathering?: boolean;
+  /** The hand just resolved and its played tiles are dissolving upward off the board, one beat
+   *  before the actual board state drains them — distinct from `isGathering` (a round-end
+   *  transition that flies tiles toward the deck box instead). */
+  isExiting?: boolean;
   onSelectEdge?: (edgeId: string) => void;
   activeConsumable?: string | null;
 }
@@ -43,21 +49,10 @@ function SlotButton({ state, onClick }: { state: SlotState; onClick: () => void 
   );
 }
 
-// Four cardinal directions a connection can grow in. Only doubles (spinners) ever use more
-// than two of them; a plain stone always attaches on one side and continues straight ahead.
-type Dir = 'E' | 'S' | 'W' | 'N';
+// Direction geometry (Dir, assignDirections) now lives in Board.ts, shared with
+// detectHandType()'s branching classification so the two can never drift apart.
 type Vec = readonly [number, number];
 const VECTOR: Record<Dir, Vec> = { E: [1, 0], S: [0, 1], W: [-1, 0], N: [0, -1] };
-const OPPOSITE: Record<Dir, Dir> = { E: 'W', W: 'E', S: 'N', N: 'S' };
-const ALL_DIRS: Dir[] = ['E', 'S', 'W', 'N'];
-
-function assignDirections(isDouble: boolean, incoming: Dir | null): Dir[] {
-  if (incoming === null) {
-    return isDouble ? ALL_DIRS : ['E', 'W'];
-  }
-  const attach = OPPOSITE[incoming]; // slot #0 always faces back toward the parent
-  return isDouble ? [attach, ...ALL_DIRS.filter((d) => d !== attach)] : [attach, incoming];
-}
 
 interface OpenSlotCell {
   pos: Vec;
@@ -146,32 +141,6 @@ function buildAxis(minCoord: number, maxCoord: number, nodeSize: number) {
   return { sizes, total, center };
 }
 
-/**
- * Tracks an element's content-box size so the board can scale itself to always fit inside it.
- * Uses a callback ref (not useRef + useLayoutEffect) because ChainBoard conditionally renders
- * a different subtree for the empty-board state — the DOM node this ref attaches to can change
- * identity (null -> element, or one element -> another) without the component ever unmounting,
- * and only a callback ref reliably re-fires an observer setup when that happens.
- */
-function useElementSize<T extends HTMLElement>() {
-  const [size, setSize] = useState({ width: 0, height: 0 });
-  const observerRef = useRef<ResizeObserver | null>(null);
-
-  const ref = useCallback((el: T | null) => {
-    observerRef.current?.disconnect();
-    observerRef.current = null;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry) setSize({ width: entry.contentRect.width, height: entry.contentRect.height });
-    });
-    observer.observe(el);
-    observerRef.current = observer;
-  }, []);
-
-  return { ref, size };
-}
-
 export default function ChainBoard({
   board,
   legalSlotIds,
@@ -183,6 +152,7 @@ export default function ChainBoard({
   onSelectNode,
   spellEffect,
   isGathering = false,
+  isExiting = false,
   onSelectEdge,
   activeConsumable,
 }: ChainBoardProps) {
@@ -416,8 +386,8 @@ export default function ChainBoard({
           const isLeaf = !edges.some((e) => e.parentNodeId === nodeId);
           const isMagnetTarget = activeSpellType === 'MAGNET' && isLeaf;
 
-          const animationClass = isGathering ? 'animate-gather-board' : '';
-          const gatherDelay = isGathering ? `${index * 60}ms` : undefined;
+          const animationClass = isGathering ? 'animate-gather-board' : isExiting ? 'animate-tile-submit-exit' : '';
+          const gatherDelay = isGathering ? `${index * 60}ms` : isExiting ? `${index * 70}ms` : undefined;
 
           const isChild = edges.some((e) => e.childNodeId === nodeId);
           const isParent = edges.some((e) => e.parentNodeId === nodeId);
@@ -427,16 +397,19 @@ export default function ChainBoard({
           return (
             <div
               key={`node-${nodeId}`}
+              data-node-id={nodeId}
               style={{
                 ...cell(pos),
                 animationDelay: gatherDelay,
-                animationFillMode: isGathering ? 'forwards' : undefined,
+                animationFillMode: isGathering || isExiting ? 'forwards' : undefined,
               }}
               className={animationClass}
             >
               <Tile
                 left={left}
                 right={right}
+                leftUpgrade={node.leftUpgrade}
+                rightUpgrade={node.rightUpgrade}
                 vertical={vertical}
                 animateIn
                 frozen={node.frozen}
