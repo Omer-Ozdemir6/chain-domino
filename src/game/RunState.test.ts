@@ -34,7 +34,7 @@ describe('RunState', () => {
     expect(run.money).toBe(0);
   });
 
-  it('grows the target 300 -> 800 -> 2000 -> 5000 -> 12000 -> 28000 -> 60000 -> 140000 across 8 antes', () => {
+  it('grows the target 300 -> 690 -> 1590 -> 3650 -> 8400 -> 19300 -> 44400 -> 102200 across 8 antes', () => {
     const run = new RunState();
     run.initializeRun('RED', 'WHITE');
     const seen = [run.currentTarget];
@@ -44,7 +44,7 @@ describe('RunState', () => {
       playAndWinBlind(run, 'BOSS');
       seen.push(run.currentTarget);
     }
-    expect(seen).toEqual([300, 800, 2000, 5000, 12000, 28000, 60000, 140000]);
+    expect(seen).toEqual([300, 690, 1590, 3650, 8400, 19300, 44400, 102200]);
   });
 
   it('computes round payout as base + unused-turn bonus + interest', () => {

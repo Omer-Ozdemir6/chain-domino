@@ -1,5 +1,79 @@
 @import "tailwindcss";
 
+/* Idle "breathing" aura behind charm/upgrade cards — grows/shrinks and fades slowly so the row
+   never reads as a dead row of static images, even when nothing's actively triggering. */
+@keyframes charm-aura-breathe {
+  0%, 100% { opacity: 0.35; transform: scale(0.92); }
+  50% { opacity: 0.8; transform: scale(1.1); }
+}
+.animate-charm-aura-breathe {
+  animation: charm-aura-breathe 3.6s ease-in-out infinite;
+}
+
+/* Kabine Eşikleri (blind select) screen — a boss icon swaying like an uneasy scale, the
+   MÜCADELE ET buttons breathing with a colored aura, and the whole cabinet splitting in two and
+   flying off-screen once a challenge is accepted. */
+@keyframes boss-icon-sway {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+.animate-boss-icon-sway {
+  animation: boss-icon-sway 2.6s ease-in-out infinite;
+  transform-origin: 50% 15%;
+}
+
+@keyframes button-aura-pulse-emerald {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.35); }
+  50% { box-shadow: 0 0 16px 4px rgba(16, 185, 129, 0.55); }
+}
+.animate-button-aura-pulse-emerald {
+  animation: button-aura-pulse-emerald 1.8s ease-in-out infinite;
+}
+
+@keyframes button-aura-pulse-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 18px 5px rgba(239, 68, 68, 0.6); }
+}
+.animate-button-aura-pulse-red {
+  animation: button-aura-pulse-red 1.6s ease-in-out infinite;
+}
+
+@keyframes blind-split-up {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-130%); opacity: 0; }
+}
+@keyframes blind-split-down {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(130%); opacity: 0; }
+}
+.animate-blind-split-up {
+  animation: blind-split-up 520ms cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+}
+.animate-blind-split-down {
+  animation: blind-split-down 520ms cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+}
+
+/* A spent turn falls away and tumbles out of frame — deliberately slower and heavier than the
+   generic small-number pop used elsewhere, so losing a turn reads as its own distinct beat. */
+@keyframes turn-lost-fall {
+  0% { transform: translateY(0) scale(1.3) rotate(0deg); opacity: 1; }
+  35% { transform: translateY(2px) scale(1.15) rotate(-10deg); opacity: 1; }
+  100% { transform: translateY(30px) scale(0.6) rotate(18deg); opacity: 0; }
+}
+.animate-turn-lost-fall {
+  animation: turn-lost-fall 900ms cubic-bezier(0.5, 0, 0.75, 0.4) forwards;
+}
+
+/* A brief red shockwave ring around the turn counter itself, in sync with the falling "-1". */
+@keyframes turn-ring-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+  70% { box-shadow: 0 0 0 9px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+.animate-turn-ring-pulse {
+  animation: turn-ring-pulse 750ms ease-out;
+}
+
 /* ═══════════════════════════════════════════
    RESPONSIVE FOUNDATION
    ═══════════════════════════════════════════ */

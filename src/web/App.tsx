@@ -83,6 +83,11 @@ export default function App() {
   // Faz 14: PixiJS effect layer handles — board layer (candlelight background + Amber spark /
   // Obsidian shatter particles) and the antique lens vignette overlay over the whole canvas.
   const pixiBoardRef = useRef<PixiEffectsLayerHandle | null>(null);
+  // The 'board' layer (candlelight + ambient dust) sits BEHIND the tiles, purely atmospheric —
+  // a burst effect drawn there would be invisible, hidden under the opaque tile it's bursting
+  // from. spawnSpark/spawnShatter/spawnShockwave all target this separate layer instead, which
+  // is mounted ABOVE the tiles.
+  const pixiFxRef = useRef<PixiEffectsLayerHandle | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -128,6 +133,12 @@ export default function App() {
   // charm-by-charm). Never touches the upper round score; that only moves once, at hand-end.
   const [handPreview, setHandPreview] = useState<{ chips: number; mult: number }>({ chips: 0, mult: 1 });
   const [handScoreFlyUp, setHandScoreFlyUp] = useState(false);
+  // The hand-score accumulator ("+N" under the round score) is deliberately NOT a live mirror of
+  // handPreview.chips*mult — it stays null (hidden) through the entire stone-by-stone/charm-by-
+  // charm buildup and is set exactly once, at the Büyük Patlama beat, to the already-finished
+  // total. Everything happens strictly in order: chips×mult finishes below, THEN this total
+  // appears, THEN the blue/red badges reset, THEN (only then) it flies up into the round score.
+  const [handTotalReveal, setHandTotalReveal] = useState<number | null>(null);
 
   function spawnScoreParticles(charmId: string) {
     const charmIndex = ownedCharms.findIndex((c) => c.id === charmId);
@@ -331,18 +342,21 @@ export default function App() {
     const result = act((g) => g.playStone(stoneId, slotId));
     if (result.ok) {
       playSound('place');
-      if (isAmberConnection && parentNodeId) {
-        // Wait a frame for React to render the newly-added tile before reading its rect.
+      // Wait a frame for React to render the newly-added tile before reading its rect.
+      requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            const childEl = document.querySelector(`[data-node-id="${stoneId}"]`);
+          const childEl = document.querySelector(`[data-node-id="${stoneId}"]`);
+          if (!childEl) return;
+          // Every lock-in gets a small confirmation shockwave, regardless of modifier.
+          pixiFxRef.current?.spawnShockwave(childEl.getBoundingClientRect());
+          if (isAmberConnection && parentNodeId) {
             const parentEl = document.querySelector(`[data-node-id="${parentNodeId}"]`);
-            if (childEl && parentEl) {
-              pixiBoardRef.current?.spawnSpark(parentEl.getBoundingClientRect(), childEl.getBoundingClientRect());
+            if (parentEl) {
+              pixiFxRef.current?.spawnSpark(parentEl.getBoundingClientRect(), childEl.getBoundingClientRect());
             }
-          });
+          }
         });
-      }
+      });
     }
     setMessage(result.ok ? null : 'Hata: ' + result.error);
     setSelection(null);
@@ -513,21 +527,33 @@ export default function App() {
             commitSubmit();
           }, 560);
         }
-        // Büyük Patlama: chips × mult resolves here, below — ONLY once that result is known does
-        // it get carried up to the round score above, via the fly-up + rollScoreTo. Nothing above
-        // moves a moment before this.
+        // Büyük Patlama — strictly staged, one beat at a time:
+        //   1) the flash marks "the multiplication below just finished"
+        //   2) the total appears in the accumulator (handTotalReveal) — chips×mult, done
+        //   3) ONLY once that total is visibly sitting there do the blue/red badges reset
+        //   4) ONLY THEN does the total fly up and the round score above start climbing
+        // Nothing above ever moves before step 4, and the badges never reset before step 3.
         playSound('win');
         triggerBoardFlash(550);
         setTimeout(() => {
-          spawnFinalScoreParticles();
-          rollScoreTo(roundScoreBefore + final.score, 700);
-          setHandScoreFlyUp(true);
+          // Step 2: the total lands — chips × mult is now a single settled number.
+          setHandTotalReveal(final.score);
           setTimeout(() => {
+            // Step 3: the multiplication boxes empty out now that their result has been captured.
             setHandPreview({ chips: 0, mult: 1 });
-            setHandScoreFlyUp(false);
-          }, 680);
-        }, 1300);
-        setTimeout(finish, 3200);
+            setTimeout(() => {
+              // Step 4: the settled total carries itself up into the round score.
+              spawnFinalScoreParticles();
+              rollScoreTo(roundScoreBefore + final.score, 700);
+              setHandScoreFlyUp(true);
+              setTimeout(() => {
+                setHandTotalReveal(null);
+                setHandScoreFlyUp(false);
+              }, 680);
+            }, 400);
+          }, 500);
+        }, 600);
+        setTimeout(finish, 2700);
       }
     }
 
@@ -564,7 +590,7 @@ export default function App() {
       }
       result.brokenTileIds?.forEach((id) => {
         const rect = obsidianRects.get(id);
-        if (rect) pixiBoardRef.current?.spawnShatter(rect);
+        if (rect) pixiFxRef.current?.spawnShatter(rect);
       });
       if (run.phase === 'PLAYING' && game.status === 'PLAYING') act((g) => g.drawForTurn());
     }
@@ -893,9 +919,6 @@ export default function App() {
     // While animating, the "El Kartı" chips×mult badges show the hand's live stone-by-stone/
     // charm-by-charm buildup (handPreview) instead of the idle board preview.
     const sidebarPreview = isAnimating ? handPreview : liveScorePreview;
-    // Faz 12: the hidden hand-score accumulator — only exists while a hand is actively resolving,
-    // otherwise null so SidebarHUD renders nothing (not even "0") for it.
-    const handScoreForHud = isAnimating ? Math.round(handPreview.chips * handPreview.mult) : null;
 
     const targetScore = run.activeBlind ? run.getBlindTarget(run.activeBlind) : run.currentTarget;
     const maxTurns = run.selectedDeck === 'BLUE' ? 7 : 6;
@@ -944,7 +967,7 @@ export default function App() {
             activeBossId={run.activeBossId}
             activeBlind={run.activeBlind}
             previewScore={sidebarPreview}
-            handScore={handScoreForHud}
+            handScore={handTotalReveal}
             handScoreFlyUp={handScoreFlyUp}
             overallRound={overallRound}
             maxOverallRounds={maxOverallRounds}
@@ -1031,6 +1054,7 @@ export default function App() {
                   activeConsumable={activeSpell}
                 />
               </div>
+              <PixiEffectsLayer ref={pixiFxRef} variant="board-fx" reducedMotion={prefersReducedMotion} />
               {boardFlash && (
                 <div className="pointer-events-none absolute inset-0 z-40 animate-board-impact-flash" />
               )}
@@ -1148,7 +1172,7 @@ export default function App() {
             activeBossId={run.activeBossId}
             activeBlind={run.activeBlind}
             previewScore={sidebarPreview}
-            handScore={handScoreForHud}
+            handScore={handTotalReveal}
             handScoreFlyUp={handScoreFlyUp}
             overallRound={overallRound}
             maxOverallRounds={maxOverallRounds}
@@ -1254,6 +1278,7 @@ export default function App() {
                   activeConsumable={activeSpell}
                 />
               </div>
+              <PixiEffectsLayer ref={pixiFxRef} variant="board-fx" reducedMotion={prefersReducedMotion} />
 
               {boardFlash && (
                 <div className="pointer-events-none absolute inset-0 z-40 animate-board-impact-flash" />

@@ -68,16 +68,31 @@ export interface RunConfig {
 // run at the old 300/800/2000/... numbers. Halving keeps the same growth shape (so late-game
 // charm/level scaling still ramps the same way) while giving new players a realistic shot at
 // clearing Ante 1 on natural sums alone.
+//
+// Growth factor is a deliberately "ugly" 2.3x (not the round 2.5x the numbers used to grow by) —
+// at exactly 2.5x, `Small(ante N+1) == Boss(ante N)` (0.6 × 2.5 == 1.5), so two DIFFERENT
+// blinds on two DIFFERENT antes kept landing on the identical target number. 2.3x keeps the same
+// overall growth shape without that coincidence ever recurring.
 export const ANTE_TARGETS: Record<number, number> = {
   1: 300,
-  2: 800,
-  3: 2000,
-  4: 5000,
-  5: 12000,
-  6: 28000,
-  7: 60000,
-  8: 140000,
+  2: 690,
+  3: 1590,
+  4: 3650,
+  5: 8400,
+  6: 19300,
+  7: 44400,
+  8: 102200,
 };
+
+/** Base payout per blind type, scaled up gradually with ante — Balatro's own $3/$4/$5 blind
+ *  rewards never change across a whole run, but our targets grow ~2.3x per ante while the
+ *  reward stayed flat, so by Ante 8 a Boss Blind hundreds of times harder than Ante 1's still
+ *  only handed back the same $5. +1 every 2 antes keeps late rewards feeling proportionate
+ *  without the shop economy exploding. */
+export function getBlindReward(blindType: 'SMALL' | 'BIG' | 'BOSS', ante: number): number {
+  const base = blindType === 'SMALL' ? 3 : blindType === 'BIG' ? 4 : 5;
+  return base + Math.floor((ante - 1) / 2);
+}
 
 const DEFAULT_RUN_CONFIG: RunConfig = {
   totalRounds: 8,
@@ -1165,7 +1180,7 @@ export class RunState {
     const blindTarget = this.getBlindTarget(this.activeBlind!);
 
     const blindLabel = this.activeBlind === 'SMALL' ? 'Küçük Kör' : this.activeBlind === 'BIG' ? 'Büyük Kör' : 'Boss Kör';
-    const blindReward = this.activeBlind === 'SMALL' ? 3 : this.activeBlind === 'BIG' ? 4 : 5;
+    const blindReward = getBlindReward(this.activeBlind!, this.round);
     const interest = Math.min(5, Math.floor(this.money / 5));
 
     const roundEndCtx: RoundEndContext = {

@@ -671,9 +671,9 @@ export default function ShopScreen({
               {/* Domino stone representation */}
               <div className="flex-1 flex flex-col justify-center items-center gap-1.5">
                 <div className="flex gap-1.5 items-center justify-center">
-                  <span className="text-lg md:text-2xl font-bold bg-slate-950/50 px-2 py-0.5 rounded">{stone.leftVal}</span>
+                  <span className="text-lg md:text-2xl font-bold text-white bg-slate-950/50 px-2 py-0.5 rounded">{stone.leftVal}</span>
                   <span className="text-slate-400">|</span>
-                  <span className="text-lg md:text-2xl font-bold bg-slate-950/50 px-2 py-0.5 rounded">{stone.rightVal}</span>
+                  <span className="text-lg md:text-2xl font-bold text-white bg-slate-950/50 px-2 py-0.5 rounded">{stone.rightVal}</span>
                 </div>
               </div>
               

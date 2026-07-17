@@ -20,6 +20,16 @@ const GEM_CLASS: Record<CharmRarity, string> = {
 };
 const CURSE_GEM = 'bg-fuchsia-500 shadow-[0_0_10px_#d946ef] animate-pulse';
 
+/** A soft, slowly "breathing" aura sitting behind each card — never fully cansız/static, even
+ *  when nothing's actively triggering. Color matches each rarity's own accent. */
+const AURA_CLASS: Record<CharmRarity, string> = {
+  COMMON: 'bg-stone-400/25',
+  UNCOMMON: 'bg-teal-400/30',
+  RARE: 'bg-rose-500/30',
+  LEGENDARY: 'bg-amber-400/35',
+};
+const CURSE_AURA = 'bg-fuchsia-500/30';
+
 const RARITY_ENTRANCE: Record<CharmRarity, string> = {
   COMMON: 'animate-charm-in-common',
   UNCOMMON: 'animate-charm-in-uncommon',
@@ -232,18 +242,43 @@ export default function CharmBar({
           const isUsedUp = Boolean(charm.interactive) && activatedCharmIds.includes(charm.id);
           const isArmed = armedCharmId === charm.id;
           const isClickable = Boolean(charm.interactive) && !isUsedUp && Boolean(onActivateCharm);
-          
+
           const durabilityVal = hasDurability ? charmDurability[charm.id] : 999;
           const durRatio = hasDurability ? durabilityVal / (charm.maxDurability ?? 4) : 1;
           const isUnstable = hasDurability && durabilityVal === 1;
+          const auraClass = charm.curse ? CURSE_AURA : AURA_CLASS[charm.rarity];
+          // The 3D tilt only applies at rest — while scoring/armed the card already owns its own
+          // transform (scale/translate via className), and an inline style here would clobber it.
+          const tiltEnabled = !isScoringActive && !isArmed && !isUsedUp;
+          const handleTiltMove = tiltEnabled
+            ? (e: React.MouseEvent<HTMLDivElement>) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const px = (e.clientX - rect.left) / rect.width - 0.5;
+                const py = (e.clientY - rect.top) / rect.height - 0.5;
+                e.currentTarget.style.transform = `perspective(700px) rotateX(${py * -10}deg) rotateY(${px * 10}deg) translateY(-4px)`;
+              }
+            : undefined;
+          const handleTiltLeave = tiltEnabled
+            ? (e: React.MouseEvent<HTMLDivElement>) => {
+                e.currentTarget.style.transform = '';
+              }
+            : undefined;
 
           return (
             <InfoTooltip key={charm.id} text={tooltipContent} widthClass="w-56" side="right">
               <div
                 onClick={isClickable ? () => onActivateCharm!(charm.id) : undefined}
+                onMouseMove={handleTiltMove}
+                onMouseLeave={handleTiltLeave}
                 className={`balatro-card relative flex flex-col justify-between w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 p-2.5 rounded-lg border-2 text-center transition select-none shrink-0 ${entranceClass} ${cardClass} ${isScoringActive ? `scale-110 -translate-y-3 z-30 animate-pulse ${signatureGlow || 'ring-4 ring-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.9)]'}` : ''} ${isClickable ? 'cursor-pointer' : 'cursor-help'} ${isClickable && !isArmed ? 'ring-2 ring-violet-400/70 animate-pulse' : ''} ${isArmed ? 'scale-105 ring-4 ring-violet-400 shadow-[0_0_18px_rgba(167,139,250,0.8)]' : ''} ${isUsedUp ? 'opacity-40 grayscale cursor-not-allowed' : ''} ${isUnstable ? 'animate-card-unstable' : ''}`}
                 style={{ animationDelay: isScoringActive ? undefined : `${i * 110}ms` }}
               >
+                {/* Idle breathing aura — a soft glow behind the card that slowly grows/shrinks,
+                    phase-offset per card so the row never breathes in lockstep. */}
+                <div
+                  className={`absolute -inset-2.5 -z-10 rounded-xl blur-md pointer-events-none ${auraClass} animate-charm-aura-breathe`}
+                  style={{ animationDelay: `${i * 260}ms` }}
+                />
                 {/* Visual cracks based on durability */}
                 {hasDurability && <CracksOverlay ratio={durRatio} />}
                 {/* Floating score text directly below the card on trigger (no container box, matching screenshot!) */}

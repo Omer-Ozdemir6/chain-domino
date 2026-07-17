@@ -12,7 +12,7 @@ function useDecrementFlash(value: number): boolean {
   useEffect(() => {
     if (value < prevRef.current) {
       setFlash(true);
-      const timer = setTimeout(() => setFlash(false), 650);
+      const timer = setTimeout(() => setFlash(false), 950);
       prevRef.current = value;
       return () => clearTimeout(timer);
     }
@@ -168,11 +168,11 @@ export default function SidebarHUD({
             <span className="block text-[12px] text-slate-500 uppercase font-bold leading-none">Raunt</span>
             <span className="font-pixel text-base text-sky-300">{overallRound}/{maxOverallRounds}</span>
           </div>
-          <div className="border border-slate-800 rounded bg-slate-900/40 px-2 py-1 relative">
+          <div className={`border border-slate-800 rounded bg-slate-900/40 px-2 py-1 relative ${turnFlash ? 'animate-turn-ring-pulse' : ''}`}>
             <span className="block text-[12px] text-slate-500 uppercase font-bold leading-none">Tur</span>
             <span key={turnsLeft} className="font-pixel text-base text-amber-400 inline-block animate-number-pop">{turnsLeft}</span>
             {turnFlash && (
-              <span className="absolute -top-2 right-0 font-pixel text-xs text-rose-400 font-black animate-tile-chip-pop pointer-events-none">-1</span>
+              <span className="absolute -top-2 right-0 font-pixel text-xs text-rose-400 font-black animate-turn-lost-fall pointer-events-none">-1</span>
             )}
           </div>
           <div className="border border-slate-800 rounded bg-slate-900/40 px-2 py-1">
@@ -243,10 +243,10 @@ export default function SidebarHUD({
       <div className="grid grid-cols-3 gap-2 shrink-0">
         <div className="flex flex-col items-center justify-center bg-slate-950/70 border border-slate-800 rounded-2xl py-2.5 shadow-inner relative">
           <span className="text-sm lg:text-base text-slate-500 uppercase font-extrabold tracking-wider font-pixel mb-1.5">TUR</span>
-          <div className="w-13 h-13 rounded-full border-2 border-amber-500/80 flex items-center justify-center bg-amber-950/15 shadow-[0_0_8px_rgba(245,158,11,0.2)] relative">
+          <div className={`w-13 h-13 rounded-full border-2 border-amber-500/80 flex items-center justify-center bg-amber-950/15 shadow-[0_0_8px_rgba(245,158,11,0.2)] relative ${turnFlash ? 'animate-turn-ring-pulse' : ''}`}>
             <span key={turnsLeft} className="font-pixel text-xl text-amber-400 font-black inline-block animate-number-pop">{turnsLeft}</span>
             {turnFlash && (
-              <span className="absolute -top-3 -right-1 font-pixel text-sm text-rose-400 font-black animate-tile-chip-pop pointer-events-none">-1</span>
+              <span className="absolute -top-3 -right-1 font-pixel text-sm text-rose-400 font-black animate-turn-lost-fall pointer-events-none">-1</span>
             )}
           </div>
         </div>

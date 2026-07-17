@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import type { RoundRecord, SkipTag } from '../../game/RunState.js';
-import { BOSS_BLINDS } from '../../game/RunState.js';
+import { BOSS_BLINDS, getBlindReward } from '../../game/RunState.js';
 
 interface BlindSelectScreenProps {
   round: number; // Current Ante
@@ -62,8 +63,18 @@ export default function BlindSelectScreen({
   const boss = BOSS_BLINDS[bossIndex];
   const tierColor = TIER_COLORS[boss.tier];
 
-  return (
-    <div className="w-full max-w-xl my-auto rounded-3xl bg-slate-900 border-4 border-slate-950 p-8 shadow-2xl text-white crt select-none">
+  // The whole cabinet splits in two along its horizontal midline and flies off-screen (one half
+  // up, one half down) once a challenge is accepted — clearing the table for the felt underneath,
+  // instead of the modal just blinking out of existence.
+  const [exitingBlind, setExitingBlind] = useState<'SMALL' | 'BIG' | 'BOSS' | null>(null);
+  function handlePlay(blindType: 'SMALL' | 'BIG' | 'BOSS') {
+    if (exitingBlind) return;
+    setExitingBlind(blindType);
+    setTimeout(() => onPlay(blindType), 520);
+  }
+
+  const panelContent = (
+    <>
       <div className="text-center py-2 border-b border-slate-800 flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-black font-pixel tracking-wider text-red-500 uppercase">
@@ -97,7 +108,7 @@ export default function BlindSelectScreen({
               {hasSmall && <span className="text-[13px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-bold">TAMAMLANDI</span>}
             </div>
             <p className="text-sm text-slate-350 mt-1 font-sans">Hedef: <span className="font-pixel text-base text-slate-200">{smallTarget}</span></p>
-            <p className="text-sm text-slate-500 font-bold font-sans">ÖDÜL: <span className="text-amber-400 font-pixel">$3</span></p>
+            <p className="text-sm text-slate-500 font-bold font-sans">ÖDÜL: <span className="text-amber-400 font-pixel">${getBlindReward('SMALL', round)}</span></p>
           </div>
           
           {/* Skip Tag visual presentation */}
@@ -114,8 +125,8 @@ export default function BlindSelectScreen({
           {!hasSmall && currentActive === 'SMALL' && (
             <div className="flex flex-col gap-2 shrink-0">
               <button
-                onClick={() => onPlay('SMALL')}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:translate-y-0.5 text-sm font-pixel font-bold text-white rounded-xl shadow border-b-2 border-emerald-800 transition"
+                onClick={() => handlePlay('SMALL')}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:translate-y-0.5 text-sm font-pixel font-bold text-white rounded-xl shadow border-b-2 border-emerald-800 transition animate-button-aura-pulse-emerald"
               >
                 MÜCADELE ET
               </button>
@@ -146,7 +157,7 @@ export default function BlindSelectScreen({
               {hasBig && <span className="text-[13px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-bold">TAMAMLANDI</span>}
             </div>
             <p className="text-sm text-slate-350 mt-1 font-sans">Hedef: <span className="font-pixel text-base text-slate-200">{bigTarget}</span></p>
-            <p className="text-sm text-slate-500 font-bold font-sans">ÖDÜL: <span className="text-amber-400 font-pixel">$4</span></p>
+            <p className="text-sm text-slate-500 font-bold font-sans">ÖDÜL: <span className="text-amber-400 font-pixel">${getBlindReward('BIG', round)}</span></p>
           </div>
           
           {/* Skip Tag visual presentation */}
@@ -163,8 +174,8 @@ export default function BlindSelectScreen({
           {!hasBig && currentActive === 'BIG' && (
             <div className="flex flex-col gap-2 shrink-0">
               <button
-                onClick={() => onPlay('BIG')}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:translate-y-0.5 text-sm font-pixel font-bold text-white rounded-xl shadow border-b-2 border-emerald-800 transition"
+                onClick={() => handlePlay('BIG')}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:translate-y-0.5 text-sm font-pixel font-bold text-white rounded-xl shadow border-b-2 border-emerald-800 transition animate-button-aura-pulse-emerald"
               >
                 MÜCADELE ET
               </button>
@@ -190,8 +201,9 @@ export default function BlindSelectScreen({
           ].join(' ')}
         >
           <div className="flex items-start justify-between w-full gap-3">
-            {/* Boss icon */}
-            <div className="text-5xl shrink-0 mt-0.5 drop-shadow-lg">{boss.icon}</div>
+            {/* Boss icon — sways gently while its threat is the active one, like a scale that
+                never quite settles, or a warning that won't stay still. */}
+            <div className={`text-5xl shrink-0 mt-0.5 drop-shadow-lg ${!hasBoss && currentActive === 'BOSS' ? 'animate-boss-icon-sway' : ''}`}>{boss.icon}</div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -207,13 +219,13 @@ export default function BlindSelectScreen({
               <p className="text-sm text-slate-350 mt-1.5 font-sans">
                 Hedef: <span className="font-pixel text-base text-slate-200">{bossTarget}</span>
               </p>
-              <p className="text-sm text-slate-500 font-bold font-sans">ÖDÜL: <span className="text-amber-400 font-pixel">$5</span></p>
+              <p className="text-sm text-slate-500 font-bold font-sans">ÖDÜL: <span className="text-amber-400 font-pixel">${getBlindReward('BOSS', round)}</span></p>
             </div>
 
             {!hasBoss && currentActive === 'BOSS' && (
               <button
-                onClick={() => onPlay('BOSS')}
-                className="px-5 py-2.5 bg-red-600 hover:bg-red-500 active:translate-y-0.5 text-sm font-pixel font-bold text-white rounded-xl shadow border-b-2 border-red-800 transition shrink-0 animate-pulse"
+                onClick={() => handlePlay('BOSS')}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-500 active:translate-y-0.5 text-sm font-pixel font-bold text-white rounded-xl shadow border-b-2 border-red-800 transition shrink-0 animate-button-aura-pulse-red"
               >
                 MÜCADELE ET
               </button>
@@ -230,6 +242,33 @@ export default function BlindSelectScreen({
           )}
         </div>
       </div>
+    </>
+  );
+
+  const panelClass = 'rounded-3xl bg-slate-900 border-4 border-slate-950 p-8 shadow-2xl text-white crt select-none';
+
+  return (
+    <div className="relative w-full max-w-xl my-auto">
+      <div className={`${panelClass} ${exitingBlind ? 'invisible' : ''}`}>{panelContent}</div>
+      {/* Split-exit: once a challenge is accepted, the whole cabinet cleaves along its horizontal
+          midline and both halves fly off-screen — two clipped copies of the same content, one
+          animating up, one down, standing in for the single (now-hidden) real panel above. */}
+      {exitingBlind && (
+        <>
+          <div
+            className={`absolute inset-0 ${panelClass} overflow-hidden animate-blind-split-up`}
+            style={{ clipPath: 'inset(0 0 50% 0)' }}
+          >
+            {panelContent}
+          </div>
+          <div
+            className={`absolute inset-0 ${panelClass} overflow-hidden animate-blind-split-down`}
+            style={{ clipPath: 'inset(50% 0 0 0)' }}
+          >
+            {panelContent}
+          </div>
+        </>
+      )}
     </div>
   );
 }
