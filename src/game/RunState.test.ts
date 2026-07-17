@@ -150,8 +150,10 @@ describe('RunState', () => {
     const result = run.rerollShop();
     expect(result.ok).toBe(true);
     expect(run.money).toBe(8);
-    // shopSize (2 charms + 1 upgrade) plus 1 Voucher, 1 Booster Pack, 1 Rune Pack, and 1 Theorem Book slot.
-    expect(run.shopOffers).toHaveLength(run.config.shopSize + 4);
+    // Balatro-style trimmed shop: 2 charms + 2 pack slots + 1 upgrade/theorem slot always,
+    // plus a voucher that only shows up some of the time — so the count varies visit to visit.
+    expect(run.shopOffers.length).toBeGreaterThanOrEqual(5);
+    expect(run.shopOffers.length).toBeLessThanOrEqual(6);
   });
 
   it('booster pack drafting can be skipped without drafting a stone', () => {

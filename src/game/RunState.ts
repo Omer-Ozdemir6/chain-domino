@@ -1517,6 +1517,11 @@ export class RunState {
     return Math.round(prevTarget * this.config.targetGrowthFactor);
   }
 
+  /** Balatro's own shop is a single row of a handful of cards: 2 jokers, 1-2 packs, and a
+   *  voucher that doesn't show up every visit — never the 6-7-item, four-panel spread this used
+   *  to roll. Trimmed to match: 2 charms, 2 pack slots drawn from the combined booster+rune
+   *  pool (so a visit might show 2 boosters, 2 rune packs, or one of each), 1 "extra" slot
+   *  drawn from upgrades/theorem books, and a voucher at a real chance instead of guaranteed. */
   private rollShopOffers(): ShopOffer[] {
     const offers: ShopOffer[] = [];
 
@@ -1529,35 +1534,31 @@ export class RunState {
       offers.push({ type: 'CHARM', item: { ...c } as any });
     });
 
-    // 1 Upgrade/Consumable
-    const shuffledUpgrades = [...SHOP_UPGRADES].sort(() => Math.random() - 0.5);
-    if (shuffledUpgrades[0]) {
-      offers.push({ type: 'UPGRADE', item: { ...shuffledUpgrades[0] } as any });
+    // 2 pack slots, each independently a booster or a rune pack.
+    const shuffledBoosters = [...BOOSTER_PACKS].sort(() => Math.random() - 0.5);
+    const shuffledRunePacks = [...RUNE_PACKS].sort(() => Math.random() - 0.5);
+    for (let slot = 0; slot < 2; slot++) {
+      if (Math.random() < 0.5 && shuffledBoosters[slot % shuffledBoosters.length]) {
+        offers.push({ type: 'BOOSTER', item: { ...shuffledBoosters[slot % shuffledBoosters.length] } as any });
+      } else if (shuffledRunePacks[slot % shuffledRunePacks.length]) {
+        offers.push({ type: 'RUNE_PACK', item: { ...shuffledRunePacks[slot % shuffledRunePacks.length] } as any });
+      }
     }
 
-    // 1 permanent Voucher, if any remain unbought
+    // 1 "extra" slot: an upgrade/consumable or a theorem book, not both every visit.
+    if (Math.random() < 0.6) {
+      const shuffledUpgrades = [...SHOP_UPGRADES].sort(() => Math.random() - 0.5);
+      if (shuffledUpgrades[0]) offers.push({ type: 'UPGRADE', item: { ...shuffledUpgrades[0] } as any });
+    } else {
+      const shuffledBooks = [...THEOREM_BOOKS].sort(() => Math.random() - 0.5);
+      if (shuffledBooks[0]) offers.push({ type: 'THEOREM', item: { ...shuffledBooks[0] } as any });
+    }
+
+    // Voucher — a real chance to appear, not guaranteed every single shop visit.
     const availableVouchers = VOUCHERS.filter((v) => !this.ownedVoucherIds.includes(v.id));
-    if (availableVouchers.length > 0) {
+    if (availableVouchers.length > 0 && Math.random() < 0.5) {
       const voucher = availableVouchers[Math.floor(Math.random() * availableVouchers.length)];
       offers.push({ type: 'VOUCHER', item: { ...voucher } as any });
-    }
-
-    // 1 Booster Pack
-    const shuffledBoosters = [...BOOSTER_PACKS].sort(() => Math.random() - 0.5);
-    if (shuffledBoosters[0]) {
-      offers.push({ type: 'BOOSTER', item: { ...shuffledBoosters[0] } as any });
-    }
-
-    // 1 Rune Pack
-    const shuffledRunePacks = [...RUNE_PACKS].sort(() => Math.random() - 0.5);
-    if (shuffledRunePacks[0]) {
-      offers.push({ type: 'RUNE_PACK', item: { ...shuffledRunePacks[0] } as any });
-    }
-
-    // 1 Theorem Book
-    const shuffledBooks = [...THEOREM_BOOKS].sort(() => Math.random() - 0.5);
-    if (shuffledBooks[0]) {
-      offers.push({ type: 'THEOREM', item: { ...shuffledBooks[0] } as any });
     }
 
     // Apply Nomad Chest 25% discount first

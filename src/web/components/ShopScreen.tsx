@@ -336,33 +336,6 @@ export default function ShopScreen({
   // Split into one labeled section per offer type — instead of two broad rows, each kind of
   // item gets its own clearly-titled area so the player can scan by category rather than a single
   // undifferentiated row of mixed cards.
-  const charmOffers = offers.filter((o) => o.type === 'CHARM');
-  const upgradeOffers = offers.filter((o) => o.type === 'UPGRADE');
-  const theoremOffers = offers.filter((o) => o.type === 'THEOREM');
-  const boosterOffers = offers.filter((o) => o.type === 'BOOSTER');
-  const runePackOffers = offers.filter((o) => o.type === 'RUNE_PACK');
-  const voucherOffers = offers.filter((o) => o.type === 'VOUCHER');
-
-  // A bounded, self-contained "frame" for one grid cell of the shop rack — Balatro never shows
-  // more than a small fixed number of slots at once (2 cards + 2 packs + 1 voucher), so instead
-  // of an ever-growing stacked list, every category gets its OWN fixed-size area; cards wrap and
-  // shrink slightly to fit within it rather than pushing the page taller.
-  function renderPanel(icon: string, title: string, borderClass: string, list: ShopOffer[]) {
-    return (
-      <div key={title} className={`bg-slate-950/40 rounded-xl border-2 ${borderClass} flex flex-col min-h-0 p-2 md:p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]`}>
-        <div className="flex items-center gap-1.5 border-b border-slate-800/60 pb-1 mb-1.5 shrink-0">
-          <span className="text-sm leading-none">{icon}</span>
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest font-pixel">{title}</span>
-        </div>
-        <div className="flex-1 flex flex-row flex-wrap content-start gap-2 items-start justify-center overflow-y-auto min-h-0">
-          {list.length === 0
-            ? <span className="text-[11px] font-mono text-slate-655 italic self-center">Boş</span>
-            : list.map(renderOfferCard)}
-        </div>
-      </div>
-    );
-  }
-
   const [selectedRuneTargets, setSelectedRuneTargets] = useState<string[]>([]);
   useEffect(() => {
     if (!pendingRune) setSelectedRuneTargets([]);
@@ -893,13 +866,10 @@ export default function ShopScreen({
             )}
           </div>
 
-          {/* Offers rack — same fixed 2×2 panel grid as landscape, sized to never need its own
-              scroll (only the page around it, to reach the Fusion Forge below, may scroll). */}
-          <div className="grid grid-cols-2 grid-rows-2 gap-2.5 h-80 sm:h-96 shrink-0">
-            {renderPanel('🃏', 'Tılsımlar', 'border-amber-700/50', charmOffers)}
-            {renderPanel('✨', 'Özel Kartlar', 'border-teal-700/50', [...upgradeOffers, ...theoremOffers])}
-            {renderPanel('🎒', 'Keseler', 'border-indigo-700/50', [...boosterOffers, ...runePackOffers])}
-            {renderPanel('📜', 'Fermanlar', 'border-rose-700/50', voucherOffers)}
+          {/* Offers rack — Balatro's own shop is one flat row of a handful of cards (2 jokers,
+              1-2 packs, sometimes a voucher), not sorted into category panels. */}
+          <div className="flex flex-row flex-wrap gap-3 justify-center items-start shrink-0">
+            {offers.map(renderOfferCard)}
           </div>
 
           {/* Fusion in Portrait */}
@@ -1029,10 +999,8 @@ export default function ShopScreen({
         </div>
       </div>
 
-      {/* 2. Middle Column: Shop Offers Rack — a fixed 2×2 grid of framed panels (Balatro never
-          shows more than a small, constant number of slots at once: 2 cards + 2 packs + 1
-          voucher). Each panel gets its own bounded area, so the whole rack fits the column
-          without ever needing to scroll, instead of one long stacked list of sections. */}
+      {/* 2. Middle Column: Shop Offers Rack — Balatro's own shop is one flat row of a handful of
+          cards (2 jokers, 1-2 packs, sometimes a voucher), never sorted into category panels. */}
       <div className="flex-1 bg-slate-950/75 border border-slate-800/80 rounded-2xl p-2 md:p-3 lg:p-4 flex flex-col h-full min-w-0 min-h-0 shop-parchment-bg">
         <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
           <h3 className="text-base font-bold uppercase tracking-wider text-slate-400">Teklifler</h3>
@@ -1043,11 +1011,8 @@ export default function ShopScreen({
           )}
         </div>
 
-        <div className="flex-1 mt-3 grid grid-cols-2 grid-rows-2 gap-2.5 md:gap-3 min-h-0">
-          {renderPanel('🃏', 'Tılsımlar', 'border-amber-700/50', charmOffers)}
-          {renderPanel('✨', 'Özel Kartlar', 'border-teal-700/50', [...upgradeOffers, ...theoremOffers])}
-          {renderPanel('🎒', 'Keseler', 'border-indigo-700/50', [...boosterOffers, ...runePackOffers])}
-          {renderPanel('📜', 'Fermanlar', 'border-rose-700/50', voucherOffers)}
+        <div className="flex-1 mt-3 flex flex-row flex-wrap gap-3 justify-center items-start content-start min-h-0 overflow-y-auto">
+          {offers.map(renderOfferCard)}
         </div>
       </div>
 
