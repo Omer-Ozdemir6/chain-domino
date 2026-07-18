@@ -213,7 +213,7 @@ export interface VoucherDef {
 export const VOUCHERS: readonly VoucherDef[] = [
   {
     id: 'voucher_wide_pockets',
-    name: 'Geniş Cephane',
+    name: 'Ek Vitrin Yeri',
     description: 'Tılsım slot sayınızı kalıcı olarak +1 artırır.',
     cost: 10,
     apply: (run) => {
