@@ -101,7 +101,7 @@ export default function InfoTooltip({
       {children}
       {rect && createPortal(
         <div
-          className={`fixed pointer-events-none ${widthClass} rounded-lg border-2 border-amber-700/60 bg-slate-950/95 px-3 py-2 text-[10.5px] leading-relaxed text-amber-100 shadow-[0_4px_12px_rgba(0,0,0,0.65)] z-[9999] animate-fade-in ${originClass}`}
+          className={`fixed pointer-events-none ${widthClass} rounded-lg border-2 border-amber-700/60 bg-stone-950/95 px-3 py-2 text-[10.5px] leading-relaxed text-amber-100 shadow-[0_4px_12px_rgba(0,0,0,0.65)] z-[9999] animate-fade-in ${originClass}`}
           style={style}
         >
           {text}

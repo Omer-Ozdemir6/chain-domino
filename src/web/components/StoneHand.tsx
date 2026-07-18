@@ -55,10 +55,10 @@ export default function StoneHand({
 
   return (
     <div>
-      <h2 className="text-[8px] md:text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-0.5 md:mb-1">Taşlar</h2>
-      <div className="h-28 md:h-32 lg:h-36 flex flex-nowrap justify-center overflow-x-auto pt-12 pb-1 scrollbar-none items-end">
+      <h2 className="text-[8px] md:text-[9px] uppercase font-bold text-stone-400 dark:text-stone-500 tracking-wider mb-0.5 md:mb-1">Taşlar</h2>
+      <div className="h-44 md:h-52 lg:h-64 flex flex-nowrap justify-center overflow-x-auto pt-10 md:pt-12 lg:pt-14 pb-1 scrollbar-none items-end">
         {stones.length === 0 && (
-          <div className="h-14 w-20 md:h-16 md:w-24 lg:h-18 lg:w-28 rounded-lg border border-dashed border-slate-700/60 flex flex-col items-center justify-center gap-0.5 text-slate-600 select-none">
+          <div className="h-28 w-16 md:h-32 md:w-20 lg:h-40 lg:w-24 rounded-lg border border-dashed border-stone-700/60 flex flex-col items-center justify-center gap-0.5 text-stone-600 select-none">
             <span className="text-base opacity-40">🕯️</span>
             <span className="text-[8px] uppercase tracking-widest font-bold opacity-60">Deste Tükendi</span>
           </div>
@@ -81,10 +81,10 @@ export default function StoneHand({
           const isSelected = selectedId === s.id;
           const isMarkedForDiscard = isDiscardMode && Boolean(discardTargets?.has(s.id));
           const selectedClass = isMarkedForDiscard
-            ? '-translate-y-6 z-30 scale-105 shadow-[0_15px_30px_rgba(0,0,0,0.3)]'
+            ? '-translate-y-8 z-30 scale-105 shadow-[0_15px_30px_rgba(0,0,0,0.3)]'
             : isSelected
-              ? '-translate-y-8 z-30 scale-105 shadow-[0_15px_30px_rgba(0,0,0,0.3)] animate-levitate'
-              : 'hover:-translate-y-2 hover:z-20';
+              ? '-translate-y-10 z-30 scale-105 shadow-[0_15px_30px_rgba(0,0,0,0.3)] animate-levitate'
+              : 'hover:-translate-y-3 hover:z-20';
 
           const hasInfo = Boolean(s.isGolden || s.modifier || s.leftUpgrade || s.rightUpgrade);
 
@@ -104,7 +104,7 @@ export default function StoneHand({
               className="shrink-0 relative"
               style={{
                 transform: `rotate(${fanRotate}deg) translateY(${fanDip}px)`,
-                marginLeft: index === 0 ? undefined : '-12px',
+                marginLeft: index === 0 ? undefined : '-18px',
                 zIndex: index,
               }}
             >
@@ -125,19 +125,19 @@ export default function StoneHand({
                   ].join(' ')}
                 >
                   {isMarkedForDiscard && (
-                    <span className="absolute -top-2 -right-2 z-40 w-5 h-5 rounded-full bg-rose-500 border-2 border-slate-950 flex items-center justify-center text-[10px] font-black text-white pointer-events-none animate-fade-in">
+                    <span className="absolute -top-2 -right-2 z-40 w-5 h-5 rounded-full bg-rose-500 border-2 border-stone-950 flex items-center justify-center text-[10px] font-black text-white pointer-events-none animate-fade-in">
                       ✕
                     </span>
                   )}
                   {isSelected && hasInfo && selectedRect && createPortal(
                     <div
-                      className="fixed w-48 bg-slate-950/95 border-2 border-cyan-500/80 rounded-xl p-2.5 shadow-[0_0_15px_rgba(6,182,212,0.4)] text-[9px] leading-relaxed text-slate-100 z-[9999] animate-fade-in text-center select-none font-sans pointer-events-none"
+                      className="fixed w-48 bg-stone-950/95 border-2 border-cyan-500/80 rounded-xl p-2.5 shadow-[0_0_15px_rgba(6,182,212,0.4)] text-[9px] leading-relaxed text-stone-100 z-[9999] animate-fade-in text-center select-none font-sans pointer-events-none"
                       style={{ left: selectedRect.left + selectedRect.width / 2, top: selectedRect.top - 10, transform: 'translate(-50%, -100%)' }}
                     >
                       <div className="font-pixel text-[10px] text-cyan-400 font-bold mb-1 tracking-wider border-b border-cyan-900/40 pb-0.5">TAŞ ÖZELLİKLERİ</div>
                       <div className="flex flex-col gap-1 text-left">
                         {s.isGolden && <div className="text-amber-300 font-semibold">• Altın Taş (Oynandığında +$3)</div>}
-                        {s.modifier === 'IVORY' && <div className="text-slate-200 font-semibold">• Fildişi Rünü (+15 Taban Puan)</div>}
+                        {s.modifier === 'IVORY' && <div className="text-stone-200 font-semibold">• Fildişi Rünü (+15 Taban Puan)</div>}
                         {s.modifier === 'OBSIDIAN' && <div className="text-purple-400 font-semibold">• Obsidyen Rünü (Çarpan x2, %25 Kırılma)</div>}
                         {s.modifier === 'AMBER' && <div className="text-amber-500 font-semibold">• Kehribar Rünü (Komşuları eşitler)</div>}
                         {((s.leftUpgrade && s.leftUpgrade > 0) || (s.rightUpgrade && s.rightUpgrade > 0)) && (
@@ -159,6 +159,8 @@ export default function StoneHand({
                     isGolden={s.isGolden}
                     modifier={s.modifier}
                     spellEffect={tileSpellEffect}
+                    vertical
+                    size="hand"
                   />
                 </div>
               </div>

@@ -1033,8 +1033,8 @@ body {
 
 /* Balatro-style tactile panels */
 .balatro-panel {
-  background-color: #17252a !important; /* Slate/Navy matte cardboard */
-  border: 3px solid #0f1c20 !important;
+  background-color: #241a11 !important; /* Aged walnut cabinet wood, not navy */
+  border: 3px solid #140e09 !important;
   border-radius: 16px !important;
   box-shadow: 0 6px 0 rgba(0, 0, 0, 0.45) !important;
 }

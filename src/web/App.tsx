@@ -933,19 +933,19 @@ export default function App() {
 
   // Every overlay below shares one "modal on top of the persistent board" treatment instead of
   // navigating to a separate screen — the header/board/hands stay mounted underneath at all times.
-  const overlayClass = 'absolute inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm overflow-hidden p-4 animate-fade-in';
+  const overlayClass = 'absolute inset-0 z-50 flex items-center justify-center bg-stone-950/85 backdrop-blur-sm overflow-hidden p-4 animate-fade-in';
 
   if (delayedPhase === 'START_SCREEN' && !introDone) {
     content = <IntroScreen onEnter={() => setIntroDone(true)} />;
   } else if (delayedPhase === 'START_SCREEN') {
     content = (
-      <div className="absolute inset-0 flex items-center justify-center bg-slate-950 overflow-hidden swirl-bg p-4 animate-table-arrive">
+      <div className="absolute inset-0 flex items-center justify-center bg-stone-950 overflow-hidden swirl-bg p-4 animate-table-arrive">
         <StartScreen onStart={handleStartRun} />
       </div>
     );
   } else if (delayedPhase === 'SHOP') {
     content = (
-      <div className="absolute inset-0 flex items-center justify-center bg-slate-950 p-4 overflow-hidden select-none swirl-bg">
+      <div className="absolute inset-0 flex items-center justify-center bg-stone-950 p-4 overflow-hidden select-none swirl-bg">
         <ShopScreen
           money={run.money}
           offers={run.shopOffers}
@@ -1028,7 +1028,7 @@ export default function App() {
 
     if (isPortrait) {
       content = (
-        <div className="w-full h-full flex flex-col bg-slate-950 text-slate-100 select-none overflow-hidden">
+        <div className="w-full h-full flex flex-col bg-stone-950 text-stone-100 select-none overflow-hidden">
           <SidebarHUD
             layout="topbar"
             round={run.round}
@@ -1082,15 +1082,15 @@ export default function App() {
               </div>
               
               {/* Spells slot bar */}
-              <div className="w-28 shrink-0 bg-slate-950/40 p-1.5 rounded-xl border border-slate-800/40 h-28 flex flex-col justify-between">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Büyüler</span>
+              <div className="w-28 shrink-0 bg-stone-950/40 p-1.5 rounded-xl border border-stone-800/40 h-28 flex flex-col justify-between">
+                <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest text-center">Büyüler</span>
                 <div className="flex gap-1 items-center justify-center">
                   {Array.from({ length: run.maxConsumableSlots }, (_, i) => {
                     const item = run.consumables[i];
                     if (!item) {
                       return (
-                        <div key={`p-empty-${i}`} className="w-8 h-12 rounded-lg border border-dashed border-slate-800 bg-slate-950/20 flex items-center justify-center shrink-0">
-                          <span className="text-xs text-slate-700">⚔️</span>
+                        <div key={`p-empty-${i}`} className="w-8 h-12 rounded-lg border border-dashed border-stone-800 bg-stone-950/20 flex items-center justify-center shrink-0">
+                          <span className="text-xs text-stone-700">⚔️</span>
                         </div>
                       );
                     }
@@ -1099,7 +1099,7 @@ export default function App() {
                     const spellTooltip = (
                       <div className="flex flex-col gap-1 text-left leading-normal font-sans">
                         <span className="font-bold text-xs text-amber-200 font-pixel">{spellDef.name}</span>
-                        <p className="text-[10px] text-slate-200 leading-relaxed">{spellDef.description}</p>
+                        <p className="text-[10px] text-stone-200 leading-relaxed">{spellDef.description}</p>
                       </div>
                     );
                     return (
@@ -1107,7 +1107,7 @@ export default function App() {
                         <button
                           onClick={() => handleSpellClick(i)}
                           className={`w-8 h-12 rounded-lg border transition flex items-center justify-center shrink-0 ${
-                            isActive ? 'border-amber-500 bg-amber-950/40 ring-1 ring-amber-500 animate-pulse' : 'border-slate-800 bg-slate-950/30'
+                            isActive ? 'border-amber-500 bg-amber-950/40 ring-1 ring-amber-500 animate-pulse' : 'border-stone-800 bg-stone-950/30'
                           }`}
                         >
                           <div className="scale-50 transform origin-center">{renderUpgradeIcon(item)}</div>
@@ -1120,7 +1120,7 @@ export default function App() {
             </div>
 
             {/* Board */}
-            <div className="flex-1 min-h-0 relative z-10 rounded-2xl overflow-hidden shadow-xl border border-slate-950 felt-board">
+            <div className="flex-1 min-h-0 relative z-10 rounded-2xl overflow-hidden shadow-xl border border-stone-950 felt-board">
               <PixiEffectsLayer
                 ref={pixiBoardRef}
                 variant="board"
@@ -1157,7 +1157,7 @@ export default function App() {
               )}
               {charmPopupText && (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center z-50">
-                  <div className="font-pixel text-2xl font-bold text-amber-300 tracking-wide text-center px-5 py-3 rounded-2xl bg-slate-900/85 border-2 border-amber-500 shadow-[0_0_25px_rgba(251,191,36,0.6)] animate-score-step-pop">
+                  <div className="font-pixel text-2xl font-bold text-amber-300 tracking-wide text-center px-5 py-3 rounded-2xl bg-stone-900/85 border-2 border-amber-500 shadow-[0_0_25px_rgba(251,191,36,0.6)] animate-score-step-pop">
                     {charmPopupText}
                   </div>
                 </div>
@@ -1172,7 +1172,7 @@ export default function App() {
             </div>
 
             {/* Hand */}
-            <div className="flex gap-2 shrink-0 items-end justify-between bg-slate-950/20 p-1.5 rounded-xl border border-slate-800/40 overflow-visible relative z-20">
+            <div className="flex gap-2 shrink-0 items-end justify-between bg-stone-950/20 p-1.5 rounded-xl border border-stone-800/40 overflow-visible relative z-20">
               <div className="flex-1 min-w-0 overflow-visible">
                 <StoneHand
                   stones={game.hand}
@@ -1187,17 +1187,17 @@ export default function App() {
                   discardTargets={discardTargets}
                 />
               </div>
-              <div className="w-12 shrink-0 flex flex-col items-center justify-center border-l border-slate-800/40 pl-2">
-                <div className="w-6 h-9 bg-red-800 rounded border border-red-700/80 flex items-center justify-center font-pixel text-slate-200 text-xs">
+              <div className="w-12 shrink-0 flex flex-col items-center justify-center border-l border-stone-800/40 pl-2">
+                <div className="w-6 h-9 bg-red-800 rounded border border-red-700/80 flex items-center justify-center font-pixel text-stone-200 text-xs">
                   <span>🀲</span>
                 </div>
-                <span className="text-[10px] font-mono text-slate-400 font-bold mt-0.5">{game.stoneDeck.remaining}/28</span>
+                <span className="text-[10px] font-mono text-stone-400 font-bold mt-0.5">{game.stoneDeck.remaining}/28</span>
               </div>
             </div>
           </main>
 
           {/* Action Row for Portrait */}
-          <div className="shrink-0 grid grid-cols-2 gap-1.5 p-2 bg-slate-900 border-t-4 border-slate-950">
+          <div className="shrink-0 grid grid-cols-2 gap-1.5 p-2 bg-stone-900 border-t-4 border-stone-950">
             <button
               type="button"
               onClick={handleSubmit}
@@ -1218,7 +1218,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleCancelDiscard}
-                className="py-1.5 rounded-lg bg-slate-700 hover:bg-slate-650 active:translate-y-0.5 text-xs font-bold text-slate-200 border-b-2 border-slate-900 transition uppercase font-pixel"
+                className="py-1.5 rounded-lg bg-stone-700 hover:bg-stone-650 active:translate-y-0.5 text-xs font-bold text-stone-200 border-b-2 border-stone-900 transition uppercase font-pixel"
               >
                 İPTAL
               </button>
@@ -1227,7 +1227,7 @@ export default function App() {
                 type="button"
                 onClick={handleUndo}
                 disabled={!canRecoverNow || !canUndoNow}
-                className="py-1.5 rounded-lg bg-slate-700 hover:bg-slate-650 active:translate-y-0.5 text-xs font-bold text-slate-200 border-b-2 border-slate-900 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase font-pixel"
+                className="py-1.5 rounded-lg bg-stone-700 hover:bg-stone-650 active:translate-y-0.5 text-xs font-bold text-stone-200 border-b-2 border-stone-900 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase font-pixel"
               >
                 GERİ AL
               </button>
@@ -1238,7 +1238,7 @@ export default function App() {
     } else {
       // Classic layout (SidebarHUD on left, play board on right)
       content = (
-        <div className="w-full h-full flex flex-row bg-slate-950 text-slate-100 select-none overflow-hidden relative">
+        <div className="w-full h-full flex flex-row bg-stone-950 text-stone-100 select-none overflow-hidden relative">
           {/* Vertical SidebarHUD on the left */}
           <SidebarHUD
             layout="sidebar"
@@ -1295,7 +1295,7 @@ export default function App() {
               {/* Spells slot bar — same card footprint as the charm slots, no boxed panel behind
                   it, so it reads as sitting directly on the table rather than in its own tray. */}
               <div className="shrink-0 flex flex-col items-center gap-1">
-                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2 font-pixel">
+                <div className="text-[9px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2 font-pixel">
                   <span>Büyüler ({run.consumables.length}/{run.maxConsumableSlots})</span>
                   {activeSpellIndex !== null && (
                     <button onClick={() => setActiveSpellIndex(null)} className="text-[8px] text-rose-450 font-bold uppercase font-pixel">
@@ -1315,9 +1315,9 @@ export default function App() {
                       return (
                         <div
                           key={`empty-${i}`}
-                          className="w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 rounded-lg border-2 border-dashed border-slate-700 bg-slate-950/25 flex items-center justify-center shrink-0"
+                          className="w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 rounded-lg border-2 border-dashed border-stone-700 bg-stone-950/25 flex items-center justify-center shrink-0"
                         >
-                          <svg className="slot-silhouette w-9 h-11 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <svg className="slot-silhouette w-9 h-11 text-stone-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M12 22s7-4 7-9V6l-7-3-7 3v7c0 5 7 9 7 9z" />
                           </svg>
                         </div>
@@ -1328,7 +1328,7 @@ export default function App() {
                     const tooltipContent = (
                       <div className="flex flex-col gap-1 text-left leading-normal font-sans">
                         <span className="font-bold text-xs text-amber-200 font-pixel">{def.name}</span>
-                        <p className="text-[10px] text-slate-200 leading-relaxed">{def.description}</p>
+                        <p className="text-[10px] text-stone-200 leading-relaxed">{def.description}</p>
                       </div>
                     );
                     return (
@@ -1336,7 +1336,7 @@ export default function App() {
                         <button
                           onClick={() => handleSpellClick(i)}
                           className={`w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 rounded-lg border-2 transition select-none flex items-center justify-center relative shrink-0 ${
-                            isActive ? 'border-amber-500 bg-amber-950/40 ring-1 ring-amber-500 shadow-md animate-pulse' : 'border-slate-850 bg-slate-950/30 hover:border-slate-700'
+                            isActive ? 'border-amber-500 bg-amber-950/40 ring-1 ring-amber-500 shadow-md animate-pulse' : 'border-stone-850 bg-stone-950/30 hover:border-stone-700'
                           }`}
                         >
                           <div className="scale-90 md:scale-100 transform origin-center">
@@ -1351,7 +1351,7 @@ export default function App() {
             </div>
 
             {/* Row 2: ChainBoard play table */}
-            <div className="flex-1 min-h-0 relative z-10 rounded-2xl overflow-hidden shadow-xl border border-slate-950 felt-board">
+            <div className="flex-1 min-h-0 relative z-10 rounded-2xl overflow-hidden shadow-xl border border-stone-950 felt-board">
               <PixiEffectsLayer
                 ref={pixiBoardRef}
                 variant="board"
@@ -1389,7 +1389,7 @@ export default function App() {
               )}
               {charmPopupText && (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center z-50">
-                  <div className="font-pixel text-4xl lg:text-5xl font-bold text-amber-300 tracking-wide text-center px-8 py-4 rounded-2xl bg-slate-900/85 border-2 border-amber-500 shadow-[0_0_25px_rgba(251,191,36,0.6)] animate-score-step-pop">
+                  <div className="font-pixel text-4xl lg:text-5xl font-bold text-amber-300 tracking-wide text-center px-8 py-4 rounded-2xl bg-stone-900/85 border-2 border-amber-500 shadow-[0_0_25px_rgba(251,191,36,0.6)] animate-score-step-pop">
                     {charmPopupText}
                   </div>
                 </div>
@@ -1404,8 +1404,9 @@ export default function App() {
             </div>
 
             {/* Row 3: Domino Hand + draw deck remaining — no panel chrome, sits directly on
-                the felt table like Row 1's charm/spell slots. */}
-            <div className="flex gap-1.5 md:gap-2 lg:gap-3 shrink-0 items-end justify-between overflow-visible relative z-20">
+                the felt table like Row 1's charm/spell slots. mb lifts it clear of the screen
+                edge instead of sitting flush against it. */}
+            <div className="flex gap-1.5 md:gap-2 lg:gap-3 shrink-0 items-end justify-between overflow-visible relative z-20 mb-1 md:mb-2 lg:mb-3">
               <div className="flex-1 min-w-0 overflow-visible">
                 <StoneHand
                   stones={game.hand}
@@ -1423,12 +1424,12 @@ export default function App() {
 
               {/* Deck remaining pile indicator — same footprint as a charm/spell card */}
               <div className="shrink-0 flex flex-col items-center justify-center gap-1">
-                <div className="w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 bg-red-800 rounded-lg border-2 border-red-700/80 shadow-[0_4px_6px_rgba(0,0,0,0.5)] flex items-center justify-center font-pixel text-slate-200 text-xs md:text-sm font-bold leading-none animate-pulse relative overflow-hidden select-none">
+                <div className="w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 bg-red-800 rounded-lg border-2 border-red-700/80 shadow-[0_4px_6px_rgba(0,0,0,0.5)] flex items-center justify-center font-pixel text-stone-200 text-xs md:text-sm font-bold leading-none animate-pulse relative overflow-hidden select-none">
                   <div className="absolute inset-1.5 border border-red-650/40 rounded flex items-center justify-center">
                     <span className="text-2xl md:text-3xl opacity-40">🀲</span>
                   </div>
                 </div>
-                <span className="text-[9px] font-mono text-slate-400 font-bold whitespace-nowrap">
+                <span className="text-[9px] font-mono text-stone-400 font-bold whitespace-nowrap">
                   {game.stoneDeck.remaining}/28
                 </span>
               </div>
@@ -1468,7 +1469,7 @@ export default function App() {
           {content}
           {/* Top-anchored (not centered): the Cash Out ledger drops down from the game screen's
               own top edge like a drawer, instead of floating as a detached card mid-screen. */}
-          <div className="absolute inset-0 z-50 flex items-start justify-center bg-slate-950/85 backdrop-blur-sm overflow-hidden animate-fade-in">
+          <div className="absolute inset-0 z-50 flex items-start justify-center bg-stone-950/85 backdrop-blur-sm overflow-hidden animate-fade-in">
             <RoundRewardScreen reward={run.lastRoundReward} onContinue={handleProceedToShop} />
           </div>
         </div>
@@ -1599,7 +1600,7 @@ export default function App() {
         {/* Zamanı Büken Sarkaç rescue moment — big, unmissable, screen-shaking reveal */}
         {rescueMessage && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center z-70">
-            <div className="font-pixel text-2xl md:text-4xl font-black text-sky-300 tracking-widest text-center px-8 py-4 rounded-2xl bg-slate-950/90 border-4 border-sky-400 shadow-[0_0_40px_rgba(56,189,248,0.9)] animate-score-step-pop uppercase">
+            <div className="font-pixel text-2xl md:text-4xl font-black text-sky-300 tracking-widest text-center px-8 py-4 rounded-2xl bg-stone-950/90 border-4 border-sky-400 shadow-[0_0_40px_rgba(56,189,248,0.9)] animate-score-step-pop uppercase">
               ⏪ {rescueMessage}
             </div>
           </div>
@@ -1608,7 +1609,7 @@ export default function App() {
         {/* Toast: transient success/error feedback */}
         {message && (
           <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 z-60 animate-toast-in">
-            <p className="rounded-lg bg-slate-900/95 border border-slate-700 px-4 py-2 text-xs font-mono text-slate-200 shadow-xl whitespace-nowrap">
+            <p className="rounded-lg bg-stone-900/95 border border-stone-700 px-4 py-2 text-xs font-mono text-stone-200 shadow-xl whitespace-nowrap">
               {message}
             </p>
           </div>

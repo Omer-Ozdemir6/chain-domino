@@ -177,7 +177,7 @@ export default function CharmBar({
     <div className="flex flex-col gap-2 relative z-30">
       {layout === 'horizontal' && (
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-450 dark:text-slate-550 font-pixel">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-stone-450 dark:text-stone-550 font-pixel">
             Tılsımların ({charms.length}/{maxCharmSlots})
           </h2>
         </div>
@@ -193,9 +193,9 @@ export default function CharmBar({
             return (
               <div
                 key={`empty-${i}`}
-                className="relative flex flex-col items-center justify-center w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 p-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 shrink-0"
+                className="relative flex flex-col items-center justify-center w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 p-2 rounded-lg border-2 border-dashed border-stone-300 dark:border-stone-700 shrink-0"
               >
-                <svg className="slot-silhouette w-9 h-11 text-slate-400 dark:text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg className="slot-silhouette w-9 h-11 text-stone-400 dark:text-stone-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="4" y="2" width="16" height="20" rx="2.5" />
                   <circle cx="12" cy="10" r="2.5" fill="currentColor" stroke="none" />
                   <path d="M12 12.5v3" />
@@ -215,7 +215,7 @@ export default function CharmBar({
                   {charm.curse ? 'LANETLİ' : charm.rarity}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-200 leading-relaxed">
+              <p className="text-[10px] text-stone-200 leading-relaxed">
                 {charm.description}
               </p>
               {hasDurability && (
@@ -237,7 +237,7 @@ export default function CharmBar({
             ? charm.signature.visual === 'vortex' ? 'ring-4 ring-violet-400 shadow-[0_0_30px_rgba(167,139,250,0.9)]'
               : charm.signature.visual === 'gnaw' ? 'animate-bounce ring-4 ring-rose-500 shadow-[0_0_25px_rgba(244,63,94,0.85)]'
               : charm.signature.visual === 'rewind' ? 'ring-4 ring-sky-400 shadow-[0_0_25px_rgba(56,189,248,0.85)]'
-              : 'ring-4 ring-slate-300 shadow-[0_0_25px_rgba(226,232,240,0.85)]' // 'smoke'
+              : 'ring-4 ring-stone-300 shadow-[0_0_25px_rgba(226,232,240,0.85)]' // 'smoke'
             : '';
           const isUsedUp = Boolean(charm.interactive) && activatedCharmIds.includes(charm.id);
           const isArmed = armedCharmId === charm.id;
@@ -312,7 +312,7 @@ export default function CharmBar({
                 )}
 
                 {/* Rarity Gem indicators in top corner (Balatro style) */}
-                <div className={`absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 ${gemClass}`} title={charm.curse ? 'Lanetli' : charm.rarity} />
+                <div className={`absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-stone-950/40 z-10 ${gemClass}`} title={charm.curse ? 'Lanetli' : charm.rarity} />
 
                 {/* Visual Icon Art — Massive Balatro Joker graphics, fills the card body */}
                 <div className="flex-1 flex items-center justify-center transform scale-[1.5] md:scale-[1.8] lg:scale-[2.1] origin-center my-auto pointer-events-none">

@@ -27,7 +27,7 @@ interface ChainBoardProps {
 }
 
 const SLOT_CLASS: Record<SlotState, string> = {
-  none: 'border-dashed border-slate-300 text-slate-300 dark:border-slate-600 dark:text-slate-600',
+  none: 'border-dashed border-stone-300 text-stone-300 dark:border-stone-600 dark:text-stone-600',
   legal: 'cursor-pointer border-solid border-emerald-500 bg-emerald-50 text-emerald-500 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50',
   illegal: 'cursor-not-allowed border-solid border-rose-400 bg-rose-50 text-rose-400 dark:bg-rose-900/20',
 };
@@ -164,11 +164,11 @@ export default function ChainBoard({
     const showRootSlot = selectionKind === 'STONE';
     const rootSlotState: SlotState = showRootSlot ? (legalSlotIds.has('ROOT') ? 'legal' : 'illegal') : 'none';
     return (
-      <div className="flex h-full w-full items-center justify-center rounded-xl bg-slate-950/20 p-4 shadow-inner">
+      <div className="flex h-full w-full items-center justify-center rounded-xl bg-stone-950/20 p-4 shadow-inner">
         {showRootSlot ? (
           <SlotButton state={rootSlotState} onClick={() => onCommit('ROOT')} />
         ) : (
-          <span className="text-sm text-slate-300/70">Masa boş — bir taş seç.</span>
+          <span className="text-sm text-stone-300/70">Masa boş — bir taş seç.</span>
         )}
       </div>
     );
@@ -233,7 +233,7 @@ export default function ChainBoard({
   return (
     <div
       ref={containerRef}
-      className="flex h-full w-full overflow-hidden rounded-xl bg-slate-950/30 p-2 shadow-inner justify-center items-center"
+      className="flex h-full w-full overflow-hidden rounded-xl bg-stone-950/30 p-2 shadow-inner justify-center items-center"
     >
       <div
         style={{

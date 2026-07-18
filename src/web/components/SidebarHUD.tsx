@@ -70,7 +70,7 @@ interface SidebarHUDProps {
 }
 
 const BLIND_BADGE: Record<'SMALL' | 'BIG' | 'BOSS', { label: string; className: string }> = {
-  SMALL: { label: 'KÜÇÜK BLIND', className: 'bg-sky-700 border-2 border-sky-900 border-b-4 shadow-[0_3px_0_rgba(0,0,0,0.3)]' },
+  SMALL: { label: 'KÜÇÜK BLIND', className: 'bg-orange-800 border-2 border-orange-950 border-b-4 shadow-[0_3px_0_rgba(0,0,0,0.3)]' },
   BIG: { label: 'BÜYÜK BLIND', className: 'bg-amber-600 border-2 border-amber-800 border-b-4 shadow-[0_3px_0_rgba(0,0,0,0.3)]' },
   BOSS: { label: 'BOSS BLIND', className: 'bg-red-750 border-2 border-red-950 border-b-4 shadow-[0_3px_0_rgba(0,0,0,0.3)]' },
 };
@@ -158,7 +158,7 @@ export default function SidebarHUD({
           <div key={`tc-${previewScore?.chips ?? 0}`} className={`balatro-badge-blue flex flex-col items-center animate-number-pop ${scoring ? 'px-4 py-2.5' : 'px-3 py-1.5'}`}>
             <span className={`text-white font-pixel font-black ${scoring ? 'text-xl' : 'text-base'}`}>{previewScore ? Math.round(previewScore.chips) : 0}</span>
           </div>
-          <span className="text-slate-400 font-pixel text-base">X</span>
+          <span className="text-stone-400 font-pixel text-base">X</span>
           <div data-mult-badge key={`tm-${previewScore?.mult ?? 1}`} className={`balatro-badge-red flex flex-col items-center animate-number-pop ${scoring ? 'px-4 py-2.5' : 'px-3 py-1.5'}`}>
             <span className={`text-white font-pixel font-black ${scoring ? 'text-xl' : 'text-base'}`}>{previewScore ? Math.round(previewScore.mult) : 1}</span>
           </div>
@@ -166,23 +166,23 @@ export default function SidebarHUD({
 
         {/* Right: Round details */}
         <div className="flex gap-1.5 text-center shrink-0">
-          <div className="border border-slate-800 rounded bg-slate-900/40 px-2 py-1">
-            <span className="block text-[12px] text-slate-500 uppercase font-bold leading-none">Ante</span>
-            <span className="font-pixel text-base text-slate-200">{round}/{totalRounds}</span>
+          <div className="border border-stone-800 rounded bg-stone-900/40 px-2 py-1">
+            <span className="block text-[12px] text-stone-500 uppercase font-bold leading-none">Ante</span>
+            <span className="font-pixel text-base text-stone-200">{round}/{totalRounds}</span>
           </div>
-          <div className="border border-slate-800 rounded bg-slate-900/40 px-2 py-1">
-            <span className="block text-[12px] text-slate-500 uppercase font-bold leading-none">Raunt</span>
-            <span className="font-pixel text-base text-sky-300">{overallRound}/{maxOverallRounds}</span>
+          <div className="border border-stone-800 rounded bg-stone-900/40 px-2 py-1">
+            <span className="block text-[12px] text-stone-500 uppercase font-bold leading-none">Raunt</span>
+            <span className="font-pixel text-base text-orange-300">{overallRound}/{maxOverallRounds}</span>
           </div>
-          <div className={`border border-slate-800 rounded bg-slate-900/40 px-2 py-1 relative ${turnFlash ? 'animate-turn-ring-pulse' : ''}`}>
-            <span className="block text-[12px] text-slate-500 uppercase font-bold leading-none">Tur</span>
+          <div className={`border border-stone-800 rounded bg-stone-900/40 px-2 py-1 relative ${turnFlash ? 'animate-turn-ring-pulse' : ''}`}>
+            <span className="block text-[12px] text-stone-500 uppercase font-bold leading-none">Tur</span>
             <span key={turnsLeft} className="font-pixel text-base text-amber-400 inline-block animate-number-pop">{turnsLeft}</span>
             {turnFlash && (
               <span className="absolute -top-2 right-0 font-pixel text-xs text-rose-400 font-black animate-turn-lost-fall pointer-events-none">-1</span>
             )}
           </div>
-          <div className="border border-slate-800 rounded bg-slate-900/40 px-2 py-1">
-            <span className="block text-[12px] text-slate-500 uppercase font-bold leading-none">Cüzdan</span>
+          <div className="border border-stone-800 rounded bg-stone-900/40 px-2 py-1">
+            <span className="block text-[12px] text-stone-500 uppercase font-bold leading-none">Cüzdan</span>
             <span className="font-pixel text-base text-emerald-400">${money}</span>
           </div>
         </div>
@@ -191,16 +191,16 @@ export default function SidebarHUD({
   }
 
   return (
-    <aside className="w-56 lg:w-64 xl:w-80 bg-slate-900 border-r-4 border-slate-950 p-3 lg:p-4 xl:p-5 flex flex-col gap-3 lg:gap-4 text-white shrink-0 select-none h-full shadow-[5px_0_15px_rgba(0,0,0,0.5)] z-20 balatro-panel">
+    <aside className="w-56 lg:w-64 xl:w-80 bg-stone-900 border-r-4 border-stone-950 p-3 lg:p-4 xl:p-5 flex flex-col gap-3 lg:gap-4 text-white shrink-0 select-none h-full shadow-[5px_0_15px_rgba(0,0,0,0.5)] z-20 balatro-panel">
       {/* 1. Ante & Raunt Row */}
       <div className="flex gap-2.5 items-center justify-between shrink-0">
-        <div className="flex-1 bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-center shadow-inner">
-          <span className="block text-sm lg:text-base text-sky-400 font-bold uppercase tracking-widest font-pixel leading-none mb-1">Safha</span>
-          <span className="font-pixel text-2xl lg:text-3xl text-sky-200 font-black">{round} / {totalRounds}</span>
+        <div className="flex-1 bg-stone-950/70 border border-stone-800 rounded-xl px-3 py-2 text-center shadow-inner">
+          <span className="block text-sm lg:text-base text-amber-500 font-bold uppercase tracking-widest font-pixel leading-none mb-1">Safha</span>
+          <span className="font-pixel text-2xl lg:text-3xl text-amber-200 font-black">{round} / {totalRounds}</span>
         </div>
-        <div className="flex-1 bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-center shadow-inner">
-          <span className="block text-sm lg:text-base text-sky-400 font-bold uppercase tracking-widest font-pixel leading-none mb-1">Raunt</span>
-          <span className="font-pixel text-2xl lg:text-3xl text-sky-200 font-black">{overallRound} / {maxOverallRounds}</span>
+        <div className="flex-1 bg-stone-950/70 border border-stone-800 rounded-xl px-3 py-2 text-center shadow-inner">
+          <span className="block text-sm lg:text-base text-orange-400 font-bold uppercase tracking-widest font-pixel leading-none mb-1">Raunt</span>
+          <span className="font-pixel text-2xl lg:text-3xl text-orange-200 font-black">{overallRound} / {maxOverallRounds}</span>
         </div>
       </div>
 
@@ -217,7 +217,7 @@ export default function SidebarHUD({
           scoring ? 'animate-score-pulse ring-2 ring-emerald-500/50' : '',
         ].join(' ')}
       >
-        <div className="flex justify-between items-center text-sm lg:text-base text-slate-400 font-bold uppercase tracking-widest font-pixel border-b border-slate-800/40 pb-2">
+        <div className="flex justify-between items-center text-sm lg:text-base text-stone-400 font-bold uppercase tracking-widest font-pixel border-b border-stone-800/40 pb-2">
           <span>El Skoru</span>
           <span className="text-rose-455 font-black font-pixel text-base lg:text-lg drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]">HEDEF: {targetScore}</span>
         </div>
@@ -247,8 +247,8 @@ export default function SidebarHUD({
 
       {/* 3. Counters (Turns, Discards, Coins) */}
       <div className="grid grid-cols-3 gap-2 shrink-0">
-        <div className="flex flex-col items-center justify-center bg-slate-950/70 border border-slate-800 rounded-2xl py-2.5 shadow-inner relative">
-          <span className="text-sm lg:text-base text-slate-500 uppercase font-extrabold tracking-wider font-pixel mb-1.5">TUR</span>
+        <div className="flex flex-col items-center justify-center bg-stone-950/70 border border-stone-800 rounded-2xl py-2.5 shadow-inner relative">
+          <span className="text-sm lg:text-base text-stone-500 uppercase font-extrabold tracking-wider font-pixel mb-1.5">TUR</span>
           <div className={`w-13 h-13 rounded-full border-2 border-amber-500/80 flex items-center justify-center bg-amber-950/15 shadow-[0_0_8px_rgba(245,158,11,0.2)] relative ${turnFlash ? 'animate-turn-ring-pulse' : ''}`}>
             <span key={turnsLeft} className="font-pixel text-xl text-amber-400 font-black inline-block animate-number-pop">{turnsLeft}</span>
             {turnFlash && (
@@ -257,8 +257,8 @@ export default function SidebarHUD({
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center bg-slate-950/70 border border-slate-800 rounded-2xl py-2.5 shadow-inner">
-          <span className="text-sm lg:text-base text-slate-500 uppercase font-extrabold tracking-wider font-pixel mb-1.5">ISKARTA</span>
+        <div className="flex flex-col items-center justify-center bg-stone-950/70 border border-stone-800 rounded-2xl py-2.5 shadow-inner">
+          <span className="text-sm lg:text-base text-stone-500 uppercase font-extrabold tracking-wider font-pixel mb-1.5">ISKARTA</span>
           <div className="w-13 h-13 rounded-full border-2 border-rose-500/80 flex items-center justify-center bg-rose-950/15 shadow-[0_0_8px_rgba(239,68,68,0.2)] relative">
             <span key={discardsLeft} className="font-pixel text-xl text-rose-500 font-black inline-block animate-number-pop">{discardsLeft}</span>
             {discardFlash && (
@@ -267,8 +267,8 @@ export default function SidebarHUD({
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center bg-slate-950/70 border border-slate-800 rounded-2xl py-2.5 shadow-inner">
-          <span className="text-sm lg:text-base text-slate-500 uppercase font-extrabold tracking-wider font-pixel mb-1.5">CÜZDAN</span>
+        <div className="flex flex-col items-center justify-center bg-stone-950/70 border border-stone-800 rounded-2xl py-2.5 shadow-inner">
+          <span className="text-sm lg:text-base text-stone-500 uppercase font-extrabold tracking-wider font-pixel mb-1.5">CÜZDAN</span>
           <div className="w-13 h-13 rounded-full border-2 border-emerald-500/80 flex items-center justify-center bg-emerald-950/15 shadow-[0_0_8px_rgba(16,185,129,0.2)]">
             <span className="font-pixel text-xl text-emerald-400 font-black">${money}</span>
           </div>
@@ -280,7 +280,7 @@ export default function SidebarHUD({
           LCD panel into its own card, matching the reference screenshot's "Full House lvl.1"
           layout. Feeds from idle board preview while placing stones AND from the hand-preview
           buildup while a submission resolves — App.tsx switches the source, this card doesn't care. */}
-      <div className="bg-slate-950/60 border-2 border-slate-800 rounded-2xl p-3.5 shrink-0 text-center">
+      <div className="bg-stone-950/60 border-2 border-stone-800 rounded-2xl p-3.5 shrink-0 text-center">
         <div className="font-pixel text-amber-300 uppercase tracking-wide text-sm lg:text-base font-black mb-2 drop-shadow-[0_0_4px_rgba(251,191,36,0.4)]">
           {handType ? `${HAND_TYPE_LABEL[handType]} Lvl.${handLevels[handType] ?? 1}` : 'Masa Boş'}
         </div>
@@ -290,7 +290,7 @@ export default function SidebarHUD({
               {previewScore ? Math.round(previewScore.chips) : 0}
             </span>
           </div>
-          <span className="text-slate-400 font-pixel text-lg font-black">X</span>
+          <span className="text-stone-400 font-pixel text-lg font-black">X</span>
           <div data-mult-badge key={`m-${previewScore?.mult ?? 1}`} className={`balatro-badge-red flex items-center justify-center min-w-20 animate-number-pop transition-[padding] ${scoring ? 'px-5 py-4' : 'px-4 py-2.5'}`}>
             <span className={`text-white font-pixel font-black leading-none transition-[font-size] ${scoring ? 'text-3xl lg:text-4xl' : 'text-xl lg:text-2xl'}`}>
               {previewScore ? Math.round(previewScore.mult) : 1}
@@ -300,7 +300,7 @@ export default function SidebarHUD({
       </div>
 
       {/* 5. 3D action controls at the bottom */}
-      <div className="flex flex-col gap-2 mt-auto pt-3 border-t border-slate-800 shrink-0">
+      <div className="flex flex-col gap-2 mt-auto pt-3 border-t border-stone-800 shrink-0">
         <button
           type="button"
           onClick={onSubmit}
@@ -334,7 +334,7 @@ export default function SidebarHUD({
             <button
               type="button"
               onClick={onCancelDiscard}
-              className="btn-arcade btn-arcade-slate py-2.5 rounded-xl text-[13px] font-black text-slate-100 uppercase font-pixel"
+              className="btn-arcade btn-arcade-slate py-2.5 rounded-xl text-[13px] font-black text-stone-100 uppercase font-pixel"
             >
               İPTAL
             </button>
@@ -343,7 +343,7 @@ export default function SidebarHUD({
               type="button"
               onClick={onUndo}
               disabled={!canRecover || !canUndo}
-              className="btn-arcade btn-arcade-slate py-2.5 rounded-xl text-[13px] font-black text-slate-100 uppercase font-pixel"
+              className="btn-arcade btn-arcade-slate py-2.5 rounded-xl text-[13px] font-black text-stone-100 uppercase font-pixel"
             >
               GERİ AL
             </button>

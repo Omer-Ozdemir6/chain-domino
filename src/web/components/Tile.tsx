@@ -15,6 +15,10 @@ interface TileProps {
   isDouble?: boolean;
   /** Stack the two values top/bottom instead of side by side, for a north/south connection. */
   vertical?: boolean;
+  /** 'hand' renders at charm-card visual weight — used for the player's held stones, which sit
+   *  right next to (and should feel as substantial as) the charm/spell cards above them. Board
+   *  tiles stay at the compact default so the chain doesn't outgrow the table as it grows. */
+  size?: 'board' | 'hand';
   isGolden?: boolean;
   highlighted?: boolean;
   spellEffect?: 'GILD' | 'MAGNET' | 'BLUE' | 'RED' | 'BLUE_SPARKLE' | null;
@@ -32,7 +36,7 @@ function getModifierClasses(modifier?: TileModifier, isGolden?: boolean, isDoubl
 
   switch (modifier) {
     case 'OBSIDIAN':
-      return 'border-purple-600 shadow-[0_0_14px_3px_rgba(147,51,234,0.55)] ring-1 ring-purple-500 bg-slate-950/90 obsidian-tile';
+      return 'border-purple-600 shadow-[0_0_14px_3px_rgba(147,51,234,0.55)] ring-1 ring-purple-500 bg-stone-950/90 obsidian-tile';
     case 'IVORY':
       return 'border-stone-300 shadow-[0_0_12px_3px_rgba(245,245,244,0.6)] ring-1 ring-stone-200 bg-stone-50/90 ivory-tile';
     case 'AMBER':
@@ -40,7 +44,7 @@ function getModifierClasses(modifier?: TileModifier, isGolden?: boolean, isDoubl
     default:
       if (isGolden) return 'border-amber-400 shadow-[0_0_15px_3px_rgba(251,191,36,0.65)] ring-2 ring-amber-400 bg-amber-500/10 golden-tile';
       if (isDouble) return 'border-red-700 shadow-[0_0_10px_2px_rgba(185,28,28,0.35)] dark:border-red-600';
-      return 'border-slate-300 dark:border-slate-600';
+      return 'border-stone-300 dark:border-stone-600';
   }
 }
 
@@ -70,6 +74,7 @@ export default function Tile({
   frozen,
   isDouble,
   vertical,
+  size = 'board',
   isGolden,
   highlighted,
   spellEffect,
@@ -86,8 +91,15 @@ export default function Tile({
   // dark-mode-flips-to-light-text/dots logic would render numbers invisible on it — pin both
   // to a dark color specifically for this modifier instead of following the theme.
   const isIvory = modifier === 'IVORY';
-  const numberColorClass = isIvory ? 'text-slate-800' : 'text-slate-100';
-  const pipDotColorClass = isIvory ? 'bg-slate-800' : undefined;
+  const numberColorClass = isIvory ? 'text-stone-800' : 'text-stone-100';
+  const pipDotColorClass = isIvory ? 'bg-stone-800' : undefined;
+  const isHandSize = size === 'hand';
+  const cellSizeClass = isHandSize
+    ? 'h-14 w-16 md:h-16 md:w-20 lg:h-20 lg:w-24 gap-1 md:gap-1.5'
+    : 'h-14 w-10 md:h-16 md:w-11 lg:h-18 lg:w-13 gap-0.5 md:gap-1';
+  const numberTextClass = isHandSize
+    ? 'text-sm md:text-base lg:text-xl'
+    : 'text-xs md:text-sm lg:text-base';
 
   return (
     <button
@@ -95,9 +107,9 @@ export default function Tile({
       onClick={onClick}
       disabled={!clickable}
       className={[
-        'flex items-center rounded-lg border-2 bg-white font-mono text-sm md:text-base lg:text-lg font-semibold text-slate-800 shadow-[0_3px_0_rgba(0,0,0,0.15),0_8px_14px_rgba(0,0,0,0.4)] transition shrink-0 relative overflow-hidden',
+        'flex items-center rounded-lg border-2 bg-white font-mono text-sm md:text-base lg:text-lg font-semibold text-stone-800 shadow-[0_3px_0_rgba(0,0,0,0.15),0_8px_14px_rgba(0,0,0,0.4)] transition shrink-0 relative overflow-hidden',
         vertical ? 'flex-col' : 'flex-row',
-        'dark:bg-slate-800 dark:text-slate-100',
+        'dark:bg-stone-800 dark:text-stone-100',
         clickable ? 'cursor-pointer hover:-translate-y-1 hover:shadow-[0_5px_0_rgba(0,0,0,0.2),0_14px_20px_rgba(0,0,0,0.5)]' : 'cursor-default',
         modifierClasses,
         frozen && !highlighted ? 'opacity-60 saturate-50' : '',
@@ -107,8 +119,8 @@ export default function Tile({
       {modifierIndicator}
       {modifier === 'OBSIDIAN' && <div className="obsidian-cracks" />}
       {modifier === 'IVORY' && <div className="ivory-runes" />}
-      <span className={`flex h-14 w-10 md:h-16 md:w-11 lg:h-18 lg:w-13 flex-col items-center justify-center gap-0.5 md:gap-1 transition-colors ${leftConnected ? 'bg-amber-500/10' : ''}`}>
-        <span className={`text-xs md:text-sm lg:text-base font-pixel font-bold leading-none ${
+      <span className={`flex ${cellSizeClass} flex-col items-center justify-center transition-colors ${leftConnected ? 'bg-amber-500/10' : ''}`}>
+        <span className={`${numberTextClass} font-pixel font-bold leading-none ${
           leftConnected
             ? 'text-amber-300 animate-pulse drop-shadow-[0_0_6px_#fbbf24]'
             : (leftUpgrade && leftUpgrade > 0)
@@ -118,7 +130,8 @@ export default function Tile({
         <div className={leftConnected ? 'animate-pulse drop-shadow-[0_0_8px_#fbbf24] saturate-200' : ''}>
           <Pips
             value={left}
-            large
+            large={!isHandSize}
+            xl={isHandSize}
             dotColorClass={(leftUpgrade && leftUpgrade > 0) ? 'bg-cyan-500 dark:bg-cyan-300 shadow-[0_0_8px_#06b6d4]' : pipDotColorClass}
             sparkle={highlighted}
           />
@@ -126,12 +139,14 @@ export default function Tile({
       </span>
       <span
         className={[
-          vertical ? 'h-px w-10 md:w-11 lg:w-13' : 'h-10 md:h-11 lg:h-13 w-px',
-          isDouble ? 'bg-red-700 dark:bg-red-600' : 'bg-slate-300 dark:bg-slate-600',
+          vertical
+            ? (isHandSize ? 'h-px w-16 md:w-20 lg:w-24' : 'h-px w-10 md:w-11 lg:w-13')
+            : (isHandSize ? 'h-14 md:h-16 lg:h-20 w-px' : 'h-10 md:h-11 lg:h-13 w-px'),
+          isDouble ? 'bg-red-700 dark:bg-red-600' : 'bg-stone-300 dark:bg-stone-600',
         ].join(' ')}
       />
-      <span className={`flex h-14 w-10 md:h-16 md:w-11 lg:h-18 lg:w-13 flex-col items-center justify-center gap-0.5 md:gap-1 transition-colors ${rightConnected ? 'bg-amber-500/10' : ''}`}>
-        <span className={`text-xs md:text-sm lg:text-base font-pixel font-bold leading-none ${
+      <span className={`flex ${cellSizeClass} flex-col items-center justify-center transition-colors ${rightConnected ? 'bg-amber-500/10' : ''}`}>
+        <span className={`${numberTextClass} font-pixel font-bold leading-none ${
           rightConnected
             ? 'text-amber-300 animate-pulse drop-shadow-[0_0_6px_#fbbf24]'
             : (rightUpgrade && rightUpgrade > 0)
@@ -141,7 +156,8 @@ export default function Tile({
         <div className={rightConnected ? 'animate-pulse drop-shadow-[0_0_8px_#fbbf24] saturate-200' : ''}>
           <Pips
             value={right}
-            large
+            large={!isHandSize}
+            xl={isHandSize}
             dotColorClass={(rightUpgrade && rightUpgrade > 0) ? 'bg-cyan-500 dark:bg-cyan-300 shadow-[0_0_8px_#06b6d4]' : pipDotColorClass}
             sparkle={highlighted}
           />
