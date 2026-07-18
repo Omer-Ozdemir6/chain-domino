@@ -532,7 +532,7 @@ const ECONOMY_CHARMS: readonly CharmDef[] = [
   { id: 'lone_wolf', name: 'Yalnız Kurt', description: "Tahtadaki çift OLMAYAN her taş için +$2 kazandırır (Çift Avcısı'nın tersi).", cost: 7, rarity: 'UNCOMMON', createHooks: () => ({ onRoundEnd: (ctx) => ctx.nodes.filter((n) => !n.isDouble).length * 2 }) },
   { id: 'perfect_landing', name: 'Tam İsabet', description: "Round'u skoru TAM OLARAK hedefe eşit bitirirsen +$25 bonus.", cost: 12, rarity: 'LEGENDARY', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.finalScore === ctx.target ? 25 : 0) }) },
   { id: 'almost_there', name: 'Neredeyse Bitti', description: "1 tur kalmışken round'u kazanırsan +$7 bonus.", cost: 6, rarity: 'COMMON', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.turnsLeft === 1 ? 7 : 0) }) },
-  { id: 'comeback_kid', name: 'Geri Dönüş Çocuğu', description: "Round'u tam sınırda (turnsLeft 0 veya 1) kazanırsan +$10 bonus.", cost: 8, rarity: 'UNCOMMON', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.turnsLeft <= 1 ? 10 : 0) }) },
+  { id: 'comeback_kid', name: 'Geri Dönüş Çocuğu', description: "Raundu tam sınırda (son hamlede ya da bir önceki hamlede) kazanırsan +$10 bonus.", cost: 8, rarity: 'UNCOMMON', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.turnsLeft <= 1 ? 10 : 0) }) },
   { id: 'spinner_fan', name: 'Fırıldak Hayranı', description: 'Tahtada en az 2 çift (spinner) taş varsa +$10 bonus.', cost: 8, rarity: 'UNCOMMON', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.nodes.filter((n) => n.isDouble).length >= 2 ? 10 : 0) }) },
   { id: 'penny_pincher', name: 'Kuruşu Kurtaran', description: 'Her round sonunda +$4 kazandırır.', cost: 5, rarity: 'COMMON', createHooks: () => ({ onRoundEnd: () => 4 }) },
   { id: 'grand_hoard', name: 'Büyük Hazine', description: 'Tahtada 8 veya daha fazla taş biriktiyse (uzun round) +$12 bonus.', cost: 9, rarity: 'RARE', createHooks: () => ({ onRoundEnd: (ctx) => (ctx.nodes.length >= 8 ? 12 : 0) }) },
@@ -633,8 +633,8 @@ const CURSE_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'speed_demon',
-    name: 'Hız Şeytanı',
-    description: "turnsLeft 3 veya üzeriyle round'u kazanırsan +$20 verir, AMA son tura kalırsan (turnsLeft 0) -$5 kaybedersin.",
+    name: 'Aceleci İfrit',
+    description: "Raundu en az 3 hamle kalmışken kazanırsan +$20 verir, AMA son hamleye kalırsan -$5 kaybedersin.",
     cost: 9,
     rarity: 'RARE',
     curse: true,
@@ -810,7 +810,7 @@ const SYNERGY_CHARMS: readonly CharmDef[] = [
   {
     id: 'synergy_finisher_duo',
     name: 'Son Anda İkilisi',
-    description: "Son Anda Kurtuluş ve Erken Bitiş Ustası'na BİRLİKTE sahipsen, turnsLeft 0 iken ekstra +$5.",
+    description: "Son Anda Kurtuluş ve Erken Bitiş Ustası'na BİRLİKTE sahipsen, hiç hamle kalmadan kazanınca ekstra +$5.",
     cost: 8,
     rarity: 'UNCOMMON',
     createHooks: (ctx) => {
@@ -993,7 +993,7 @@ const NUMBER_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'high_five',
-    name: 'Beşli Çakış',
+    name: 'Beşinci Alamet',
     description: 'Tahtada TAM OLARAK 5 taş varsa +$16 bonus.',
     cost: 9,
     rarity: 'RARE',
