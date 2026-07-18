@@ -1191,7 +1191,7 @@ export default function App() {
                 <div className="w-6 h-9 bg-red-800 rounded border border-red-700/80 flex items-center justify-center font-pixel text-stone-200 text-xs">
                   <span>🀲</span>
                 </div>
-                <span className="text-[10px] font-mono text-stone-400 font-bold mt-0.5">{game.stoneDeck.remaining}/28</span>
+                <span className="text-[10px] font-mono text-stone-400 font-bold mt-0.5">{game.stoneDeck.remaining}/{run.customDeck.length}</span>
               </div>
             </div>
           </main>
@@ -1430,7 +1430,7 @@ export default function App() {
                   </div>
                 </div>
                 <span className="text-[9px] font-mono text-stone-400 font-bold whitespace-nowrap">
-                  {game.stoneDeck.remaining}/28
+                  {game.stoneDeck.remaining}/{run.customDeck.length}
                 </span>
               </div>
             </div>
