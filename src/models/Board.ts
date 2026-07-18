@@ -113,6 +113,15 @@ interface Move {
   parentSlotIndex: number | null;
 }
 
+export interface BoardSnapshot {
+  nodes: Array<[string, InternalNode]>;
+  edges: GraphEdge[];
+  rootNodeId: string | null;
+  unfrozenMoves: Move[];
+  matchMode: MatchMode;
+  branchingEnabled: boolean;
+}
+
 /**
  * A branching domino board: stones are graph nodes connected directly by classic end-matching
  * (equal pip value on the touching sides) — no operator sits between them.
@@ -137,6 +146,30 @@ export class Board {
 
   setBranchingEnabled(enabled: boolean): void {
     this.branchingEnabled = enabled;
+  }
+
+  /** A plain-data dump of every private field, for localStorage persistence — `nodes` is a Map
+   *  (not JSON-safe on its own), everything else here is already plain arrays/primitives. */
+  toSnapshot(): BoardSnapshot {
+    return {
+      nodes: Array.from(this.nodes.entries()),
+      edges: this.edges,
+      rootNodeId: this.rootNodeId,
+      unfrozenMoves: this.unfrozenMoves,
+      matchMode: this.matchMode,
+      branchingEnabled: this.branchingEnabled,
+    };
+  }
+
+  static fromSnapshot(snap: BoardSnapshot): Board {
+    const board = new Board();
+    board.nodes = new Map(snap.nodes);
+    board.edges = snap.edges;
+    board.rootNodeId = snap.rootNodeId;
+    board.unfrozenMoves = snap.unfrozenMoves;
+    board.matchMode = snap.matchMode;
+    board.branchingEnabled = snap.branchingEnabled;
+    return board;
   }
 
   isBranchingEnabled(): boolean {

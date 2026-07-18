@@ -34,10 +34,22 @@ export interface SubmitResult {
 /** Flat score bonus for placing every stone drawn this turn before submitting. */
 const HAND_EMPTIED_BONUS = 5;
 
+export interface GameStateSnapshot {
+  config: GameConfig;
+  board: ReturnType<Board['toSnapshot']>;
+  stoneDeck: DominoStone[];
+  hand: DominoStone[];
+  playedNodesThisRound: GraphNode[];
+  turn: number;
+  score: number;
+  status: GameStatus;
+  lossReason: LossReason;
+}
+
 export class GameState {
   readonly config: GameConfig;
   readonly stoneDeck: Deck;
-  readonly board = new Board();
+  readonly board: Board;
 
   hand: DominoStone[] = [];
   /** Every stone scored this round, across all submitted hands — the board itself is emptied
@@ -50,10 +62,41 @@ export class GameState {
   status: GameStatus = 'PLAYING';
   lossReason: LossReason = null;
 
-  constructor(config: GameConfig) {
+  /** `restore` lets fromSnapshot() hand in an already-rebuilt Board/Deck — both `board` and
+   *  `stoneDeck` are readonly, so this has to happen in the constructor, not a later method. */
+  constructor(config: GameConfig, restore?: { board: Board; stoneDeck: Deck }) {
     this.config = config;
-    this.stoneDeck = Deck.createStandardSet(config.maxPips ?? 6);
-    this.stoneDeck.shuffle();
+    this.board = restore?.board ?? new Board();
+    this.stoneDeck = restore?.stoneDeck ?? Deck.createStandardSet(config.maxPips ?? 6);
+    if (!restore) this.stoneDeck.shuffle();
+  }
+
+  toSnapshot(): GameStateSnapshot {
+    return {
+      config: this.config,
+      board: this.board.toSnapshot(),
+      stoneDeck: this.stoneDeck.toSnapshot(),
+      hand: this.hand,
+      playedNodesThisRound: this.playedNodesThisRound,
+      turn: this.turn,
+      score: this.score,
+      status: this.status,
+      lossReason: this.lossReason,
+    };
+  }
+
+  static fromSnapshot(snap: GameStateSnapshot): GameState {
+    const gs = new GameState(snap.config, {
+      board: Board.fromSnapshot(snap.board),
+      stoneDeck: Deck.fromSnapshot(snap.stoneDeck),
+    });
+    gs.hand = snap.hand;
+    gs.playedNodesThisRound = snap.playedNodesThisRound;
+    gs.turn = snap.turn;
+    gs.score = snap.score;
+    gs.status = snap.status;
+    gs.lossReason = snap.lossReason;
+    return gs;
   }
 
   /** Tops the stone hand up to its fixed slot count (never beyond). */

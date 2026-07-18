@@ -156,7 +156,10 @@ export default function App() {
   // The played tiles dissolve upward off the board (toward the score panel) once the hand fully
   // resolves, instead of instantly vanishing the instant the board is drained.
   const [isBoardExiting, setIsBoardExiting] = useState(false);
-  const [delayedPhase, setDelayedPhase] = useState<string>('START_SCREEN');
+  // Seeded from run.phase (not hardcoded 'START_SCREEN') so a run restored from localStorage on
+  // mount renders its actual saved screen immediately, instead of flashing the title screen for
+  // one frame before the phase-sync effect below catches up.
+  const [delayedPhase, setDelayedPhase] = useState<string>(run.phase);
   const [isGathering, setIsGathering] = useState(false);
   const [flyingParticles, setFlyingParticles] = useState<any[]>([]);
   // Faz 11: lower LCD panel — the CURRENT hand's live Chips×Mult buildup (stone-by-stone, then

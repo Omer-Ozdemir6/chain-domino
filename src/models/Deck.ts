@@ -44,4 +44,15 @@ export class Deck {
   getStones(): DominoStone[] {
     return this.stones;
   }
+
+  /** For localStorage persistence — the deck's own state is just this one array. */
+  toSnapshot(): DominoStone[] {
+    return this.stones;
+  }
+
+  static fromSnapshot(stones: DominoStone[]): Deck {
+    const deck = new Deck();
+    deck.stones = stones;
+    return deck;
+  }
 }

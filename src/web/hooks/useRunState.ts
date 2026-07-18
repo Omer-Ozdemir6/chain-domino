@@ -1,20 +1,27 @@
 import { useReducer, useRef } from 'react';
 import { RunState, type RunConfig } from '../../game/RunState.js';
 import type { GameState } from '../../game/GameState.js';
+import { loadSavedRun, saveRun } from '../persistence.js';
 
 /**
  * RunState is a mutable class, not immutable data. This hook keeps a single stable
  * instance and forces a re-render after every mutation instead of reducer-ifying it.
+ *
+ * Also owns the localStorage round-trip: a saved run (if any) is restored on first mount instead
+ * of a fresh instance, and every mutation below re-persists the current state afterward — so a
+ * page refresh (or the browser/tab closing) mid-run picks back up exactly where it left off,
+ * rather than losing the wallet, hand, and owned charms.
  */
 export function useRunState(config?: Partial<RunConfig>) {
   const [, bump] = useReducer((c: number) => c + 1, 0);
   const ref = useRef<RunState | null>(null);
-  if (!ref.current) ref.current = new RunState(config);
+  if (!ref.current) ref.current = loadSavedRun() ?? new RunState(config);
   const run = ref.current;
 
   /** Mutates the current round's GameState (place/undo/submit/skip). */
   function act<T>(fn: (game: GameState) => T): T {
     const result = run.act(fn);
+    saveRun(run);
     bump();
     return result;
   }
@@ -22,16 +29,20 @@ export function useRunState(config?: Partial<RunConfig>) {
   /** Mutates the run itself (buy/sell/reroll/leaveShop). */
   function shop<T>(fn: (run: RunState) => T): T {
     const result = fn(run);
+    saveRun(run);
     bump();
     return result;
   }
 
   /** Replaces the run with a brand-new instance. If `after` is given, it runs against the fresh
    *  instance before the re-render — lets callers (e.g. "New Run") jump straight past the start
-   *  screen into a freshly initialized run instead of landing back on the main menu. */
+   *  screen into a freshly initialized run instead of landing back on the main menu. A bare
+   *  reset() (no `after`) is how "Ana Menüye Dön" un-does a save: the fresh instance sits at
+   *  'START_SCREEN', and saveRun() treats that phase as "nothing to persist" and clears it. */
   function reset(after?: (freshRun: RunState) => void): void {
     ref.current = new RunState(config);
     after?.(ref.current);
+    saveRun(ref.current);
     bump();
   }
 

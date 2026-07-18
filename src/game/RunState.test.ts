@@ -631,4 +631,46 @@ describe('RunState', () => {
       expect(run.game.board.isBranchingEnabled()).toBe(true);
     });
   });
+
+  describe('toSnapshot / fromSnapshot (localStorage persistence)', () => {
+    it('round-trips a shop-phase run through JSON, preserving wallet/charms/deck', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.phase = 'SHOP';
+      run.money = 42;
+      run.ownedCharmIds = ['division_master', 'chain_end_interest'];
+      run.round = 3;
+
+      const restored = RunState.fromSnapshot(JSON.parse(JSON.stringify(run.toSnapshot())));
+
+      expect(restored.money).toBe(42);
+      expect(restored.ownedCharmIds).toEqual(['division_master', 'chain_end_interest']);
+      expect(restored.round).toBe(3);
+      expect(restored.phase).toBe('SHOP');
+      expect(restored.customDeck).toEqual(run.customDeck);
+      // A restored run must still be playable — sellCharm needs SHOP phase + a live money field.
+      expect(restored.sellCharm('division_master').ok).toBe(true);
+    });
+
+    it('round-trips a mid-hand board (a placed, not-yet-submitted stone) through JSON', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.startBlind('SMALL');
+      const first = run.game.hand[0];
+      run.act((g) => g.playStone(first.id, 'ROOT'));
+
+      const restored = RunState.fromSnapshot(JSON.parse(JSON.stringify(run.toSnapshot())));
+
+      expect(restored.game.board.getNodes()).toHaveLength(1);
+      expect(restored.game.board.getRootNodeId()).toBe(run.game.board.getRootNodeId());
+      expect(restored.game.hand.map((s) => s.id)).toEqual(run.game.hand.map((s) => s.id));
+      expect(restored.game.turn).toBe(run.game.turn);
+    });
+
+    it('an empty save (never past START_SCREEN) has no game to snapshot and does not crash', () => {
+      const run = new RunState();
+      const snap = run.toSnapshot();
+      expect(snap.game).toBeNull();
+    });
+  });
 });

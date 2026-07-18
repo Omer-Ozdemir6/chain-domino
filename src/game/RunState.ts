@@ -1,4 +1,4 @@
-import { GameState, type GameConfig } from './GameState.js';
+import { GameState, type GameConfig, type GameStateSnapshot } from './GameState.js';
 import { CHARMS } from '../models/CharmRegistry.js';
 import type { CharmDef, CharmHooks, RoundEndContext } from '../models/Charm.js';
 import type { DominoStone, TileModifier, HandType } from '../models/types.js';
@@ -63,6 +63,18 @@ export interface RunConfig {
   rerollCost: number;
   /** Every blind target multiplied by this — 1 normally, 2 for the "Altın Ateş" challenge. */
   targetMultiplier?: number;
+}
+
+/** A plain-data dump of a whole RunState, JSON-safe for localStorage. Loosely typed on purpose —
+ *  it's produced by spreading `this` (see RunState.toSnapshot()), so trying to hand-list every one
+ *  of the class's 40+ fields here would just be a second place they could quietly drift out of
+ *  sync. `config` and `game` are the two fields anything outside RunState actually needs to know
+ *  the real shape of; everything else round-trips through Object.assign untouched. */
+export interface RunStateSnapshot {
+  config: RunConfig;
+  game: GameStateSnapshot | null;
+  activatedCharmIdsThisTurn?: string[];
+  [key: string]: unknown;
 }
 
 // Halved relative to the original curve: the natural-sum + hand-type-level scoring engine (plus
@@ -602,6 +614,30 @@ export class RunState {
     this.money = this.config.startingMoney;
     this.currentTarget = this.config.startingTarget;
     this.currentRerollCost = this.config.rerollCost;
+  }
+
+  /** A plain-data dump of the whole run for localStorage persistence. Most fields are already
+   *  primitives/arrays/records and survive a spread untouched; the three that don't get handled
+   *  explicitly: `game` (a class instance -> its own toSnapshot()), `activatedCharmIdsThisTurn`
+   *  (a Set -> array), and `roundHooks` (an array of closures over the owned charms — genuinely
+   *  not serializable, and not needed to be: fromSnapshot() rebuilds it via wireCharms()). */
+  toSnapshot(): RunStateSnapshot {
+    const snap = { ...this } as unknown as RunStateSnapshot & { roundHooks?: unknown };
+    snap.game = this.game ? this.game.toSnapshot() : null;
+    snap.activatedCharmIdsThisTurn = Array.from(this.activatedCharmIdsThisTurn);
+    delete snap.roundHooks;
+    return snap;
+  }
+
+  static fromSnapshot(snap: RunStateSnapshot): RunState {
+    const run = new RunState(snap.config);
+    Object.assign(run, snap);
+    run.game = snap.game ? GameState.fromSnapshot(snap.game) : (undefined as unknown as GameState);
+    (run as unknown as { activatedCharmIdsThisTurn: Set<string> }).activatedCharmIdsThisTurn = new Set(
+      snap.activatedCharmIdsThisTurn ?? []
+    );
+    (run as unknown as { roundHooks: CharmHooks[] }).roundHooks = run.phase === 'START_SCREEN' ? [] : run.wireCharms();
+    return run;
   }
 
   initializeRun(deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', challengeId: string | null = null): void {
