@@ -15,13 +15,13 @@ function renderBoosterIcon(id: string, size?: 'STANDARD' | 'JUMBO') {
   const isJumbo = size === 'JUMBO';
 
   return (
-    <div className={`${isJumbo ? 'w-18 h-24' : 'w-14 h-20'} rounded-xl bg-gradient-to-br ${color} flex flex-col items-center justify-between border-2 border-white/20 shadow-lg relative overflow-hidden select-none`}>
-      <div className="absolute inset-0 bg-opacity-20 bg-white swirl-felt pointer-events-none" />
+    <div className={`${isJumbo ? 'w-24 h-32' : 'w-20 h-28'} rounded-xl bg-gradient-to-br ${color} flex flex-col items-center justify-between border-2 border-white/20 shadow-lg relative overflow-hidden select-none`}>
+      <div className="absolute inset-0 bg-white/20 swirl-felt pointer-events-none" />
       {isJumbo && (
         <span className="absolute top-1 left-1/2 -translate-x-1/2 bg-amber-500 text-stone-950 text-[9px] font-pixel font-black px-1.5 py-0.5 rounded shadow z-10 tracking-widest">JUMBO</span>
       )}
-      <span className="font-pixel text-[10px] text-white font-extrabold rotate-12 drop-shadow-md mt-6">PAKET</span>
-      <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping mb-3" />
+      <span className="font-pixel text-sm text-white font-extrabold rotate-12 drop-shadow-md mt-8">PAKET</span>
+      <div className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-ping mb-4" />
     </div>
   );
 }
@@ -29,13 +29,13 @@ function renderBoosterIcon(id: string, size?: 'STANDARD' | 'JUMBO') {
 function renderRuneIcon(size?: 'STANDARD' | 'JUMBO') {
   const isJumbo = size === 'JUMBO';
   return (
-    <div className={`${isJumbo ? 'w-18 h-24' : 'w-14 h-20'} rounded-xl bg-gradient-to-br from-rose-700 to-fuchsia-900 border-rose-500/50 shadow-[0_0_10px_rgba(225,29,72,0.4)] flex flex-col items-center justify-between border-2 border-white/20 shadow-lg relative overflow-hidden select-none`}>
-      <div className="absolute inset-0 bg-opacity-20 bg-white swirl-felt pointer-events-none" />
+    <div className={`${isJumbo ? 'w-24 h-32' : 'w-20 h-28'} rounded-xl bg-gradient-to-br from-rose-700 to-fuchsia-900 border-rose-500/50 shadow-[0_0_10px_rgba(225,29,72,0.4)] flex flex-col items-center justify-between border-2 border-white/20 shadow-lg relative overflow-hidden select-none`}>
+      <div className="absolute inset-0 bg-white/20 swirl-felt pointer-events-none" />
       {isJumbo && (
         <span className="absolute top-1 left-1/2 -translate-x-1/2 bg-amber-500 text-stone-950 text-[9px] font-pixel font-black px-1.5 py-0.5 rounded shadow z-10 tracking-widest">JUMBO</span>
       )}
-      <span className="font-pixel text-[10px] text-white font-extrabold rotate-12 drop-shadow-md mt-6">RÜN</span>
-      <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-300 animate-ping mb-3" />
+      <span className="font-pixel text-sm text-white font-extrabold rotate-12 drop-shadow-md mt-8">RÜN</span>
+      <div className="w-2.5 h-2.5 rounded-full bg-fuchsia-300 animate-ping mb-4" />
     </div>
   );
 }
