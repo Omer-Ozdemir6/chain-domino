@@ -44,6 +44,20 @@ const HAND_TYPE_LABEL: Record<HandType, string> = {
  */
 const LANDSCAPE_CANVAS = { width: 1440, height: 900 };
 
+/** Reads the plain-number mirrors of `env(safe-area-inset-*)` set on `:root` in index.css —
+ *  `env()` itself has no JS-readable equivalent, custom properties are the standard bridge.
+ *  Returns all zeros (a harmless no-op) on a device/browser with no notch/rounded-corner insets. */
+function readSafeAreaInsets(): { top: number; right: number; bottom: number; left: number } {
+  const style = getComputedStyle(document.documentElement);
+  const parse = (name: string) => parseFloat(style.getPropertyValue(name)) || 0;
+  return {
+    top: parse('--sat'),
+    right: parse('--sar'),
+    bottom: parse('--sab'),
+    left: parse('--sal'),
+  };
+}
+
 /** Picks the matching design canvas for the real viewport's orientation and computes its fit scale. */
 function useCanvasScale(): { scale: number; width: number; height: number; isPortrait: boolean } {
   const [state, setState] = useState({ scale: 1, ...LANDSCAPE_CANVAS, isPortrait: false });
@@ -54,13 +68,21 @@ function useCanvasScale(): { scale: number; width: number; height: number; isPor
       // pushed bottom-anchored UI (the hand row, the action buttons) below the real fold.
       const vw = window.visualViewport?.width ?? window.innerWidth;
       const vh = window.visualViewport?.height ?? window.innerHeight;
-      const isPortrait = vh > vw;
+      // Shrink the fit area by the device's actual notch/home-indicator/rounded-corner insets —
+      // centering alone (the root's `.safe-area-pad`) keeps the canvas's CENTER clear, but a
+      // canvas sized to the full raw viewport can still have its own EDGES bleed under a notch
+      // on a narrow/extreme aspect ratio. This is what actually keeps the HUD and action buttons
+      // from ever landing behind one.
+      const insets = readSafeAreaInsets();
+      const safeVw = Math.max(1, vw - insets.left - insets.right);
+      const safeVh = Math.max(1, vh - insets.top - insets.bottom);
+      const isPortrait = safeVh > safeVw;
       if (isPortrait) {
-        setState({ scale: 1, width: vw, height: vh, isPortrait: true });
+        setState({ scale: 1, width: safeVw, height: safeVh, isPortrait: true });
       } else {
-        const scale = Math.min(vw / LANDSCAPE_CANVAS.width, vh / LANDSCAPE_CANVAS.height);
-        const width = vw / scale;
-        const height = vh / scale;
+        const scale = Math.min(safeVw / LANDSCAPE_CANVAS.width, safeVh / LANDSCAPE_CANVAS.height);
+        const width = safeVw / scale;
+        const height = safeVh / scale;
         setState({ scale, width, height, isPortrait: false });
       }
     }
@@ -80,6 +102,12 @@ export default function App() {
   const { run, act, shop, reset } = useRunState(RUN_CONFIG);
   const [selection, setSelection] = useState<Selection>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // "TAŞI DEĞİŞTİR": pick any number of hand stones (1 or many), confirm once — only those
+  // stones go to the discard pile and get replaced, for a single discard charge regardless of
+  // how many were picked. Distinct from `selection` (which is for board placement, one stone
+  // at a time) since this needs to hold an arbitrary multi-select set instead.
+  const [isDiscardMode, setIsDiscardMode] = useState(false);
+  const [discardTargets, setDiscardTargets] = useState<Set<string>>(new Set());
   // "Müzenin Kapıları Aralanıyor" — a one-time dark title-card shown before the main menu on
   // this page load only (never replays on subsequent runs/resets within the same session).
   const [introDone, setIntroDone] = useState(false);
@@ -279,10 +307,22 @@ export default function App() {
 
   function handleActivateCharm(charmId: string): void {
     setActiveSpellIndex(null);
+    setIsDiscardMode(false);
+    setDiscardTargets(new Set());
     setArmedCharmId((prev) => (prev === charmId ? null : charmId));
   }
 
   function selectStone(id: string): void {
+    if (isDiscardMode) {
+      setDiscardTargets((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+      return;
+    }
+
     if (armedCharmId !== null) {
       const charmDef = CHARMS.find((c) => c.id === armedCharmId);
       const res = shop((r) => r.useActiveCharm(armedCharmId, id));
@@ -627,16 +667,37 @@ export default function App() {
     setSelection(null);
   }
 
+  // "TAŞI DEĞİŞTİR" is a two-step button: the first press arms discard-select mode (stones in
+  // hand become tappable, toggling in/out of `discardTargets` instead of going to the board);
+  // the second press commits — ONLY the picked stones are discarded and replaced, for exactly
+  // one discard charge no matter how many were picked. Pressing it while armed but with nothing
+  // picked just cancels back out instead of erroring.
   function handleDiscard(): void {
-    const stoneIds = game.hand.map((s) => s.id);
-    const res = shop((r) => r.discardSelected(stoneIds));
+    if (!isDiscardMode) {
+      setIsDiscardMode(true);
+      setSelection(null);
+      setArmedCharmId(null);
+      setActiveSpellIndex(null);
+      return;
+    }
+    if (discardTargets.size === 0) {
+      setIsDiscardMode(false);
+      return;
+    }
+    const res = shop((r) => r.discardSelected([...discardTargets]));
     if (res.ok) {
       playSound('discard');
-      setMessage('Eliniz ıskarta edildi, yenileri çekildi.');
+      setMessage(`${discardTargets.size} taş değiştirildi, yenileri çekildi.`);
     } else {
       setMessage('Hata: ' + res.error);
     }
-    setSelection(null);
+    setIsDiscardMode(false);
+    setDiscardTargets(new Set());
+  }
+
+  function handleCancelDiscard(): void {
+    setIsDiscardMode(false);
+    setDiscardTargets(new Set());
   }
 
   function handleSelectNode(nodeId: string): void {
@@ -666,6 +727,8 @@ export default function App() {
   }
 
   function handleSpellClick(index: number): void {
+    setIsDiscardMode(false);
+    setDiscardTargets(new Set());
     const item = run.consumables[index];
     if (item === 'consumable_clover') {
       const res = shop((r) => r.useConsumable(index, ''));
@@ -994,6 +1057,9 @@ export default function App() {
             onSubmit={handleSubmit}
             onUndo={handleUndo}
             onDiscard={handleDiscard}
+            isDiscardMode={isDiscardMode}
+            discardTargetCount={discardTargets.size}
+            onCancelDiscard={handleCancelDiscard}
             onSkip={handleSkip}
             message={message}
             activeBossId={run.activeBossId}
@@ -1125,6 +1191,8 @@ export default function App() {
                   isCharmTargeting={armedCharmId !== null}
                   activationEffect={charmActivationEffect}
                   isGathering={isGathering}
+                  isDiscardMode={isDiscardMode}
+                  discardTargets={discardTargets}
                 />
               </div>
               <div className="w-12 shrink-0 flex flex-col items-center justify-center border-l border-slate-800/40 pl-2">
@@ -1149,19 +1217,29 @@ export default function App() {
             <button
               type="button"
               onClick={handleDiscard}
-              disabled={!canRecoverNow || run.discardsLeft <= 0}
+              disabled={isDiscardMode ? discardTargets.size === 0 : (!canRecoverNow || run.discardsLeft <= 0)}
               className="py-1.5 rounded-lg bg-rose-805 hover:bg-rose-705 active:translate-y-0.5 text-xs font-bold text-white shadow border-b-2 border-rose-955 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase font-pixel"
             >
-              ISKARTA
+              {isDiscardMode ? `ONAYLA (${discardTargets.size})` : 'TAŞI DEĞİŞTİR'}
             </button>
-            <button
-              type="button"
-              onClick={handleUndo}
-              disabled={!canRecoverNow || !canUndoNow}
-              className="py-1.5 rounded-lg bg-slate-700 hover:bg-slate-650 active:translate-y-0.5 text-xs font-bold text-slate-200 border-b-2 border-slate-900 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase font-pixel"
-            >
-              GERİ AL
-            </button>
+            {isDiscardMode ? (
+              <button
+                type="button"
+                onClick={handleCancelDiscard}
+                className="py-1.5 rounded-lg bg-slate-700 hover:bg-slate-650 active:translate-y-0.5 text-xs font-bold text-slate-200 border-b-2 border-slate-900 transition uppercase font-pixel"
+              >
+                İPTAL
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={!canRecoverNow || !canUndoNow}
+                className="py-1.5 rounded-lg bg-slate-700 hover:bg-slate-650 active:translate-y-0.5 text-xs font-bold text-slate-200 border-b-2 border-slate-900 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase font-pixel"
+              >
+                GERİ AL
+              </button>
+            )}
             <button
               type="button"
               onClick={handleSkip}
@@ -1199,6 +1277,9 @@ export default function App() {
             onSubmit={handleSubmit}
             onUndo={handleUndo}
             onDiscard={handleDiscard}
+            isDiscardMode={isDiscardMode}
+            discardTargetCount={discardTargets.size}
+            onCancelDiscard={handleCancelDiscard}
             onSkip={handleSkip}
             message={message}
             activeBossId={run.activeBossId}
@@ -1350,6 +1431,8 @@ export default function App() {
                   isCharmTargeting={armedCharmId !== null}
                   activationEffect={charmActivationEffect}
                   isGathering={isGathering}
+                  isDiscardMode={isDiscardMode}
+                  discardTargets={discardTargets}
                 />
               </div>
 

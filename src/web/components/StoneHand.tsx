@@ -14,6 +14,10 @@ interface StoneHandProps {
   isCharmTargeting?: boolean;
   /** The stone just clicked to activate an interactive charm — plays a crack/flip animation. */
   activationEffect?: { stoneId: string; kind: 'SPLIT' | 'SWAP' } | null;
+  /** "TAŞI DEĞİŞTİR" is armed — clicking a stone now toggles it in/out of `discardTargets`
+   *  (multi-select) instead of arming it for board placement. */
+  isDiscardMode?: boolean;
+  discardTargets?: Set<string>;
 }
 
 export default function StoneHand({
@@ -25,6 +29,8 @@ export default function StoneHand({
   isGathering = false,
   isCharmTargeting,
   activationEffect,
+  isDiscardMode = false,
+  discardTargets,
 }: StoneHandProps) {
   // The hand row scrolls horizontally (overflow-x-auto), which per the CSS overflow spec forces
   // its vertical overflow to clip too — a stone lifted on selection (and its info tooltip above
@@ -69,9 +75,12 @@ export default function StoneHand({
             ? activationEffect.kind === 'SPLIT' ? 'animate-charm-crack' : 'animate-charm-mirror-flip'
             : '';
           const isSelected = selectedId === s.id;
-          const selectedClass = isSelected 
-            ? '-translate-y-8 z-30 scale-105 shadow-[0_15px_30px_rgba(0,0,0,0.3)] animate-levitate' 
-            : 'hover:-translate-y-2 hover:z-20';
+          const isMarkedForDiscard = isDiscardMode && Boolean(discardTargets?.has(s.id));
+          const selectedClass = isMarkedForDiscard
+            ? '-translate-y-6 z-30 scale-105 shadow-[0_15px_30px_rgba(0,0,0,0.3)]'
+            : isSelected
+              ? '-translate-y-8 z-30 scale-105 shadow-[0_15px_30px_rgba(0,0,0,0.3)] animate-levitate'
+              : 'hover:-translate-y-2 hover:z-20';
 
           const hasInfo = Boolean(s.isGolden || s.modifier || s.leftUpgrade || s.rightUpgrade);
 
@@ -85,12 +94,18 @@ export default function StoneHand({
                 'shrink-0 relative transition-all duration-200',
                 selectedClass,
                 isSpellTargeting || isCharmTargeting ? 'ring-2 ring-violet-400/70 rounded-lg cursor-pointer' : '',
+                isDiscardMode ? `rounded-lg cursor-pointer ${isMarkedForDiscard ? 'ring-2 ring-rose-400' : 'ring-1 ring-rose-500/30 hover:ring-rose-400/60'}` : '',
               ].join(' ')}
               style={{
                 animationDelay: isGathering ? gatherDelay : dealDelay,
                 animationFillMode: isGathering ? 'forwards' : undefined,
               }}
             >
+              {isMarkedForDiscard && (
+                <span className="absolute -top-2 -right-2 z-40 w-5 h-5 rounded-full bg-rose-500 border-2 border-slate-950 flex items-center justify-center text-[10px] font-black text-white pointer-events-none animate-fade-in">
+                  ✕
+                </span>
+              )}
               {isSelected && hasInfo && selectedRect && createPortal(
                 <div
                   className="fixed w-48 bg-slate-950/95 border-2 border-cyan-500/80 rounded-xl p-2.5 shadow-[0_0_15px_rgba(6,182,212,0.4)] text-[9px] leading-relaxed text-slate-100 z-[9999] animate-fade-in text-center select-none font-sans pointer-events-none"

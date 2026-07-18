@@ -47,6 +47,11 @@ interface SidebarHUDProps {
   onUndo: () => void;
   onSkip: () => void;
   onDiscard: () => void;
+  /** "TAŞI DEĞİŞTİR" is armed (hand stones are now tappable to mark for discard) — changes the
+   *  button into a "confirm N" state and reveals a cancel affordance beside it. */
+  isDiscardMode?: boolean;
+  discardTargetCount?: number;
+  onCancelDiscard?: () => void;
   message: string | null;
   activeBossId?: string | null;
   activeBlind?: 'SMALL' | 'BIG' | 'BOSS' | null;
@@ -104,6 +109,9 @@ export default function SidebarHUD({
   onUndo,
   onSkip,
   onDiscard,
+  isDiscardMode = false,
+  discardTargetCount = 0,
+  onCancelDiscard,
   layout = 'sidebar',
   activeBossId = null,
   activeBlind = null,
@@ -309,24 +317,39 @@ export default function SidebarHUD({
           ZİNCİRİ GÖNDER
         </button>
 
+        {isDiscardMode && (
+          <p className="text-[11px] text-center text-rose-300 font-bold font-sans -mb-0.5 animate-pulse">
+            Değiştirmek istediğiniz taşları seçin ({discardTargetCount})
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={onDiscard}
-            disabled={!canRecover || discardsLeft <= 0}
-            className="btn-arcade btn-arcade-red py-2.5 rounded-xl text-[13px] font-black text-white uppercase font-pixel"
+            disabled={isDiscardMode ? discardTargetCount === 0 : (!canRecover || discardsLeft <= 0)}
+            className="btn-arcade btn-arcade-red py-2.5 rounded-xl text-[13px] font-black text-white uppercase font-pixel disabled:opacity-30"
           >
-            ISKARTA ET
+            {isDiscardMode ? `ONAYLA (${discardTargetCount})` : 'TAŞI DEĞİŞTİR'}
           </button>
 
-          <button
-            type="button"
-            onClick={onUndo}
-            disabled={!canRecover || !canUndo}
-            className="btn-arcade btn-arcade-slate py-2.5 rounded-xl text-[13px] font-black text-slate-100 uppercase font-pixel"
-          >
-            GERİ AL
-          </button>
+          {isDiscardMode ? (
+            <button
+              type="button"
+              onClick={onCancelDiscard}
+              className="btn-arcade btn-arcade-slate py-2.5 rounded-xl text-[13px] font-black text-slate-100 uppercase font-pixel"
+            >
+              İPTAL
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onUndo}
+              disabled={!canRecover || !canUndo}
+              className="btn-arcade btn-arcade-slate py-2.5 rounded-xl text-[13px] font-black text-slate-100 uppercase font-pixel"
+            >
+              GERİ AL
+            </button>
+          )}
         </div>
 
         <button

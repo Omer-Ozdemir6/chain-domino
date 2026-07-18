@@ -299,6 +299,19 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Plain-number mirrors of the safe-area insets, read back in JS (via getComputedStyle) by
+   useCanvasScale() — `env()` itself isn't readable from JS, so exposing it as a custom property
+   is the standard bridge. Used to shrink the fit-to-viewport calculation so the scaled design
+   canvas's own edges never land under a notch/home-indicator/rounded corner, not just to center
+   it within them (centering alone doesn't stop a large canvas from bleeding past a small safe
+   area on an extreme aspect ratio). */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
 /* Portrait orientation overlay — prompts user to rotate to landscape */
 @keyframes rotate-phone-hint {
   0%, 100% { transform: rotate(0deg); }
