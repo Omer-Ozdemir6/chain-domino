@@ -276,6 +276,55 @@ export default function ShopScreen({
     }, 750);
   }
 
+  // Pack-opening ceremony: a bought booster/rune pack sits sealed in the middle of the screen
+  // until the player clicks it — only THEN does the seal crack (smoke + light burst) and the
+  // stone/rune choices actually reveal themselves, instead of the choice list just appearing
+  // instantly the moment the purchase resolves.
+  const packIsPending = draftOffers.length > 0 || runeOffers.length > 0;
+  const [packSeal, setPackSeal] = useState<'sealed' | 'cracking' | 'open'>('sealed');
+  useEffect(() => {
+    if (packIsPending) setPackSeal('sealed');
+  }, [packIsPending]);
+  function handleCrackSeal() {
+    if (packSeal !== 'sealed') return;
+    setPackSeal('cracking');
+    setTimeout(() => setPackSeal('open'), 500);
+  }
+  const sealedPackOverlay = packIsPending && packSeal !== 'open' && (
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
+      <div
+        onClick={handleCrackSeal}
+        className={`relative cursor-pointer ${packSeal === 'sealed' ? 'animate-pack-idle-bob hover:scale-105 transition-transform' : 'animate-pack-crack'}`}
+      >
+        {draftOffers.length > 0
+          ? renderBoosterIcon(`booster_${(draftOffers[0]?.modifier ?? 'standard').toLowerCase()}`, 'JUMBO')
+          : renderRuneIcon('JUMBO')}
+        {packSeal === 'sealed' && (
+          <span className="absolute -top-2 -right-2 text-2xl drop-shadow-[0_0_8px_rgba(251,191,36,0.9)] animate-pulse pointer-events-none">🔒</span>
+        )}
+        {packSeal === 'cracking' && (
+          <>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-36 h-36 rounded-full bg-amber-300/50 blur-2xl animate-pack-burst" />
+            </div>
+            {Array.from({ length: 8 }, (_, i) => (
+              <span
+                key={i}
+                className="absolute left-1/2 top-1/2 text-xl pointer-events-none animate-pack-smoke"
+                style={{ '--puff-angle': `${i * 45}deg` } as React.CSSProperties}
+              >
+                💨
+              </span>
+            ))}
+          </>
+        )}
+      </div>
+      {packSeal === 'sealed' && (
+        <p className="mt-6 text-sm text-amber-300/80 font-sans animate-pulse">Mührü kırmak için tıklayın</p>
+      )}
+    </div>
+  );
+
   const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
   const diceOverlay = isRerolling && (
     <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none bg-slate-950/30">
@@ -640,14 +689,14 @@ export default function ShopScreen({
     );
   }
 
-  // Common Draft Kese Modal Overlay
-  const draftOverlay = draftOffers && draftOffers.length > 0 && (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
+  // Common Draft Kese Modal Overlay — only revealed once the pack's seal has been cracked open.
+  const draftOverlay = draftOffers && draftOffers.length > 0 && packSeal === 'open' && (
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
       <h2 className="text-2xl md:text-3xl text-amber-300 mb-2 drop-shadow-[0_0_10px_#fbbf24] animate-pulse">KESE AÇILIYOR</h2>
       <p className="text-sm text-slate-400 mb-8 font-sans">Taş kesesinden destenize kalıcı olarak eklemek için 1 adet taş seçin.</p>
       
       <div className="flex gap-4 justify-center items-center mb-8">
-        {draftOffers.map((stone) => {
+        {draftOffers.map((stone, i) => {
           let modifierBorder = 'border-stone-700 bg-stone-900/60';
           let modifierLabel = 'STANDART';
           if (stone.modifier === 'OBSIDIAN') {
@@ -660,12 +709,14 @@ export default function ShopScreen({
             modifierBorder = 'border-amber-500 bg-amber-950/40 shadow-[0_0_15px_rgba(245,158,11,0.4)] text-amber-300';
             modifierLabel = 'KEHRİBAR';
           }
+          const fanOffset = (i - (draftOffers.length - 1) / 2) * 6;
 
           return (
             <div
               key={stone.id}
               onClick={() => onDraftSelect(stone.id)}
-              className={`flex flex-col items-center justify-between p-3.5 w-24 h-36 md:w-30 md:h-44 rounded-2xl border-2 cursor-pointer transform hover:scale-105 active:scale-95 transition ${modifierBorder}`}
+              style={{ '--fan-rot': `${fanOffset}deg`, animationDelay: `${i * 90}ms` } as React.CSSProperties}
+              className={`flex flex-col items-center justify-between p-3.5 w-24 h-36 md:w-30 md:h-44 rounded-2xl border-2 cursor-pointer transform hover:scale-105 active:scale-95 transition animate-pack-fan-in ${modifierBorder}`}
             >
               <span className="text-[9.5px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-slate-950/80 mb-2 text-white">
                 {modifierLabel}
@@ -696,18 +747,20 @@ export default function ShopScreen({
     </div>
   );
 
-  // Rün Kesesi — Step 1: pick exactly 1 of 3 random rune options.
-  const runePackOverlay = runeOffers.length > 0 && (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
+  // Rün Kesesi — Step 1: pick exactly 1 of 3 random rune options. Only revealed once the pack's
+  // seal has been cracked open.
+  const runePackOverlay = runeOffers.length > 0 && packSeal === 'open' && (
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
       <h2 className="text-2xl md:text-3xl text-rose-350 mb-2 drop-shadow-[0_0_10px_#fb7185] animate-pulse">RÜN KESESİ AÇILIYOR</h2>
       <p className="text-sm text-slate-400 mb-8 font-sans">Bir rün seçin — seçtiğiniz rün, birden fazla taşınıza birden uygulanabilir.</p>
 
       <div className="flex gap-4 justify-center items-center mb-8 flex-wrap">
-        {runeOffers.map((rune) => (
+        {runeOffers.map((rune, i) => (
           <div
             key={rune.id}
             onClick={() => onChooseRune(rune.id)}
-            className="flex flex-col items-center justify-between p-3.5 w-32 h-44 md:w-36 md:h-48 rounded-2xl border-2 border-rose-600/70 bg-rose-950/30 shadow-[0_0_15px_rgba(225,29,72,0.3)] cursor-pointer transform hover:scale-105 active:scale-95 transition text-center"
+            style={{ '--fan-rot': `${(i - (runeOffers.length - 1) / 2) * 6}deg`, animationDelay: `${i * 90}ms` } as React.CSSProperties}
+            className="flex flex-col items-center justify-between p-3.5 w-32 h-44 md:w-36 md:h-48 rounded-2xl border-2 border-rose-600/70 bg-rose-950/30 shadow-[0_0_15px_rgba(225,29,72,0.3)] cursor-pointer transform hover:scale-105 active:scale-95 transition text-center animate-pack-fan-in"
           >
             <span className="text-[12px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-slate-950/80 text-rose-300">
               {rune.targetCount} taşa uygulanır
@@ -733,7 +786,7 @@ export default function ShopScreen({
 
   // Rün Kesesi — Step 2: pick up to `pendingRune.targetCount` existing customDeck stones to apply it to.
   const runeTargetOverlay = pendingRune && (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
       <h2 className="text-2xl md:text-3xl text-rose-350 mb-1 drop-shadow-[0_0_10px_#fb7185]">{pendingRune.name}</h2>
       <p className="text-sm text-slate-400 mb-4 font-sans text-center max-w-md">
         Destenizden {pendingRune.targetCount} taşa kadar seçin ({selectedRuneTargets.length}/{pendingRune.targetCount} seçildi).
@@ -970,6 +1023,7 @@ export default function ShopScreen({
         {runePackOverlay}
         {runeTargetOverlay}
         {detailsPanel}
+        {sealedPackOverlay}
         {diceOverlay}
       </div>
     );
@@ -1216,6 +1270,7 @@ export default function ShopScreen({
       {runePackOverlay}
       {runeTargetOverlay}
       {detailsPanel}
+      {sealedPackOverlay}
       {diceOverlay}
     </div>
   );
