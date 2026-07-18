@@ -950,28 +950,49 @@ export default function ShopScreen({
     );
   }
 
-  // A compact, always-visible list of every owned charm with a one-click sell action (half its
-  // cost back) — separate from the Fusion Forge's inventory below, which only lists charms that
-  // are part of a fusion recipe and would otherwise be the only owned-charm display in the shop.
+  // A compact, always-visible list of every owned charm — hover (or tap) to see what it actually
+  // does via the same details panel the shop offers use, then hit its own small SAT button to
+  // sell for half cost. Separate from the Fusion Forge's inventory below, which only lists charms
+  // that are part of a fusion recipe and would otherwise be the only owned-charm display in the shop.
   const sellableCharmsSection = onSell && ownedCharms.length > 0 && (
     <div className="shrink-0">
       <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block mb-1.5">
-        Tılsımlarınız (satmak için tıklayın)
+        Tılsımlarınız (özelliği için üzerine gelin)
       </span>
       <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
-        {ownedCharms.map((charm) => (
-          <button
-            key={charm.id}
-            type="button"
-            onClick={() => onSell(charm.id)}
-            title={`Sat: $${Math.round(charm.cost / 2)}`}
-            className="group flex items-center gap-1.5 pl-1.5 pr-2 py-1 rounded-lg border border-stone-800 bg-stone-900/40 text-stone-400 hover:border-rose-500/60 hover:bg-rose-950/20 hover:text-rose-300 transition text-left"
-          >
-            <span className="text-sm shrink-0 leading-none">{renderCharmIcon(charm.id)}</span>
-            <span className="text-[11px] max-w-24 truncate">{charm.name}</span>
-            <span className="text-[10px] font-pixel font-bold text-emerald-500 group-hover:text-rose-300 shrink-0">${Math.round(charm.cost / 2)}</span>
-          </button>
-        ))}
+        {ownedCharms.map((charm) => {
+          const itemDetails = {
+            name: charm.name,
+            type: 'Tılsım',
+            description: charm.description,
+            rarity: charm.rarity,
+            cost: charm.cost,
+            id: `sell-${charm.id}`,
+          };
+          return (
+            <div
+              key={charm.id}
+              onMouseEnter={(e) => handleCardEnter(e, itemDetails)}
+              onMouseLeave={handleCardLeave}
+              onClick={(e) => handleCardClick(e, itemDetails)}
+              className="group flex items-center gap-1.5 pl-1.5 pr-1.5 py-1 rounded-lg border border-stone-800 bg-stone-900/40 text-stone-400 hover:border-amber-500/60 hover:bg-amber-950/10 transition cursor-help select-none"
+            >
+              <span className="text-sm shrink-0 leading-none">{renderCharmIcon(charm.id)}</span>
+              <span className="text-[11px] max-w-24 truncate">{charm.name}</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSell(charm.id);
+                }}
+                title={`Sat: $${Math.round(charm.cost / 2)}`}
+                className="text-[10px] font-pixel font-bold text-emerald-500 hover:text-rose-300 shrink-0 px-1 rounded hover:bg-rose-950/40 transition"
+              >
+                ${Math.round(charm.cost / 2)}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
