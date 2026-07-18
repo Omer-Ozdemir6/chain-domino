@@ -122,6 +122,18 @@ export default function StartScreen({ onStart }: StartScreenProps) {
   const [tab, setTab] = useState<TabState>('MAIN');
   const [selectedChest, setSelectedChest] = useState<ChestId | null>(null);
 
+  // The chosen starting chest grows and cracks open, then a light/dust vortex bursts out and
+  // fills the screen — `onStart` only actually fires once the vortex flash is fully opaque, so
+  // the instant screen swap underneath (Sefer Kurulumu -> Kabine Eşikleri) is masked by it.
+  const [launchStage, setLaunchStage] = useState<'idle' | 'growing' | 'vortex'>('idle');
+  function handleLaunch() {
+    if (launchStage !== 'idle') return;
+    setLaunchStage('growing');
+    setTimeout(() => setLaunchStage('vortex'), 400);
+    setTimeout(() => onStart(deck, stake, selectedChest), 780);
+  }
+  const chestIcon = selectedChest ? STARTING_CHESTS.find((c) => c.id === selectedChest)?.icon ?? '📦' : '📦';
+
   return (
     <div className="absolute inset-0 w-full h-full flex flex-col justify-between p-6 md:p-10 select-none overflow-hidden swirl-red-blue-bg">
 
@@ -470,8 +482,9 @@ export default function StartScreen({ onStart }: StartScreenProps) {
 
             <button
               type="button"
-              onClick={() => onStart(deck, stake, selectedChest)}
-              className="mt-5 w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:translate-y-0.5 text-sm font-bold text-white shadow border-b-4 border-emerald-800 transition cursor-pointer select-none uppercase font-pixel tracking-widest"
+              onClick={handleLaunch}
+              disabled={launchStage !== 'idle'}
+              className="mt-5 w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:translate-y-0.5 text-sm font-bold text-white shadow border-b-4 border-emerald-800 transition cursor-pointer select-none uppercase font-pixel tracking-widest disabled:opacity-60 disabled:pointer-events-none"
             >
               🚀 Macerayı Başlat
             </button>
@@ -487,6 +500,29 @@ export default function StartScreen({ onStart }: StartScreenProps) {
         </div>
       )}
 
+      {/* Chest-opening vortex transition into Kabine Eşikleri — the chosen chest grows and
+          glows, then a burst of spinning light rings and dust fills the whole screen; onStart()
+          only actually fires once that flash is fully opaque, masking the instant screen swap
+          underneath it. */}
+      {launchStage !== 'idle' && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950 overflow-hidden pointer-events-none">
+          {launchStage === 'growing' && (
+            <span className="text-8xl animate-chest-grow">{chestIcon}</span>
+          )}
+          {launchStage === 'vortex' && (
+            <>
+              {Array.from({ length: 3 }, (_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-40 h-40 rounded-full border-4 border-amber-300/70 animate-vortex-ring"
+                  style={{ animationDelay: `${i * 90}ms` }}
+                />
+              ))}
+              <div className="absolute inset-0 bg-amber-200 animate-vortex-flash" />
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

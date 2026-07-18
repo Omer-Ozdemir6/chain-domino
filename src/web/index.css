@@ -89,6 +89,34 @@
   animation: charm-mult-beam 550ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+/* Sefer Kurulumu -> Kabine Eşikleri: the chosen starting chest grows and glows, then spinning
+   light rings and a bright flash burst out and fill the screen, masking the instant swap to
+   the next screen underneath. */
+@keyframes chest-grow {
+  0% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 rgba(251, 191, 36, 0)); }
+  100% { transform: scale(1.7); filter: brightness(1.7) drop-shadow(0 0 35px rgba(251, 191, 36, 0.85)); }
+}
+.animate-chest-grow {
+  animation: chest-grow 400ms cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+
+@keyframes vortex-ring {
+  0% { transform: rotate(0deg) scale(0.3); opacity: 0.9; border-color: rgba(252, 211, 77, 0.8); }
+  100% { transform: rotate(540deg) scale(4.5); opacity: 0; border-color: rgba(252, 211, 77, 0); }
+}
+.animate-vortex-ring {
+  animation: vortex-ring 550ms ease-out forwards;
+}
+
+@keyframes vortex-flash {
+  0% { opacity: 0; }
+  70% { opacity: 1; }
+  100% { opacity: 1; }
+}
+.animate-vortex-flash {
+  animation: vortex-flash 380ms ease-in forwards;
+}
+
 /* Pack-opening ceremony: the sealed pack bobs gently in place, cracks (scales down then snaps
    back while fading out) once clicked, and a burst of light + a ring of smoke puffs fires
    outward from its center at that same moment. */
