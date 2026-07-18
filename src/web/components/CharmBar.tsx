@@ -218,6 +218,284 @@ const SPECIAL_GLYPHS: Record<string, { path: React.ReactNode; colorClass: string
     colorClass: 'text-stone-300 dark:text-stone-200',
     path: <><path d="M6 20V11a6 6 0 0 1 12 0v9l-2-2-2 2-2-2-2 2-2-2z" /><circle cx="9.5" cy="10.5" r="1" fill="currentColor" stroke="none" /><circle cx="14.5" cy="10.5" r="1" fill="currentColor" stroke="none" /></>,
   },
+
+  // --- Core (bespoke, replacing sprite-sheet art) ---
+  // A single solitary flame — the lone "odd number" master.
+  division_master: {
+    colorClass: 'text-teal-600 dark:text-teal-400',
+    path: <><path d="M12 2c-1 3-4 4-4 8a4 4 0 0 0 8 0c0-4-3-5-4-8z" /><path d="M9 22h6" /></>,
+  },
+  // A plus sign in a ring — the "sum" master.
+  add_master: {
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    path: <><circle cx="12" cy="12" r="9" /><path d="M12 7v10M7 12h10" strokeWidth="2.2" /></>,
+  },
+  // A minus sign in a ring — mirrors add_master.
+  subtract_master: {
+    colorClass: 'text-rose-600 dark:text-rose-400',
+    path: <><circle cx="12" cy="12" r="9" /><path d="M7 12h10" strokeWidth="2.2" /></>,
+  },
+  // An 8-point burst — a frenzy of multiplication.
+  multiplier_frenzy: {
+    colorClass: 'text-amber-600 dark:text-amber-400',
+    path: <path d="M12 2v5M12 17v5M2 12h5M17 12h5M5 5l3.5 3.5M15.5 15.5L19 19M19 5l-3.5 3.5M8.5 15.5L5 19" />,
+  },
+  // Mirrored chevrons split by a dashed axis — visual symmetry.
+  symmetry_bonus: {
+    colorClass: 'text-sky-600 dark:text-sky-400',
+    path: <><path d="M12 3v18" strokeDasharray="2 2" /><path d="M12 3L5 12l7 9" /><path d="M12 3l7 9-7 9" /></>,
+  },
+  // A small plain heart — an affection for small numbers.
+  small_number_love: {
+    colorClass: 'text-pink-500 dark:text-pink-400',
+    path: <path d="M12 18c-4-3.4-7-6.2-7-9.4A3.4 3.4 0 0 1 12 6.6a3.4 3.4 0 0 1 7 2c0 3.2-3 6-7 9.4z" />,
+  },
+  // A simple radiant sun — basic, uncomplicated pleasure.
+  simple_pleasures: {
+    colorClass: 'text-amber-500 dark:text-amber-300',
+    path: <><circle cx="12" cy="12" r="5.5" /><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.5 1.5M16.9 16.9l1.5 1.5M18.4 5.6l-1.5 1.5M7.1 16.9l-1.5 1.5" /></>,
+  },
+  // Four stones in a row under a soft dashed murmur — the fourth-stone-onward whisper.
+  overtime: {
+    colorClass: 'text-violet-600 dark:text-violet-400',
+    path: <><rect x="3" y="5" width="4" height="7" rx="1" /><rect x="8" y="5" width="4" height="7" rx="1" /><rect x="13" y="5" width="4" height="7" rx="1" /><rect x="18" y="5" width="3" height="7" rx="1" /><path d="M4 17c4-2.5 8-2.5 16 0" strokeDasharray="1.5 2" /></>,
+  },
+  // Four linked points around a center — a fourfold harmony.
+  four_way_harmony: {
+    colorClass: 'text-teal-500 dark:text-teal-400',
+    path: <><circle cx="6.5" cy="6.5" r="2.2" /><circle cx="17.5" cy="6.5" r="2.2" /><circle cx="6.5" cy="17.5" r="2.2" /><circle cx="17.5" cy="17.5" r="2.2" /><path d="M8.5 8.5l3 3M15.5 8.5l-3 3M8.5 15.5l3-3M15.5 15.5l-3-3" opacity="0.55" /></>,
+  },
+  // A balance scale — the master of even measure.
+  balance_master: {
+    colorClass: 'text-amber-500 dark:text-amber-400',
+    path: <><path d="M12 2v17" /><path d="M5 7h14" /><path d="M5 7l-3 6a3.2 3.2 0 0 0 6 0z" /><path d="M19 7l-3 6a3.2 3.2 0 0 0 6 0z" /><path d="M8 21h8" /></>,
+  },
+  // Two small coins linked by a short chain — interest compounding at chain's end.
+  chain_end_interest: {
+    colorClass: 'text-amber-600 dark:text-amber-400',
+    path: <><circle cx="8" cy="16" r="4" /><circle cx="16" cy="8" r="3.2" /><path d="M11 13l2-2" strokeWidth="1.3" /></>,
+  },
+  // A shield with a protective central gem.
+  loss_insurance: {
+    colorClass: 'text-stone-400 dark:text-stone-300',
+    path: <><path d="M12 2 20 5.5v5c0 5.2-3.5 8.7-8 10.5-4.5-1.8-8-5.3-8-10.5v-5z" /><circle cx="12" cy="11" r="2.3" fill="currentColor" stroke="none" /></>,
+  },
+  // A drawstring coin pouch.
+  generous_trader: {
+    colorClass: 'text-amber-600 dark:text-amber-400',
+    path: <><path d="M8.5 10a3.5 3.5 0 0 1 7 0v1h1.2a1 1 0 0 1 1 1.1l-.9 7.1a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8l-.9-7.1a1 1 0 0 1 1-1.1H8.5z" /><path d="M9.3 10a2.7 2.7 0 0 1 5.4 0" /></>,
+  },
+  // A racing checkered flag — finishing early.
+  early_finisher: {
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    path: <><path d="M6 3v18" /><path d="M6 4h4v3h4V4h4v7h-4v-3h-4v3H6z" /></>,
+  },
+  // A hunting crosshair over a paired target.
+  double_hunter: {
+    colorClass: 'text-rose-600 dark:text-rose-400',
+    path: <><circle cx="12" cy="12" r="7.5" /><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" /></>,
+  },
+  // An hourglass with a single glowing grain caught mid-fall.
+  clutch_finisher: {
+    colorClass: 'text-emerald-500 dark:text-emerald-400',
+    path: <><path d="M6 3h12" /><path d="M6 21h12" /><path d="M7 3c0 5 5 7 5 9s-5 4-5 9" /><path d="M17 3c0 5-5 7-5 9s5 4 5 9" /><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" /></>,
+  },
+  // Two overlapping ghostly silhouettes — twin souls.
+  twin_souls: {
+    colorClass: 'text-violet-500 dark:text-violet-400',
+    path: <><path d="M7.5 20v-7a4 4 0 0 1 8 0v7l-2-1.6-2 1.6-2-1.6z" opacity="0.9" /><path d="M14 20v-8a3.7 3.7 0 0 1 4-3.7" opacity="0.4" /></>,
+  },
+  // A wide resonant wave — chords ringing louder together.
+  multiplier_resonance: {
+    colorClass: 'text-indigo-600 dark:text-indigo-400',
+    path: <path d="M2 12h3l2-7 3 14 2-9 3 6h3l2-4" />,
+  },
+  // A ghostly card silhouette with a faint die inside.
+  gamblers_spirit: {
+    colorClass: 'text-fuchsia-600 dark:text-fuchsia-400',
+    path: <><path d="M7 20v-9a5 5 0 0 1 10 0v9l-2.5-2-2.5 2-2.5-2z" /><rect x="9.5" y="10.5" width="5" height="5" rx="1" fill="currentColor" fillOpacity="0.4" stroke="none" /></>,
+  },
+  // Cracked spectacles — the mad scholar's monocle.
+  mad_scholar: {
+    colorClass: 'text-purple-600 dark:text-purple-400',
+    path: <><circle cx="7" cy="12" r="4" /><circle cx="17" cy="12" r="4" /><path d="M11 12h2M3 12h1M20 12h1" /><path d="M7.5 9.5l1.6 1.8-1 2.4" strokeWidth="1.1" /></>,
+  },
+  // A heart with a small flame offered above it.
+  sacrificial_heart: {
+    colorClass: 'text-rose-500 dark:text-rose-400',
+    path: <><path d="M12 19c-5-4-8-7-8-10.5A3.8 3.8 0 0 1 12 5a3.8 3.8 0 0 1 8 3.5C20 12 17 15 12 19z" /><path d="M12 2.5c-.6 1.2-1.4 1.5-1.4 2.5a1.4 1.4 0 0 0 2.8 0c0-1-.8-1.3-1.4-2.5z" fill="currentColor" stroke="none" /></>,
+  },
+  // A spiky, predatory coin.
+  loan_shark: {
+    colorClass: 'text-red-700 dark:text-red-400',
+    path: <><circle cx="12" cy="12" r="7.5" /><path d="M12 4.5v2M12 17.5v2M4.5 12h2M17.5 12h2M7.4 7.4l1.4 1.4M15.2 15.2l1.4 1.4M16.6 7.4l-1.4 1.4M7.4 16.6l1.4-1.4" strokeWidth="1.1" /></>,
+  },
+  // A trophy with a crack running through its cup.
+  fragile_victory: {
+    colorClass: 'text-amber-500 dark:text-amber-400',
+    path: <><path d="M7 4h10v3a5 5 0 0 1-10 0z" /><path d="M9 4H5v2a4 4 0 0 0 4 4" opacity="0.5" /><path d="M15 4h4v2a4 4 0 0 1-4 4" opacity="0.5" /><path d="M12 12v4M9 20h6M11 16l-2 4" strokeWidth="1.2" /></>,
+  },
+  // Symmetry Bonus's mirrored chevrons crowned with a small star — its legendary amplification.
+  legendary_symmetry: {
+    colorClass: 'text-amber-400 dark:text-amber-300',
+    path: <><path d="M12 6v16" strokeDasharray="2 2" /><path d="M12 6L6 14l6 8" /><path d="M12 6l6 8-6 8" /><path d="M12 1l.7 1.6 1.7.2-1.2 1.2.3 1.7-1.5-.9-1.5.9.3-1.7-1.2-1.2 1.7-.2z" fill="currentColor" stroke="none" /></>,
+  },
+
+  // --- Positional (bespoke) ---
+  // A stone struck at the very opening of the chain, radiating impact lines.
+  opening_strike: {
+    colorClass: 'text-orange-600 dark:text-orange-400',
+    path: <><rect x="9" y="9" width="6" height="9" rx="1" /><path d="M12 9V4M8 6l1.5 2M16 6l-1.5 2" strokeWidth="1.3" /></>,
+  },
+  // A closing curtain motif — the grand finale.
+  grand_finale: {
+    colorClass: 'text-rose-500 dark:text-rose-400',
+    path: <><path d="M4 3v18" /><path d="M20 3v18" /><path d="M4 4c5 5 5 15 0 16" opacity="0.6" /><path d="M20 4c-5 5-5 15 0 16" opacity="0.6" /><path d="M9 12h6" strokeDasharray="1.5 2" /></>,
+  },
+  // A single small coin — the miser master's frugal secret.
+  minimalist: {
+    colorClass: 'text-stone-400 dark:text-stone-300',
+    path: <><circle cx="12" cy="12" r="4.5" /><path d="M12 9.3v5.4M10.5 10.3h2.6M10.5 13.7h2.6" strokeWidth="1" /></>,
+  },
+
+  // --- Economy (bespoke) ---
+  // A simple laurel wreath — an easy, humble win.
+  flat_bonus_common: {
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    path: <><path d="M6 20c3-8 3-14 6-16" /><path d="M18 20c-3-8-3-14-6-16" /></>,
+  },
+  // A winding footpath — a long journey.
+  long_turn_reward: {
+    colorClass: 'text-stone-400 dark:text-stone-300',
+    path: <><path d="M4 20c3-4 1-8 5-10s1-6 7-8" /><circle cx="6" cy="17" r="0.9" fill="currentColor" stroke="none" /><circle cx="10" cy="11" r="0.9" fill="currentColor" stroke="none" /><circle cx="15" cy="4" r="0.9" fill="currentColor" stroke="none" /></>,
+  },
+  // A medal with an upward chevron — exceeding the goal.
+  overachiever: {
+    colorClass: 'text-amber-500 dark:text-amber-400',
+    path: <><circle cx="12" cy="8" r="5" /><path d="M9.3 8l2.7-2.7L14.7 8" strokeWidth="1.3" /><path d="M9 12l-2 9 5-3 5 3-2-9" /></>,
+  },
+  // A crescent moon over a lone howling curve.
+  lone_wolf: {
+    colorClass: 'text-stone-400 dark:text-stone-300',
+    path: <><path d="M18 3.5a3 3 0 1 0 0 6 3.5 3.5 0 1 1 0-6z" fill="currentColor" stroke="none" /><path d="M4 20c2-6 5-9 8-9 2 0 3 1.5 3 3 0 3-3 4-3 6" /></>,
+  },
+  // A finish line almost broken through.
+  almost_there: {
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    path: <><path d="M4 5v16" /><path d="M20 5v16" /><path d="M4 12h11" strokeDasharray="3 2" /><path d="M17 9l3 3-3 3" strokeWidth="1.3" /></>,
+  },
+  // A boomerang return-arrow.
+  comeback_kid: {
+    colorClass: 'text-sky-600 dark:text-sky-400',
+    path: <><path d="M4 12a8 8 0 0 1 14-5" /><path d="M16 4.2l1.8 2.8-3.1.7" strokeWidth="1.3" /></>,
+  },
+  // A four-bladed pinwheel — matching the "spinner" (double) theme.
+  spinner_fan: {
+    colorClass: 'text-red-600 dark:text-red-400',
+    path: <><path d="M12 12 4 8a4 4 0 0 1 8-2z" /><path d="M12 12 16 4a4 4 0 0 1 2 8z" /><path d="M12 12 20 16a4 4 0 0 1-8 2z" /><path d="M12 12 8 20a4 4 0 0 1-2-8z" /><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" /></>,
+  },
+  // A small coin pinched between two lines.
+  penny_pincher: {
+    colorClass: 'text-amber-600 dark:text-amber-400',
+    path: <><circle cx="12" cy="14" r="3.5" /><path d="M7.5 8l3 3M16.5 8l-3 3" strokeWidth="1.4" /></>,
+  },
+  // A mound of piled coins.
+  grand_hoard: {
+    colorClass: 'text-amber-500 dark:text-amber-400',
+    path: <><path d="M3 18c2-5 4-6 9-6s7 1 9 6" /><circle cx="8" cy="17" r="1.6" fill="currentColor" stroke="none" /><circle cx="12" cy="15.3" r="1.8" fill="currentColor" stroke="none" /><circle cx="16" cy="17" r="1.6" fill="currentColor" stroke="none" /></>,
+  },
+  // A diagonal speed-dash with a small motion trail.
+  swift_victory: {
+    colorClass: 'text-emerald-500 dark:text-emerald-400',
+    path: <><path d="M4 18c4-2 8-6 14-14" strokeWidth="1.6" /><path d="M14 4h4v4" strokeWidth="1.6" /><path d="M6.5 15.5l-2 1 1-2" strokeWidth="1.1" /></>,
+  },
+  // A small sprout — modest, steady growth.
+  modest_gain: {
+    colorClass: 'text-emerald-500 dark:text-emerald-400',
+    path: <><path d="M12 20V11" /><path d="M12 11c-4 0-5-3-5-5 3 0 5 1 5 5z" /><path d="M12 13c3 0 4-2.5 4-4.5-2.5 0-4 1-4 4.5z" opacity="0.7" /></>,
+  },
+  // Three dots in a triangular cluster — three doubles.
+  triple_double: {
+    colorClass: 'text-rose-600 dark:text-rose-400',
+    path: <><circle cx="7" cy="8" r="2.3" /><circle cx="17" cy="8" r="2.3" /><circle cx="12" cy="16.5" r="2.3" /></>,
+  },
+  // A simplified running figure.
+  marathon_runner: {
+    colorClass: 'text-teal-600 dark:text-teal-400',
+    path: <><circle cx="14.5" cy="4.5" r="1.8" fill="currentColor" stroke="none" /><path d="M9 20l2-6 3 2 2-5-3-3-4 1-2 4" strokeWidth="1.4" /></>,
+  },
+
+  // --- Curse (bespoke) ---
+  // A coin split by a jagged crack.
+  chaos_coin: {
+    colorClass: 'text-fuchsia-600 dark:text-fuchsia-400',
+    path: <><circle cx="12" cy="12" r="7.5" /><path d="M9.5 7l3 4.5-2 1 3 4.5" strokeWidth="1.3" /></>,
+  },
+  // Inward-pointing mirrored chevrons — symmetry turned in on itself.
+  reverse_symmetry: {
+    colorClass: 'text-rose-600 dark:text-rose-400',
+    path: <><path d="M12 3v18" strokeDasharray="2 2" /><path d="M5 3l7 9-7 9" opacity="0.85" /><path d="M19 3l-7 9 7 9" opacity="0.85" /></>,
+  },
+  // A circle and diamond colliding with a spark.
+  add_sub_clash: {
+    colorClass: 'text-orange-600 dark:text-orange-400',
+    path: <><circle cx="7" cy="12" r="4" /><path d="M17 6l5 6-5 6-5-6z" /><path d="M10.5 12h3" strokeWidth="1.3" /></>,
+  },
+  // An anvil and a feather forced together.
+  mul_div_clash: {
+    colorClass: 'text-orange-700 dark:text-orange-400',
+    path: <><path d="M3 15h5l1-2h4a1.6 1.6 0 0 1 1.6 1.6V16H3z" /><path d="M18.5 4c-3 0-6.5 2-6.5 5.8 0 1 .4 1.7 1.3 1.7 3.7 0 6.2-3.7 6.2-6.7 0-.3 0-.6-.2-.8z" /></>,
+  },
+  // A three-pip die with a lucky sparkle.
+  lucky_dice: {
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    path: <><rect x="5" y="5" width="14" height="14" rx="3" /><circle cx="9" cy="9" r="1.1" fill="currentColor" stroke="none" /><circle cx="15" cy="15" r="1.1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" /><path d="M19 2l.8 1.7 1.8.3-1.3 1.3.3 1.8-1.6-.9-1.6.9.3-1.8L16.4 4l1.8-.3z" fill="currentColor" stroke="none" /></>,
+  },
+  // A circle exactly half filled.
+  all_or_nothing: {
+    colorClass: 'text-stone-400 dark:text-stone-300',
+    path: <><circle cx="12" cy="12" r="8" /><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" /></>,
+  },
+  // A small horned flame-spirit with trailing legs — a hasty ifrit.
+  speed_demon: {
+    colorClass: 'text-orange-600 dark:text-orange-400',
+    path: <><path d="M12 3c-1 2-3 2-3 5a3 3 0 0 0 6 0c0-3-2-3-3-5z" /><path d="M9 5l-1-2M15 5l1-2" strokeWidth="1.2" /><path d="M9 21c1-3 1-5 3-5s2 2 3 5" opacity="0.6" /></>,
+  },
+  // A flame split by a dashed, unstable seam.
+  volatile_soul: {
+    colorClass: 'text-violet-600 dark:text-violet-400',
+    path: <><path d="M12 3c-2 3-5 5-5 9a5 5 0 0 0 10 0c0-4-3-6-5-9z" /><path d="M12 8v8" strokeDasharray="1.5 1.5" /></>,
+  },
+  // A ledger with a coin stamp — a collector's due notice.
+  debt_collector: {
+    colorClass: 'text-red-700 dark:text-red-400',
+    path: <><rect x="4" y="6" width="16" height="14" rx="1.5" /><path d="M8 10.5h8M8 14.5h5" strokeWidth="1.1" /><circle cx="17.5" cy="4.5" r="2.2" fill="currentColor" stroke="none" /></>,
+  },
+  // Stacked casino chips.
+  high_roller: {
+    colorClass: 'text-violet-600 dark:text-violet-400',
+    path: <><ellipse cx="12" cy="18" rx="7" ry="2.2" /><ellipse cx="12" cy="14" rx="7" ry="2.2" /><ellipse cx="12" cy="10" rx="7" ry="2.2" /></>,
+  },
+  // Twin circles split by a lightning crack — an even-numbered curse.
+  even_curse: {
+    colorClass: 'text-fuchsia-600 dark:text-fuchsia-400',
+    path: <><circle cx="8" cy="12" r="4.5" /><circle cx="16" cy="12" r="4.5" /><path d="M12 7l-1.3 5 2 1-1.3 5" strokeWidth="1.1" /></>,
+  },
+  // A single diamond split by a lightning crack — an odd-numbered curse.
+  odd_curse: {
+    colorClass: 'text-fuchsia-600 dark:text-fuchsia-400',
+    path: <><path d="M12 2 19 12 12 22 5 12Z" /><path d="M12 6l-1.5 5 2 1-1.5 5" strokeWidth="1.1" /></>,
+  },
+  // A jagged starburst — everything or nothing, in one blast.
+  boom_or_bust: {
+    colorClass: 'text-red-600 dark:text-red-400',
+    path: <path d="M12 2l1.5 4 4-1-2 4 4 1-4 2 2 4-4-1-1.5 4-1.5-4-4 1 2-4-4-1 4-2-2-4 4 1z" fill="currentColor" stroke="none" />,
+  },
+  // An open hand with fingers spread, reaching.
+  greedy_hand: {
+    colorClass: 'text-amber-700 dark:text-amber-400',
+    path: <path d="M5 12v4a5 5 0 0 0 5 5h2a5 5 0 0 0 5-5v-6M8 12V8a2 2 0 0 1 4 0v4M12 11V7a2 2 0 0 1 4 0v5M16 12v-3a2 2 0 0 1 4 0v3" />,
+  },
 };
 
 function genericCharmGlyph(id: string) {
