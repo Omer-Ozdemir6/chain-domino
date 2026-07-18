@@ -47,42 +47,43 @@ const PixiEffectsLayer = forwardRef<PixiEffectsLayerHandle, PixiEffectsLayerProp
       sizeRef(el);
     };
 
+    // Converts a viewport-space DOMRect center into this layer's Pixi stage space. Can't just
+    // subtract `div.getBoundingClientRect()`'s origin and use that raw pixel delta — the whole
+    // app sits under a CSS `transform: scale(...)` wrapper (the landscape/portrait canvas-fit
+    // logic in App.tsx), which shrinks/grows the div's rendered *screen* box without touching the
+    // *layout* size ResizeObserver reports (and that the Pixi stage/renderer are sized to). Mixing
+    // those two spaces put every burst noticeably off from the tile that triggered it, worse the
+    // further the fit-scale was from 1. Converting through a fraction-of-box-size cancels the
+    // scale out, since both the rect and the origin box shrink/grow together.
+    function toStageXY(rect: DOMRect): [number, number] {
+      const div = containerDivRef.current;
+      const app = appRef.current;
+      if (!div || !app) return [0, 0];
+      const origin = div.getBoundingClientRect();
+      const fracX = origin.width > 0 ? (rect.left + rect.width / 2 - origin.left) / origin.width : 0;
+      const fracY = origin.height > 0 ? (rect.top + rect.height / 2 - origin.top) / origin.height : 0;
+      return [fracX * app.screen.width, fracY * app.screen.height];
+    }
+
     useImperativeHandle(ref, () => ({
       spawnSpark(fromRect, toRect, color = 0xd9a441) {
-        const div = containerDivRef.current;
         const particles = systemsRef.current.particles;
-        if (!div || !particles) return;
-        const origin = div.getBoundingClientRect();
-        particles.spawnSpark(
-          fromRect.left + fromRect.width / 2 - origin.left,
-          fromRect.top + fromRect.height / 2 - origin.top,
-          toRect.left + toRect.width / 2 - origin.left,
-          toRect.top + toRect.height / 2 - origin.top,
-          color
-        );
+        if (!particles || !appRef.current) return;
+        const [fx, fy] = toStageXY(fromRect);
+        const [tx, ty] = toStageXY(toRect);
+        particles.spawnSpark(fx, fy, tx, ty, color);
       },
       spawnShatter(rect, color = 0xa855f7, count = 14) {
-        const div = containerDivRef.current;
         const particles = systemsRef.current.particles;
-        if (!div || !particles) return;
-        const origin = div.getBoundingClientRect();
-        particles.spawnShatter(
-          rect.left + rect.width / 2 - origin.left,
-          rect.top + rect.height / 2 - origin.top,
-          color,
-          count
-        );
+        if (!particles || !appRef.current) return;
+        const [x, y] = toStageXY(rect);
+        particles.spawnShatter(x, y, color, count);
       },
       spawnShockwave(rect, color = 0xd9a441) {
-        const div = containerDivRef.current;
         const particles = systemsRef.current.particles;
-        if (!div || !particles) return;
-        const origin = div.getBoundingClientRect();
-        particles.spawnShockwave(
-          rect.left + rect.width / 2 - origin.left,
-          rect.top + rect.height / 2 - origin.top,
-          color
-        );
+        if (!particles || !appRef.current) return;
+        const [x, y] = toStageXY(rect);
+        particles.spawnShockwave(x, y, color);
       },
     }), []);
 
@@ -97,13 +98,17 @@ const PixiEffectsLayer = forwardRef<PixiEffectsLayerHandle, PixiEffectsLayerProp
 
       (async () => {
         try {
+          // Retina (2x) resolution quadruples every filter's pixel-fill cost (blur especially) —
+          // worth it on a desktop GPU, but on a narrow/mobile viewport it's the difference between
+          // smooth and janky for atmosphere the player is looking at from arm's length anyway.
+          const isNarrowViewport = window.innerWidth < 768;
           await app.init({
             width: Math.max(1, div.clientWidth),
             height: Math.max(1, div.clientHeight),
             backgroundAlpha: 0,
             antialias: true,
             autoDensity: true,
-            resolution: Math.min(window.devicePixelRatio || 1, 2),
+            resolution: isNarrowViewport ? 1 : Math.min(window.devicePixelRatio || 1, 2),
           });
         } catch {
           // No WebGL / init failed on this device — the effects layer simply stays empty.

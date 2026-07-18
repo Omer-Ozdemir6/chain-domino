@@ -68,7 +68,7 @@ export default function Pips({ value, large, xl, dotColorClass, sparkle }: PipsP
           <span
             key={i}
             className={[
-              active ? (dotColorClass ?? 'bg-slate-800 dark:bg-slate-100') : '',
+              active ? (dotColorClass ?? 'bg-stone-800 dark:bg-stone-100') : '',
               dotSize,
               active && sparkle ? 'animate-pip-to-star' : '',
             ].join(' ')}

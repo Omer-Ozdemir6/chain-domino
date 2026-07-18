@@ -105,8 +105,8 @@ const STAKE_INFO: Record<'WHITE' | 'RED', { name: string; desc: string; color: s
   WHITE: {
     name: 'Beyaz Pul',
     desc: 'Standart hedefler ve temel zorluk.',
-    color: 'text-slate-200',
-    borderActive: 'border-slate-300 bg-slate-900/40 shadow-[0_0_10px_rgba(255,255,255,0.1)]',
+    color: 'text-stone-200',
+    borderActive: 'border-stone-300 bg-stone-900/40 shadow-[0_0_10px_rgba(255,255,255,0.1)]',
   },
   RED: {
     name: 'Kırmızı Pul',
@@ -231,7 +231,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
         <button
           type="button"
           onClick={() => setTab('DECK_SELECT')}
-          className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-sky-700/50 bg-gradient-to-b from-sky-950/50 to-slate-950/80 cursor-pointer select-none"
+          className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-sky-700/50 bg-gradient-to-b from-sky-950/50 to-stone-950/80 cursor-pointer select-none"
           style={{ animationDelay: '480ms', '--glow': 'rgba(14,165,233,0.3)' } as React.CSSProperties}
         >
           <span className="text-4xl">🃏</span>
@@ -243,7 +243,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
         <button
           type="button"
           onClick={() => setTab('STAKE_SELECT')}
-          className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-rose-700/50 bg-gradient-to-b from-rose-950/50 to-slate-950/80 cursor-pointer select-none"
+          className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-rose-700/50 bg-gradient-to-b from-rose-950/50 to-stone-950/80 cursor-pointer select-none"
           style={{ animationDelay: '560ms', '--glow': 'rgba(244,63,94,0.3)' } as React.CSSProperties}
         >
           <span className="text-4xl">🏆</span>
@@ -255,7 +255,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
         <button
           type="button"
           onClick={() => setTab('CHALLENGES')}
-          className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-fuchsia-700/50 bg-gradient-to-b from-fuchsia-950/50 to-slate-950/80 cursor-pointer select-none"
+          className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-fuchsia-700/50 bg-gradient-to-b from-fuchsia-950/50 to-stone-950/80 cursor-pointer select-none"
           style={{ animationDelay: '640ms', '--glow': 'rgba(192,38,211,0.3)' } as React.CSSProperties}
         >
           <span className="text-4xl">⚔️</span>
@@ -270,9 +270,9 @@ export default function StartScreen({ onStart }: StartScreenProps) {
 
       {/* ── DECK SELECT ── */}
       {tab === 'DECK_SELECT' && (
-        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-fade-in">
-          <div className="w-full max-w-xl bg-slate-900 border-4 border-slate-950 rounded-3xl p-6 shadow-2xl text-white flex flex-col">
-            <h2 className="text-center text-2xl font-bold font-pixel tracking-widest text-amber-400 uppercase border-b border-slate-800 pb-2">
+        <div className="absolute inset-0 bg-stone-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-fade-in">
+          <div className="w-full max-w-xl bg-stone-900 border-4 border-stone-950 rounded-3xl p-6 shadow-2xl text-white flex flex-col">
+            <h2 className="text-center text-2xl font-bold font-pixel tracking-widest text-amber-400 uppercase border-b border-stone-800 pb-2">
               DESTE SEÇİMİ
             </h2>
             
@@ -284,12 +284,12 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                   <button
                     key={d}
                     onClick={() => setDeck(d)}
-                    className={`menu-card flex flex-col justify-between p-3 rounded-xl border-2 text-center h-40 cursor-pointer select-none ${isActive ? info.borderActive : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}
+                    className={`menu-card flex flex-col justify-between p-3 rounded-xl border-2 text-center h-40 cursor-pointer select-none ${isActive ? info.borderActive : 'border-stone-800 bg-stone-950/40 hover:border-stone-700'}`}
                     style={{ '--glow': 'transparent' } as React.CSSProperties}
                   >
                     <span className={`text-4xl font-bold ${info.color}`}>{info.icon}</span>
                     <span className={`text-sm font-bold ${info.color} leading-none`}>{info.name}</span>
-                    <span className="text-[12px] text-slate-300 leading-tight">{info.desc}</span>
+                    <span className="text-[12px] text-stone-300 leading-tight">{info.desc}</span>
                     {isActive && <span className="text-[11px] font-bold text-emerald-400 bg-emerald-900/30 px-2 py-0.5 rounded">✓ SEÇİLİ</span>}
                   </button>
                 );
@@ -299,7 +299,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             <button
               type="button"
               onClick={() => setTab('MAIN')}
-              className="mt-5 w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-sm transition cursor-pointer select-none"
+              className="mt-5 w-full py-2.5 bg-stone-800 hover:bg-stone-700 font-bold rounded-xl border border-stone-950 text-sm transition cursor-pointer select-none"
             >
               TAMAM
             </button>
@@ -309,9 +309,9 @@ export default function StartScreen({ onStart }: StartScreenProps) {
 
       {/* ── STAKE SELECT ── */}
       {tab === 'STAKE_SELECT' && (
-        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-fade-in">
-          <div className="w-full max-w-lg bg-slate-900 border-4 border-slate-950 rounded-3xl p-6 shadow-2xl text-white flex flex-col">
-            <h2 className="text-center text-2xl font-bold font-pixel tracking-widest text-red-400 uppercase border-b border-slate-800 pb-2">
+        <div className="absolute inset-0 bg-stone-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-fade-in">
+          <div className="w-full max-w-lg bg-stone-900 border-4 border-stone-950 rounded-3xl p-6 shadow-2xl text-white flex flex-col">
+            <h2 className="text-center text-2xl font-bold font-pixel tracking-widest text-red-400 uppercase border-b border-stone-800 pb-2">
               ZORLUK SEÇİMİ
             </h2>
 
@@ -323,16 +323,16 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                   <button
                     key={s}
                     onClick={() => setStake(s)}
-                    className={`menu-card flex flex-col items-center gap-2 p-4 rounded-xl border-2 text-center transition cursor-pointer select-none ${isActive ? info.borderActive : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'}`}
+                    className={`menu-card flex flex-col items-center gap-2 p-4 rounded-xl border-2 text-center transition cursor-pointer select-none ${isActive ? info.borderActive : 'border-stone-800 bg-stone-950/40 hover:border-stone-700'}`}
                     style={{ '--glow': 'transparent' } as React.CSSProperties}
                   >
                     <div className={`w-10 h-10 rounded-full border-4 flex items-center justify-center font-pixel text-base font-black shadow ${
-                      s === 'WHITE' ? 'border-slate-400 bg-white text-slate-800' : 'border-red-700 bg-red-500 text-white animate-pulse'
+                      s === 'WHITE' ? 'border-stone-400 bg-white text-stone-800' : 'border-red-700 bg-red-500 text-white animate-pulse'
                     }`}>
                       {s === 'WHITE' ? 'W' : 'R'}
                     </div>
                     <span className={`text-sm font-bold ${info.color}`}>{info.name}</span>
-                    <span className="text-[12px] text-slate-400 leading-tight">{info.desc}</span>
+                    <span className="text-[12px] text-stone-400 leading-tight">{info.desc}</span>
                     {isActive && <span className="text-[11px] font-bold text-emerald-400 bg-emerald-900/30 px-2 py-0.5 rounded">✓ SEÇİLİ</span>}
                   </button>
                 );
@@ -342,7 +342,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             <button
               type="button"
               onClick={() => setTab('MAIN')}
-              className="mt-5 w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-sm transition cursor-pointer select-none"
+              className="mt-5 w-full py-2.5 bg-stone-800 hover:bg-stone-700 font-bold rounded-xl border border-stone-950 text-sm transition cursor-pointer select-none"
             >
               TAMAM
             </button>
@@ -352,12 +352,12 @@ export default function StartScreen({ onStart }: StartScreenProps) {
 
       {/* ── CHALLENGES ── */}
       {tab === 'CHALLENGES' && (
-        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-fade-in">
-          <div className="w-full max-w-2xl bg-slate-900 border-4 border-slate-950 rounded-3xl p-6 shadow-2xl text-white flex flex-col max-h-[90vh] overflow-y-auto">
-            <h2 className="text-center text-2xl font-bold font-pixel tracking-widest text-fuchsia-400 uppercase border-b border-slate-800 pb-2">
+        <div className="absolute inset-0 bg-stone-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-fade-in">
+          <div className="w-full max-w-2xl bg-stone-900 border-4 border-stone-950 rounded-3xl p-6 shadow-2xl text-white flex flex-col max-h-[90vh] overflow-y-auto">
+            <h2 className="text-center text-2xl font-bold font-pixel tracking-widest text-fuchsia-400 uppercase border-b border-stone-800 pb-2">
               MÜCADELELER
             </h2>
-            <p className="text-center text-[12px] text-slate-500 mt-1.5 mb-4">
+            <p className="text-center text-[12px] text-stone-500 mt-1.5 mb-4">
               Özel kurallarla oyna, becerinle sınırlarını zorla!
             </p>
 
@@ -367,8 +367,8 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                   key={ch.id}
                   className={`relative flex flex-col gap-2 p-4 rounded-xl border-2 transition select-none ${
                     ch.unlocked
-                      ? 'border-slate-700 bg-slate-950/50 hover:border-fuchsia-700/50 hover:bg-fuchsia-950/10 cursor-pointer'
-                      : 'border-slate-800 bg-slate-950/20 opacity-40 cursor-not-allowed'
+                      ? 'border-stone-700 bg-stone-950/50 hover:border-fuchsia-700/50 hover:bg-fuchsia-950/10 cursor-pointer'
+                      : 'border-stone-800 bg-stone-950/20 opacity-40 cursor-not-allowed'
                   }`}
                 >
                   {/* Header */}
@@ -376,7 +376,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                     <span className="text-3xl">{ch.icon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-pixel text-sm font-black text-slate-100 truncate">{ch.name}</span>
+                        <span className="font-pixel text-sm font-black text-stone-100 truncate">{ch.name}</span>
                         <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${ch.diffColor} border-current/30 bg-current/5`}>
                           {ch.difficulty}
                         </span>
@@ -385,12 +385,12 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                   </div>
 
                   {/* Description */}
-                  <p className="text-[12px] text-slate-400 leading-relaxed">{ch.description}</p>
+                  <p className="text-[12px] text-stone-400 leading-relaxed">{ch.description}</p>
 
                   {/* Rule badge */}
-                  <div className="flex items-center gap-1.5 bg-slate-950/60 border border-slate-800 rounded-lg px-2.5 py-1.5">
+                  <div className="flex items-center gap-1.5 bg-stone-950/60 border border-stone-800 rounded-lg px-2.5 py-1.5">
                     <span className="text-[11px] text-amber-500 font-bold">KURAL:</span>
-                    <span className="text-[11px] text-slate-300">{ch.rule}</span>
+                    <span className="text-[11px] text-stone-300">{ch.rule}</span>
                   </div>
 
                   {/* Play button */}
@@ -408,7 +408,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                   )}
 
                   {!ch.unlocked && (
-                    <div className="text-center text-[12px] text-slate-600 font-pixel">🔒 Kilitli</div>
+                    <div className="text-center text-[12px] text-stone-600 font-pixel">🔒 Kilitli</div>
                   )}
                 </div>
               ))}
@@ -417,7 +417,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             <button
               type="button"
               onClick={() => setTab('MAIN')}
-              className="mt-5 w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-sm transition cursor-pointer select-none"
+              className="mt-5 w-full py-2.5 bg-stone-800 hover:bg-stone-700 font-bold rounded-xl border border-stone-950 text-sm transition cursor-pointer select-none"
             >
               KAPAT
             </button>
@@ -427,26 +427,26 @@ export default function StartScreen({ onStart }: StartScreenProps) {
 
       {/* ── SETUP & START CONFIRM ── */}
       {tab === 'SETUP' && (
-        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-chain-place">
-          <div className="w-full max-w-lg bg-slate-900 border-4 border-slate-950 rounded-3xl p-5 shadow-2xl text-white flex flex-col max-h-full overflow-y-auto">
-            <h2 className="text-center text-2xl font-bold font-pixel tracking-widest text-emerald-400 uppercase border-b border-slate-800 pb-2">
+        <div className="absolute inset-0 bg-stone-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-40 animate-chain-place">
+          <div className="w-full max-w-lg bg-stone-900 border-4 border-stone-950 rounded-3xl p-5 shadow-2xl text-white flex flex-col max-h-full overflow-y-auto">
+            <h2 className="text-center text-2xl font-bold font-pixel tracking-widest text-emerald-400 uppercase border-b border-stone-800 pb-2">
               SEFER KURULUMU
             </h2>
 
             <div className="mt-4 flex flex-col gap-3">
-              <div className="flex justify-between items-center bg-slate-950/40 p-2.5 rounded-lg border border-slate-850">
-                <span className="text-sm text-slate-400 font-medium">Seçili Deste:</span>
+              <div className="flex justify-between items-center bg-stone-950/40 p-2.5 rounded-lg border border-stone-850">
+                <span className="text-sm text-stone-400 font-medium">Seçili Deste:</span>
                 <span className={`text-sm font-bold ${DECK_INFO[deck].color}`}>{DECK_INFO[deck].name}</span>
               </div>
-              <div className="flex justify-between items-center bg-slate-950/40 p-2.5 rounded-lg border border-slate-850">
-                <span className="text-sm text-slate-400 font-medium">Zorluk Seviyesi:</span>
+              <div className="flex justify-between items-center bg-stone-950/40 p-2.5 rounded-lg border border-stone-850">
+                <span className="text-sm text-stone-400 font-medium">Zorluk Seviyesi:</span>
                 <span className={`text-sm font-bold ${STAKE_INFO[stake].color}`}>{STAKE_INFO[stake].name}</span>
               </div>
             </div>
 
             {/* Chest Selection */}
             <div className="mt-4">
-              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">🏴 Başlangıç Sandığı Seç</p>
+              <p className="text-sm font-bold text-stone-400 uppercase tracking-widest mb-2">🏴 Başlangıç Sandığı Seç</p>
               <div className="grid grid-cols-2 gap-2">
                 {STARTING_CHESTS.map((chest) => {
                   const isSelected = selectedChest === chest.id;
@@ -459,15 +459,15 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                         'menu-card flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition text-left cursor-pointer',
                         isSelected
                           ? 'border-amber-400 bg-amber-950/20 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
-                          : 'border-slate-700 bg-slate-950/30 hover:border-slate-500',
+                          : 'border-stone-700 bg-stone-950/30 hover:border-stone-500',
                       ].join(' ')}
                       style={{ '--glow': 'rgba(251,191,36,0.3)' } as React.CSSProperties}
                     >
                       <span className="text-4xl">{chest.icon}</span>
-                      <span className={`text-[13px] font-pixel font-bold text-center leading-tight ${isSelected ? 'text-amber-300' : 'text-slate-200'}`}>
+                      <span className={`text-[13px] font-pixel font-bold text-center leading-tight ${isSelected ? 'text-amber-300' : 'text-stone-200'}`}>
                         {chest.name}
                       </span>
-                      <span className="text-[11px] text-slate-400 text-center leading-tight">
+                      <span className="text-[11px] text-stone-400 text-center leading-tight">
                         {chest.description}
                       </span>
                       {isSelected && (
@@ -477,7 +477,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                   );
                 })}
               </div>
-              <p className="text-[11px] text-slate-500 mt-2 text-center">Sandık seçimi opsiyoneldir.</p>
+              <p className="text-[11px] text-stone-500 mt-2 text-center">Sandık seçimi opsiyoneldir.</p>
             </div>
 
             <button
@@ -492,7 +492,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             <button
               type="button"
               onClick={() => setTab('MAIN')}
-              className="mt-3.5 w-full py-2 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl border border-slate-950 text-sm transition cursor-pointer select-none"
+              className="mt-3.5 w-full py-2 bg-stone-800 hover:bg-stone-700 font-bold rounded-xl border border-stone-950 text-sm transition cursor-pointer select-none"
             >
               GERİ DÖN
             </button>
@@ -505,7 +505,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           only actually fires once that flash is fully opaque, masking the instant screen swap
           underneath it. */}
       {launchStage !== 'idle' && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950 overflow-hidden pointer-events-none">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-stone-950 overflow-hidden pointer-events-none">
           {launchStage === 'growing' && (
             <span className="text-8xl animate-chest-grow">{chestIcon}</span>
           )}

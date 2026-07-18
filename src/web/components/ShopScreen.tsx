@@ -9,8 +9,8 @@ import { Fragment, useEffect, useState } from 'react';
 
 function renderBoosterIcon(id: string, size?: 'STANDARD' | 'JUMBO') {
   let color = 'from-blue-500 to-indigo-700';
-  if (id.includes('obsidian')) color = 'from-purple-800 to-slate-900 border-purple-600/50 shadow-[0_0_10px_rgba(147,51,234,0.4)]';
-  else if (id.includes('ivory')) color = 'from-slate-100 to-stone-300 border-stone-400';
+  if (id.includes('obsidian')) color = 'from-purple-800 to-stone-900 border-purple-600/50 shadow-[0_0_10px_rgba(147,51,234,0.4)]';
+  else if (id.includes('ivory')) color = 'from-stone-100 to-stone-300 border-stone-400';
   else if (id.includes('amber')) color = 'from-amber-500 to-orange-700 border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.4)]';
   const isJumbo = size === 'JUMBO';
 
@@ -18,7 +18,7 @@ function renderBoosterIcon(id: string, size?: 'STANDARD' | 'JUMBO') {
     <div className={`${isJumbo ? 'w-18 h-24' : 'w-14 h-20'} rounded-xl bg-gradient-to-br ${color} flex flex-col items-center justify-between border-2 border-white/20 shadow-lg relative overflow-hidden select-none`}>
       <div className="absolute inset-0 bg-opacity-20 bg-white swirl-felt pointer-events-none" />
       {isJumbo && (
-        <span className="absolute top-1 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-950 text-[9px] font-pixel font-black px-1.5 py-0.5 rounded shadow z-10 tracking-widest">JUMBO</span>
+        <span className="absolute top-1 left-1/2 -translate-x-1/2 bg-amber-500 text-stone-950 text-[9px] font-pixel font-black px-1.5 py-0.5 rounded shadow z-10 tracking-widest">JUMBO</span>
       )}
       <span className="font-pixel text-[10px] text-white font-extrabold rotate-12 drop-shadow-md mt-6">PAKET</span>
       <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping mb-3" />
@@ -32,7 +32,7 @@ function renderRuneIcon(size?: 'STANDARD' | 'JUMBO') {
     <div className={`${isJumbo ? 'w-18 h-24' : 'w-14 h-20'} rounded-xl bg-gradient-to-br from-rose-700 to-fuchsia-900 border-rose-500/50 shadow-[0_0_10px_rgba(225,29,72,0.4)] flex flex-col items-center justify-between border-2 border-white/20 shadow-lg relative overflow-hidden select-none`}>
       <div className="absolute inset-0 bg-opacity-20 bg-white swirl-felt pointer-events-none" />
       {isJumbo && (
-        <span className="absolute top-1 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-950 text-[9px] font-pixel font-black px-1.5 py-0.5 rounded shadow z-10 tracking-widest">JUMBO</span>
+        <span className="absolute top-1 left-1/2 -translate-x-1/2 bg-amber-500 text-stone-950 text-[9px] font-pixel font-black px-1.5 py-0.5 rounded shadow z-10 tracking-widest">JUMBO</span>
       )}
       <span className="font-pixel text-[10px] text-white font-extrabold rotate-12 drop-shadow-md mt-6">RÜN</span>
       <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-300 animate-ping mb-3" />
@@ -291,7 +291,7 @@ export default function ShopScreen({
     setTimeout(() => setPackSeal('open'), 500);
   }
   const sealedPackOverlay = packIsPending && packSeal !== 'open' && (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-stone-950/95 z-50 p-4 font-pixel select-none crt-screen">
       <div
         onClick={handleCrackSeal}
         className={`relative cursor-pointer ${packSeal === 'sealed' ? 'animate-pack-idle-bob hover:scale-105 transition-transform' : 'animate-pack-crack'}`}
@@ -327,7 +327,7 @@ export default function ShopScreen({
 
   const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
   const diceOverlay = isRerolling && (
-    <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none bg-slate-950/30">
+    <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none bg-stone-950/30">
       <div className="flex gap-8">
         <span className="text-7xl text-stone-100 animate-dice-tumble" style={{ animationDelay: '0ms' }}>
           {DICE_FACES[diceFaces[0] - 1]}
@@ -458,7 +458,7 @@ export default function ShopScreen({
           className={`balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${borderClass}`}
         >
           {renderPriceBadge(charm.cost)}
-          <div className={`absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 ${gemClass}`} title={charm.curse ? 'Lanetli' : charm.rarity} />
+          <div className={`absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-stone-950/40 z-10 ${gemClass}`} title={charm.curse ? 'Lanetli' : charm.rarity} />
 
           <div className="flex-1 flex items-center justify-center transform scale-[1.3] origin-center my-auto pointer-events-none">
             {renderCharmIcon(charm.id)}
@@ -500,7 +500,7 @@ export default function ShopScreen({
           className="balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 border-amber-600/80 bg-amber-950/20 shadow-[0_0_10px_rgba(217,119,6,0.3)] transition shrink-0 cursor-pointer hover:scale-105 active:scale-95"
         >
           {renderPriceBadge(voucher.cost)}
-          <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 bg-amber-500 shadow-[0_0_8px_#d97706]" title="Ferman" />
+          <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-stone-950/40 z-10 bg-amber-500 shadow-[0_0_8px_#d97706]" title="Ferman" />
 
           <div className="flex-1 flex items-center justify-center transform scale-[1.3] origin-center my-auto pointer-events-none">
             {renderVoucherIcon(voucher.id)}
@@ -547,7 +547,7 @@ export default function ShopScreen({
           className={`balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${boosterBorder}`}
         >
           {renderPriceBadge(pack.cost)}
-          <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 bg-indigo-500 shadow-[0_0_8px_#6366f1]" title="Kese" />
+          <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-stone-950/40 z-10 bg-indigo-500 shadow-[0_0_8px_#6366f1]" title="Kese" />
 
           <div className="flex-1 flex items-center justify-center transform scale-[0.9] origin-center my-auto pointer-events-none">
             {renderBoosterIcon(pack.id)}
@@ -589,7 +589,7 @@ export default function ShopScreen({
           className="balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 border-rose-600/80 bg-rose-950/20 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95"
         >
           {renderPriceBadge(pack.cost)}
-          <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 bg-rose-500 shadow-[0_0_8px_#f43f5e]" title="Rün Kesesi" />
+          <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-stone-950/40 z-10 bg-rose-500 shadow-[0_0_8px_#f43f5e]" title="Rün Kesesi" />
 
           <div className="flex-1 flex items-center justify-center transform scale-[0.9] origin-center my-auto pointer-events-none">
             {renderRuneIcon()}
@@ -632,7 +632,7 @@ export default function ShopScreen({
           className={`balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${borderClass}`}
         >
           {renderPriceBadge(book.cost)}
-          <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 bg-rose-500 shadow-[0_0_8px_#f43f5e]" title="Teorem Kitabı" />
+          <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-stone-950/40 z-10 bg-rose-500 shadow-[0_0_8px_#f43f5e]" title="Teorem Kitabı" />
 
           <div className="flex-1 flex items-center justify-center text-4xl origin-center my-auto pointer-events-none text-rose-450 drop-shadow">
             📖
@@ -675,7 +675,7 @@ export default function ShopScreen({
         className={`balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${borderClass}`}
       >
         {renderPriceBadge(upgrade.cost)}
-        <div className={`absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-slate-950/40 z-10 ${gemColor}`} title="Büyü" />
+        <div className={`absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-stone-950/40 z-10 ${gemColor}`} title="Büyü" />
 
         <div className="flex-1 flex items-center justify-center transform scale-[1.3] origin-center my-auto pointer-events-none">
           {renderUpgradeIcon(upgrade.id)}
@@ -698,9 +698,9 @@ export default function ShopScreen({
 
   // Common Draft Kese Modal Overlay — only revealed once the pack's seal has been cracked open.
   const draftOverlay = draftOffers && draftOffers.length > 0 && packSeal === 'open' && (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-stone-950/95 z-50 p-4 font-pixel select-none crt-screen">
       <h2 className="text-2xl md:text-3xl text-amber-300 mb-2 drop-shadow-[0_0_10px_#fbbf24] animate-pulse">KESE AÇILIYOR</h2>
-      <p className="text-sm text-slate-400 mb-8 font-sans">Taş kesesinden destenize kalıcı olarak eklemek için 1 adet taş seçin.</p>
+      <p className="text-sm text-stone-400 mb-8 font-sans">Taş kesesinden destenize kalıcı olarak eklemek için 1 adet taş seçin.</p>
       
       <div className="flex gap-4 justify-center items-center mb-8">
         {draftOffers.map((stone, i) => {
@@ -725,16 +725,16 @@ export default function ShopScreen({
               style={{ '--fan-rot': `${fanOffset}deg`, animationDelay: `${i * 90}ms` } as React.CSSProperties}
               className={`flex flex-col items-center justify-between p-3.5 w-24 h-36 md:w-30 md:h-44 rounded-2xl border-2 cursor-pointer transform hover:scale-105 active:scale-95 transition animate-pack-fan-in ${modifierBorder}`}
             >
-              <span className="text-[9.5px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-slate-950/80 mb-2 text-white">
+              <span className="text-[9.5px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-stone-950/80 mb-2 text-white">
                 {modifierLabel}
               </span>
               
               {/* Domino stone representation */}
               <div className="flex-1 flex flex-col justify-center items-center gap-1.5">
                 <div className="flex gap-1.5 items-center justify-center">
-                  <span className="text-lg md:text-2xl font-bold text-white bg-slate-950/50 px-2 py-0.5 rounded">{stone.leftVal}</span>
-                  <span className="text-slate-400">|</span>
-                  <span className="text-lg md:text-2xl font-bold text-white bg-slate-950/50 px-2 py-0.5 rounded">{stone.rightVal}</span>
+                  <span className="text-lg md:text-2xl font-bold text-white bg-stone-950/50 px-2 py-0.5 rounded">{stone.leftVal}</span>
+                  <span className="text-stone-400">|</span>
+                  <span className="text-lg md:text-2xl font-bold text-white bg-stone-950/50 px-2 py-0.5 rounded">{stone.rightVal}</span>
                 </div>
               </div>
               
@@ -747,7 +747,7 @@ export default function ShopScreen({
       <button
         type="button"
         onClick={onSkipDraft}
-        className="px-6 py-2 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-sm font-pixel uppercase tracking-widest transition"
+        className="px-6 py-2 rounded-xl border border-stone-700 bg-stone-900/60 hover:bg-stone-800 text-stone-400 hover:text-stone-200 text-sm font-pixel uppercase tracking-widest transition"
       >
         Atla
       </button>
@@ -757,9 +757,9 @@ export default function ShopScreen({
   // Rün Kesesi — Step 1: pick exactly 1 of 3 random rune options. Only revealed once the pack's
   // seal has been cracked open.
   const runePackOverlay = runeOffers.length > 0 && packSeal === 'open' && (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-stone-950/95 z-50 p-4 font-pixel select-none crt-screen">
       <h2 className="text-2xl md:text-3xl text-rose-350 mb-2 drop-shadow-[0_0_10px_#fb7185] animate-pulse">RÜN KESESİ AÇILIYOR</h2>
-      <p className="text-sm text-slate-400 mb-8 font-sans">Bir rün seçin — seçtiğiniz rün, birden fazla taşınıza birden uygulanabilir.</p>
+      <p className="text-sm text-stone-400 mb-8 font-sans">Bir rün seçin — seçtiğiniz rün, birden fazla taşınıza birden uygulanabilir.</p>
 
       <div className="flex gap-4 justify-center items-center mb-8 flex-wrap">
         {runeOffers.map((rune, i) => (
@@ -769,13 +769,13 @@ export default function ShopScreen({
             style={{ '--fan-rot': `${(i - (runeOffers.length - 1) / 2) * 6}deg`, animationDelay: `${i * 90}ms` } as React.CSSProperties}
             className="flex flex-col items-center justify-between p-3.5 w-32 h-44 md:w-36 md:h-48 rounded-2xl border-2 border-rose-600/70 bg-rose-950/30 shadow-[0_0_15px_rgba(225,29,72,0.3)] cursor-pointer transform hover:scale-105 active:scale-95 transition text-center animate-pack-fan-in"
           >
-            <span className="text-[12px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-slate-950/80 text-rose-300">
+            <span className="text-[12px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-stone-950/80 text-rose-300">
               {rune.targetCount} taşa uygulanır
             </span>
             <span className="flex-1 flex items-center justify-center text-base font-bold text-white leading-tight px-1">
               {rune.name}
             </span>
-            <p className="text-[11px] text-slate-300 font-sans leading-snug mb-2">{rune.description}</p>
+            <p className="text-[11px] text-stone-300 font-sans leading-snug mb-2">{rune.description}</p>
             <span className="text-[11px] text-emerald-400 font-bold">SEÇ</span>
           </div>
         ))}
@@ -784,7 +784,7 @@ export default function ShopScreen({
       <button
         type="button"
         onClick={onSkipRunePack}
-        className="px-6 py-2 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-sm font-pixel uppercase tracking-widest transition"
+        className="px-6 py-2 rounded-xl border border-stone-700 bg-stone-900/60 hover:bg-stone-800 text-stone-400 hover:text-stone-200 text-sm font-pixel uppercase tracking-widest transition"
       >
         Atla
       </button>
@@ -793,9 +793,9 @@ export default function ShopScreen({
 
   // Rün Kesesi — Step 2: pick up to `pendingRune.targetCount` existing customDeck stones to apply it to.
   const runeTargetOverlay = pendingRune && (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-50 p-4 font-pixel select-none crt-screen">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-stone-950/95 z-50 p-4 font-pixel select-none crt-screen">
       <h2 className="text-2xl md:text-3xl text-rose-350 mb-1 drop-shadow-[0_0_10px_#fb7185]">{pendingRune.name}</h2>
-      <p className="text-sm text-slate-400 mb-4 font-sans text-center max-w-md">
+      <p className="text-sm text-stone-400 mb-4 font-sans text-center max-w-md">
         Destenizden {pendingRune.targetCount} taşa kadar seçin ({selectedRuneTargets.length}/{pendingRune.targetCount} seçildi).
       </p>
 
@@ -807,26 +807,26 @@ export default function ShopScreen({
               key={stone.id}
               onClick={() => toggleRuneTarget(stone.id)}
               className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border-2 cursor-pointer transition select-none shrink-0 ${
-                isSelected ? 'border-rose-400 bg-rose-950/40 shadow-[0_0_10px_rgba(251,113,133,0.4)]' : 'border-slate-800 bg-slate-900/40 hover:border-slate-600'
+                isSelected ? 'border-rose-400 bg-rose-950/40 shadow-[0_0_10px_rgba(251,113,133,0.4)]' : 'border-stone-800 bg-stone-900/40 hover:border-stone-600'
               }`}
             >
-              <span className="text-base font-bold text-white bg-slate-950/60 px-1.5 py-0.5 rounded">{stone.leftVal}</span>
-              <span className="text-slate-500 text-sm">|</span>
-              <span className="text-base font-bold text-white bg-slate-950/60 px-1.5 py-0.5 rounded">{stone.rightVal}</span>
+              <span className="text-base font-bold text-white bg-stone-950/60 px-1.5 py-0.5 rounded">{stone.leftVal}</span>
+              <span className="text-stone-500 text-sm">|</span>
+              <span className="text-base font-bold text-white bg-stone-950/60 px-1.5 py-0.5 rounded">{stone.rightVal}</span>
               {stone.modifier && stone.modifier !== 'NORMAL' && (
                 <span className="text-[10px] text-amber-300 font-bold ml-1 uppercase">{stone.modifier}</span>
               )}
             </div>
           );
         })}
-        {customDeck.length === 0 && <span className="text-sm text-slate-500 font-sans">Destenizde taş yok.</span>}
+        {customDeck.length === 0 && <span className="text-sm text-stone-500 font-sans">Destenizde taş yok.</span>}
       </div>
 
       <div className="flex gap-3 shrink-0">
         <button
           type="button"
           onClick={onSkipRunePack}
-          className="px-6 py-2.5 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-sm font-pixel uppercase tracking-widest transition"
+          className="px-6 py-2.5 rounded-xl border border-stone-700 bg-stone-900/60 hover:bg-stone-800 text-stone-400 hover:text-stone-200 text-sm font-pixel uppercase tracking-widest transition"
         >
           Vazgeç
         </button>
@@ -863,7 +863,7 @@ export default function ShopScreen({
     );
     detailsPanel = (
       <div
-        className={`fixed z-[9999] w-80 bg-slate-950/95 border-3 rounded-2xl p-5 flex flex-col gap-3 font-sans select-none cursor-auto animate-fade-in ${
+        className={`fixed z-[9999] w-80 bg-stone-950/95 border-3 rounded-2xl p-5 flex flex-col gap-3 font-sans select-none cursor-auto animate-fade-in ${
           isCharmDetails ? 'border-amber-600/80 shadow-[0_0_30px_rgba(217,119,6,0.65)]' : 'border-cyan-500/80 shadow-[0_0_30px_rgba(6,182,212,0.65)]'
         }`}
         style={{ left, top }}
@@ -874,21 +874,21 @@ export default function ShopScreen({
             {hoveredDetails.name}
           </span>
           <div className="flex items-center gap-2">
-            <span className="bg-slate-900 px-2 py-0.5 rounded text-[12px] font-bold text-slate-400 border border-slate-800 uppercase tracking-widest">
+            <span className="bg-stone-900 px-2 py-0.5 rounded text-[12px] font-bold text-stone-400 border border-stone-800 uppercase tracking-widest">
               {hoveredDetails.type}
             </span>
             {hoveredDetails.rarity && (
               <span className={`text-[12px] font-extrabold tracking-widest uppercase ${
                 hoveredDetails.rarity === 'LEGENDARY' ? 'text-violet-400 shadow-[0_0_8px_rgba(167,139,250,0.5)]' :
                 hoveredDetails.rarity === 'RARE' ? 'text-red-400 shadow-[0_0_8px_rgba(248,113,113,0.5)]' :
-                hoveredDetails.rarity === 'UNCOMMON' ? 'text-teal-400' : 'text-slate-400'
+                hoveredDetails.rarity === 'UNCOMMON' ? 'text-teal-400' : 'text-stone-400'
               }`}>
                 {hoveredDetails.rarity}
               </span>
             )}
           </div>
         </div>
-        <p className="text-base leading-relaxed text-slate-200 py-1 font-outfit">
+        <p className="text-base leading-relaxed text-stone-200 py-1 font-outfit">
           {hoveredDetails.description}
         </p>
         {hoveredDetails.cost !== undefined && (
@@ -934,13 +934,13 @@ export default function ShopScreen({
         </div>
 
         {activeTag && (
-          <div className="flex items-center gap-2.5 bg-slate-950/80 border border-amber-500/30 rounded-xl px-4 py-2 shadow-lg animate-pulse shrink-0 self-center">
+          <div className="flex items-center gap-2.5 bg-stone-950/80 border border-amber-500/30 rounded-xl px-4 py-2 shadow-lg animate-pulse shrink-0 self-center">
             <span className="text-4xl">{activeTag.icon}</span>
             <div className="flex flex-col leading-tight select-none">
               <span className="font-pixel text-sm font-black text-amber-300 uppercase tracking-widest">
                 Aktif Etiket: {activeTag.name}
               </span>
-              <span className="text-[12px] text-slate-400 font-sans mt-0.5">
+              <span className="text-[12px] text-stone-400 font-sans mt-0.5">
                 {activeTag.description}
               </span>
             </div>
@@ -948,9 +948,9 @@ export default function ShopScreen({
         )}
 
         {/* Offers & Fusion stacked in Portrait */}
-        <div className="flex-1 bg-slate-950/70 border border-slate-800/80 rounded-2xl p-4 flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <h3 className="text-base font-bold uppercase tracking-wider text-slate-400">Teklifler</h3>
+        <div className="flex-1 bg-stone-950/70 border border-stone-800/80 rounded-2xl p-4 flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-stone-800 pb-2">
+            <h3 className="text-base font-bold uppercase tracking-wider text-stone-400">Teklifler</h3>
             {slotsFull && (
               <span className="text-[13px] text-amber-400 font-bold uppercase animate-pulse">Slotlar Dolu!</span>
             )}
@@ -963,15 +963,15 @@ export default function ShopScreen({
           </div>
 
           {/* Fusion in Portrait */}
-          <div className="border-t border-slate-800/50 pt-3 mt-2">
+          <div className="border-t border-stone-800/50 pt-3 mt-2">
             <h3 className="text-sm font-bold uppercase tracking-wider text-amber-500 font-pixel mb-2">Garabet Füzyon Ocağı</h3>
             {ownedCharms.length < 2 ? (
-              <p className="text-[11.5px] text-slate-500 italic font-sans text-center">En az 2 tılsımınız olmalı.</p>
+              <p className="text-[11.5px] text-stone-500 italic font-sans text-center">En az 2 tılsımınız olmalı.</p>
             ) : (
-              <div className="flex flex-col gap-3 bg-slate-950/30 p-3 rounded-xl border border-slate-900/50">
+              <div className="flex flex-col gap-3 bg-stone-950/30 p-3 rounded-xl border border-stone-900/50">
                 {/* Inventory */}
                 <div>
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Tılsım Seç:</span>
+                  <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block mb-1">Tılsım Seç:</span>
                   <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
                     {eligibleOwnedCharms.map((charm) => (
                       <button
@@ -979,7 +979,7 @@ export default function ShopScreen({
                         type="button"
                         onClick={() => handleFuseCharmSelect(charm.id)}
                         className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-left text-[12px] transition ${
-                          fuseA === charm.id || fuseB === charm.id ? 'border-amber-400 bg-amber-950/30 text-amber-300 font-bold' : 'border-slate-800 bg-slate-900/40 text-slate-400'
+                          fuseA === charm.id || fuseB === charm.id ? 'border-amber-400 bg-amber-950/30 text-amber-300 font-bold' : 'border-stone-800 bg-stone-900/40 text-stone-400'
                         }`}
                       >
                         <span className="text-sm">{renderCharmIcon(charm.id)}</span>
@@ -991,15 +991,15 @@ export default function ShopScreen({
 
                 {/* Slots */}
                 <div className="flex justify-center items-center gap-2">
-                  <div className="w-12 h-14 border rounded flex items-center justify-center text-sm bg-slate-900 border-slate-800">
+                  <div className="w-12 h-14 border rounded flex items-center justify-center text-sm bg-stone-900 border-stone-800">
                     {fuseA ? renderCharmIcon(fuseA) : '?'}
                   </div>
-                  <span className="text-slate-600 font-pixel">+</span>
-                  <div className="w-12 h-14 border rounded flex items-center justify-center text-sm bg-slate-900 border-slate-800">
+                  <span className="text-stone-600 font-pixel">+</span>
+                  <div className="w-12 h-14 border rounded flex items-center justify-center text-sm bg-stone-900 border-stone-800">
                     {fuseB ? renderCharmIcon(fuseB) : '?'}
                   </div>
-                  <span className="text-slate-600 font-pixel">=</span>
-                  <div className="w-12 h-14 border rounded flex items-center justify-center text-sm bg-slate-900 border-slate-800">
+                  <span className="text-stone-600 font-pixel">=</span>
+                  <div className="w-12 h-14 border rounded flex items-center justify-center text-sm bg-stone-900 border-stone-800">
                     {resultCharm ? renderCharmIcon(resultCharm.id) : '?'}
                   </div>
                 </div>
@@ -1015,7 +1015,7 @@ export default function ShopScreen({
                       setFuseB(null);
                     }}
                     className={`w-full py-2.5 rounded-lg text-sm font-pixel font-bold text-white transition ${
-                      canFuse ? 'bg-amber-600 hover:bg-amber-500 border-b-2 border-amber-800' : 'bg-slate-850 opacity-40'
+                      canFuse ? 'bg-amber-600 hover:bg-amber-500 border-b-2 border-amber-800' : 'bg-stone-850 opacity-40'
                     }`}
                   >
                     BİRLEŞTİR (${activeRecipe.cost})
@@ -1040,7 +1040,7 @@ export default function ShopScreen({
   // LANDSCAPE LAYOUT (Zero scroll on page, columns side-by-side)
   // ─────────────────────────────────────────────────────────────
   return (
-    <div className="w-full h-full flex flex-row bg-slate-900 border-4 border-slate-950 p-2 md:p-3 lg:p-4 gap-2 md:gap-3 lg:gap-4 select-none overflow-hidden rounded-3xl relative felt-board">
+    <div className="w-full h-full flex flex-row bg-stone-900 border-4 border-stone-950 p-2 md:p-3 lg:p-4 gap-2 md:gap-3 lg:gap-4 select-none overflow-hidden rounded-3xl relative felt-board">
       {/* 1. Left Side: Controls & Wood Sign */}
       <div className="w-28 md:w-32 lg:w-40 flex flex-col justify-between shrink-0 h-full">
         {/* Carved wooden shop sign */}
@@ -1054,18 +1054,18 @@ export default function ShopScreen({
         </div>
 
         {/* Balance Badge */}
-        <div className="bg-slate-950/90 border border-slate-800 p-2.5 rounded-xl text-center shadow-inner">
-          <span className="block text-[10px] text-slate-500 font-pixel uppercase tracking-widest mb-0.5">Bakiye</span>
+        <div className="bg-stone-950/90 border border-stone-800 p-2.5 rounded-xl text-center shadow-inner">
+          <span className="block text-[10px] text-stone-500 font-pixel uppercase tracking-widest mb-0.5">Bakiye</span>
           <span className="font-pixel text-2xl md:text-3xl text-emerald-400 font-black">💰 ${money}</span>
         </div>
 
         {/* Active Tag */}
         {activeTag && (
-          <div className="bg-slate-950 border border-amber-500/25 p-2 rounded-xl text-center shadow-md animate-pulse">
-            <span className="block text-[9.5px] text-slate-500 font-pixel uppercase tracking-widest mb-0.5">Aktif Etiket</span>
+          <div className="bg-stone-950 border border-amber-500/25 p-2 rounded-xl text-center shadow-md animate-pulse">
+            <span className="block text-[9.5px] text-stone-500 font-pixel uppercase tracking-widest mb-0.5">Aktif Etiket</span>
             <div className="text-2xl my-1">{activeTag.icon}</div>
             <span className="font-pixel text-[12px] text-amber-300 font-bold block leading-tight">{activeTag.name}</span>
-            <span className="text-[9.5px] text-slate-400 block leading-tight mt-1">{activeTag.description}</span>
+            <span className="text-[9.5px] text-stone-400 block leading-tight mt-1">{activeTag.description}</span>
           </div>
         )}
 
@@ -1093,9 +1093,9 @@ export default function ShopScreen({
 
       {/* 2. Middle Column: Shop Offers Rack — Balatro's own shop is one flat row of a handful of
           cards (2 jokers, 1-2 packs, sometimes a voucher), never sorted into category panels. */}
-      <div className="flex-1 bg-slate-950/75 border border-slate-800/80 rounded-2xl p-2 md:p-3 lg:p-4 flex flex-col h-full min-w-0 min-h-0 shop-parchment-bg">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
-          <h3 className="text-base font-bold uppercase tracking-wider text-slate-400">Teklifler</h3>
+      <div className="flex-1 bg-stone-950/75 border border-stone-800/80 rounded-2xl p-2 md:p-3 lg:p-4 flex flex-col h-full min-w-0 min-h-0 shop-parchment-bg">
+        <div className="flex items-center justify-between border-b border-stone-800 pb-2 shrink-0">
+          <h3 className="text-base font-bold uppercase tracking-wider text-stone-400">Teklifler</h3>
           {slotsFull && (
             <span className="text-[13px] text-amber-400 font-bold uppercase animate-pulse">
               Tılsım Slotları Dolu!
@@ -1103,14 +1103,14 @@ export default function ShopScreen({
           )}
         </div>
 
-        <div className="flex-1 mt-3 flex flex-row flex-wrap gap-3 justify-center items-start content-start min-h-0 overflow-y-auto">
+        <div className="flex-1 mt-3 flex flex-row flex-wrap gap-3 justify-center items-center content-center min-h-0 overflow-y-auto">
           <Fragment key={rerollKey}>{offers.map((offer, i) => (<div key={i} className="animate-shop-card-in" style={{ animationDelay: `${i * 70}ms` }}>{renderOfferCard(offer)}</div>))}</Fragment>
         </div>
       </div>
 
       {/* 3. Right Column: Fusion Forge (Side-by-side setup) */}
-      <div className="w-64 md:w-72 lg:w-80 xl:w-96 bg-slate-950/75 border border-slate-800/80 rounded-2xl p-2 md:p-3 lg:p-4 flex flex-col shrink-0 h-full min-h-0">
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-2 shrink-0 select-none">
+      <div className="w-64 md:w-72 lg:w-80 xl:w-96 bg-stone-950/75 border border-stone-800/80 rounded-2xl p-2 md:p-3 lg:p-4 flex flex-col shrink-0 h-full min-h-0">
+        <div className="flex items-center gap-2 border-b border-stone-800 pb-2 shrink-0 select-none">
           <span className="text-lg">🏛️</span>
           <h3 className="text-[13px] font-bold uppercase tracking-wider text-amber-500 font-pixel">
             Garabet Füzyon Ocağı
@@ -1118,8 +1118,8 @@ export default function ShopScreen({
         </div>
 
         {ownedCharms.length < 2 ? (
-          <div className="flex-1 flex items-center justify-center py-4 bg-slate-900/10 border border-slate-900/40 rounded-xl mt-3">
-            <p className="text-[12px] font-sans text-slate-500 italic text-center px-4 leading-normal">
+          <div className="flex-1 flex items-center justify-center py-4 bg-stone-900/10 border border-stone-900/40 rounded-xl mt-3">
+            <p className="text-[12px] font-sans text-stone-500 italic text-center px-4 leading-normal">
               Füzyon ocağını kullanmak için en az 2 tılsıma sahip olmalısınız.
             </p>
           </div>
@@ -1127,12 +1127,12 @@ export default function ShopScreen({
           <div className="flex-1 flex flex-col mt-3 gap-3 min-h-0">
             {/* Charm Inventory Selector */}
             <div className="flex-1 flex flex-col min-h-0">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block shrink-0">
+              <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block shrink-0">
                 1. Tılsımlarını Seç:
               </span>
-              <div className="flex-1 overflow-y-auto mt-1 max-h-56 border border-slate-900 bg-slate-950/30 p-2.5 rounded-xl flex flex-col gap-1.5 animate-fade-in pr-1">
+              <div className="flex-1 overflow-y-auto mt-1 max-h-56 border border-stone-900 bg-stone-950/30 p-2.5 rounded-xl flex flex-col gap-1.5 animate-fade-in pr-1">
                 {eligibleOwnedCharms.length === 0 ? (
-                  <p className="text-[11.5px] text-slate-500 italic font-sans leading-relaxed">
+                  <p className="text-[11.5px] text-stone-500 italic font-sans leading-relaxed">
                     {fuseA
                       ? 'Seçilen tılsımla birleşebilecek başka uyumlu tılsımınız bulunmuyor.'
                       : 'Birleştirilebilir uyumlu tılsımınız bulunmuyor. Saat, Matruşka, Abaküs, Ayna vb. uyumlu çiftleri toplayın.'}
@@ -1151,13 +1151,13 @@ export default function ShopScreen({
                           'flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left transition select-none cursor-pointer shrink-0',
                           isSelected
                             ? 'border-amber-400 bg-amber-950/20 text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.15)] font-bold'
-                            : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:bg-slate-800 hover:text-white',
+                            : 'border-stone-800 bg-stone-900/40 text-stone-400 hover:bg-stone-800 hover:text-white',
                         ].join(' ')}
                       >
                         <span className="text-base shrink-0 leading-none">{renderCharmIcon(charm.id)}</span>
                         <div className="flex flex-col">
                           <span className="text-[12px] font-pixel leading-tight">{charm.name}</span>
-                          <span className="text-[10px] text-slate-500 font-sans leading-none mt-0.5">
+                          <span className="text-[10px] text-stone-500 font-sans leading-none mt-0.5">
                             {charm.rarity} {isFused ? '(Füzyon)' : ''}
                           </span>
                         </div>
@@ -1169,53 +1169,53 @@ export default function ShopScreen({
             </div>
 
             {/* Selected slots & Recipe check */}
-            <div className="border border-slate-900/80 bg-slate-950/40 p-2.5 rounded-xl shrink-0 flex flex-col items-center">
-              <span className="text-[11px] font-bold text-slate-455 uppercase tracking-wider block mb-1.5 text-center">
+            <div className="border border-stone-900/80 bg-stone-950/40 p-2.5 rounded-xl shrink-0 flex flex-col items-center">
+              <span className="text-[11px] font-bold text-stone-455 uppercase tracking-wider block mb-1.5 text-center">
                 2. Sinerji Reçetesi
               </span>
               <div className="flex items-center gap-3">
                 {/* Slot A */}
                 <div className={[
                   'w-11 h-14 rounded-lg border flex flex-col items-center justify-center p-1 text-center transition shrink-0',
-                  fuseA ? 'border-amber-500/50 bg-amber-950/10' : 'border-dashed border-slate-800 bg-slate-900/10'
+                  fuseA ? 'border-amber-500/50 bg-amber-950/10' : 'border-dashed border-stone-800 bg-stone-900/10'
                 ].join(' ')}>
                   {fuseA ? (
                     <>
                       <span className="text-sm shrink-0 leading-none">{renderCharmIcon(fuseA)}</span>
-                      <span className="text-[9px] font-pixel text-slate-350 leading-tight truncate w-full mt-0.5">
+                      <span className="text-[9px] font-pixel text-stone-350 leading-tight truncate w-full mt-0.5">
                         {ownedCharms.find(c => c.id === fuseA)?.name}
                       </span>
                     </>
                   ) : (
-                    <span className="text-[10px] text-slate-650 font-pixel">Boş</span>
+                    <span className="text-[10px] text-stone-650 font-pixel">Boş</span>
                   )}
                 </div>
 
-                <span className="text-slate-650 font-bold font-pixel text-base select-none">+</span>
+                <span className="text-stone-650 font-bold font-pixel text-base select-none">+</span>
 
                 {/* Slot B */}
                 <div className={[
                   'w-11 h-14 rounded-lg border flex flex-col items-center justify-center p-1 text-center transition shrink-0',
-                  fuseB ? 'border-amber-500/50 bg-amber-950/10' : 'border-dashed border-slate-800 bg-slate-900/10'
+                  fuseB ? 'border-amber-500/50 bg-amber-950/10' : 'border-dashed border-stone-800 bg-stone-900/10'
                 ].join(' ')}>
                   {fuseB ? (
                     <>
                       <span className="text-sm shrink-0 leading-none">{renderCharmIcon(fuseB)}</span>
-                      <span className="text-[9px] font-pixel text-slate-350 leading-tight truncate w-full mt-0.5">
+                      <span className="text-[9px] font-pixel text-stone-350 leading-tight truncate w-full mt-0.5">
                         {ownedCharms.find(c => c.id === fuseB)?.name}
                       </span>
                     </>
                   ) : (
-                    <span className="text-[10px] text-slate-650 font-pixel">Boş</span>
+                    <span className="text-[10px] text-stone-650 font-pixel">Boş</span>
                   )}
                 </div>
 
-                <span className="text-slate-650 font-bold font-pixel text-base select-none">=</span>
+                <span className="text-stone-650 font-bold font-pixel text-base select-none">=</span>
 
                 {/* Result Preview */}
                 <div className={[
                   'w-11 h-14 rounded-lg border flex flex-col items-center justify-center p-1 text-center transition shrink-0',
-                  resultCharm ? 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_8px_rgba(16,185,129,0.2)] animate-pulse' : 'border-dashed border-slate-800 bg-slate-900/10'
+                  resultCharm ? 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_8px_rgba(16,185,129,0.2)] animate-pulse' : 'border-dashed border-stone-800 bg-stone-900/10'
                 ].join(' ')}>
                   {resultCharm ? (
                     <>
@@ -1225,19 +1225,19 @@ export default function ShopScreen({
                       </span>
                     </>
                   ) : (
-                    <span className="text-[10px] text-slate-650 font-pixel">?</span>
+                    <span className="text-[10px] text-stone-650 font-pixel">?</span>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Fusion Action Bar */}
-            <div className="shrink-0 flex flex-col gap-1 border-t border-slate-900 pt-2.5">
+            <div className="shrink-0 flex flex-col gap-1 border-t border-stone-900 pt-2.5">
               {resultCharm ? (
                 <div className="flex flex-col gap-2">
-                  <div className="bg-slate-900/20 border border-slate-900 p-2 rounded-lg text-center">
+                  <div className="bg-stone-900/20 border border-stone-900 p-2 rounded-lg text-center">
                     <span className="text-[10.5px] font-pixel text-emerald-400 font-bold block mb-0.5">YENİ HİBRİT TILSIM</span>
-                    <p className="text-[10px] text-slate-350 font-sans leading-tight">
+                    <p className="text-[10px] text-stone-350 font-sans leading-tight">
                       {resultCharm.description}
                     </p>
                   </div>
@@ -1253,7 +1253,7 @@ export default function ShopScreen({
                       'w-full py-2.5 rounded-xl text-sm font-pixel font-bold text-white shadow border-b-2 transition cursor-pointer select-none',
                       canFuse
                         ? 'bg-amber-600 hover:bg-amber-500 border-amber-800 shadow-[0_0_8px_rgba(245,158,11,0.25)]'
-                        : 'bg-slate-850 border-slate-950 opacity-40 cursor-default text-slate-400'
+                        : 'bg-stone-850 border-stone-950 opacity-40 cursor-default text-stone-400'
                     ].join(' ')}
                   >
                     {activeRecipe && money >= activeRecipe.cost ? `BİRLEŞTİR ($${activeRecipe.cost})` : `YETERSİZ PARA ($${activeRecipe?.cost ?? ''})`}
@@ -1263,7 +1263,7 @@ export default function ShopScreen({
                 <button
                   type="button"
                   disabled
-                  className="w-full py-2.5 rounded-xl bg-slate-850 border-slate-950 opacity-40 text-sm font-pixel font-bold text-slate-500 cursor-default border-b-2"
+                  className="w-full py-2.5 rounded-xl bg-stone-850 border-stone-950 opacity-40 text-sm font-pixel font-bold text-stone-500 cursor-default border-b-2"
                 >
                   FÜZYON YAPILAMAZ
                 </button>

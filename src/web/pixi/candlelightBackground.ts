@@ -24,7 +24,11 @@ interface Pool {
 
 export function createCandlelightBackground(width: number, height: number) {
   const container = new Container();
-  container.filters = [new BlurFilter({ strength: 24 })];
+  // A large-kernel blur re-run on this container every tick (the flicker redraws it constantly)
+  // was the single heaviest thing this app did per frame — strength 24 at full/retina resolution
+  // added up to real, felt jank on mobile GPUs for a background that's soft/diffuse either way.
+  // Lower strength + explicit low quality (fewer internal passes) reads the same to the eye.
+  container.filters = [new BlurFilter({ strength: 14, quality: 2 })];
 
   const anchors: Array<[number, number]> = [
     [0.06, 0.08],
@@ -49,6 +53,7 @@ export function createCandlelightBackground(width: number, height: number) {
   });
 
   let time = 0;
+  let frameParity = false;
 
   function draw(w: number, h: number) {
     for (const p of pools) {
@@ -75,11 +80,14 @@ export function createCandlelightBackground(width: number, height: number) {
     draw(w, h);
   }
 
-  // Redraw every tick too (flicker needs it), resize just updates radii.
+  // Redraw on every OTHER tick (flicker needs it, but not at full 60fps — each redraw re-runs
+  // the container's blur filter, the most expensive thing here; the flicker is slow/gentle
+  // enough that halving its update rate reads identically while halving that cost).
   const originalTick = tick;
   function tickAndDraw(deltaSeconds: number, w: number, h: number) {
     originalTick(deltaSeconds);
-    draw(w, h);
+    frameParity = !frameParity;
+    if (frameParity) draw(w, h);
   }
 
   return { container, tick: tickAndDraw, setPalette, resize };

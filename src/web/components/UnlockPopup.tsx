@@ -5,11 +5,11 @@ interface UnlockPopupProps {
 
 export default function UnlockPopup({ onContinue, onEndless }: UnlockPopupProps) {
   return (
-    <div className="w-full max-w-sm my-auto rounded-3xl bg-slate-900 border-4 border-slate-950 p-6 shadow-2xl text-white crt text-center select-none animate-[fade-in_0.5s_ease-out]">
+    <div className="w-full max-w-sm my-auto rounded-3xl bg-stone-900 border-4 border-stone-950 p-6 shadow-2xl text-white crt text-center select-none animate-[fade-in_0.5s_ease-out]">
       <h2 className="text-2xl font-black font-pixel tracking-widest text-teal-400 uppercase">
         MÜZE KURTARILDI!
       </h2>
-      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mt-0.5">
         Sefer Başarıyla Tamamlandı
       </p>
 
@@ -19,7 +19,7 @@ export default function UnlockPopup({ onContinue, onEndless }: UnlockPopupProps)
           {/* Card Title */}
           <div>
             <span className="text-[8px] uppercase tracking-wider text-teal-400 font-extrabold">EFSANEVİ</span>
-            <h4 className="text-xs font-bold leading-tight mt-1 text-slate-200">
+            <h4 className="text-xs font-bold leading-tight mt-1 text-stone-200">
               Süper Domino Ustası
             </h4>
           </div>
@@ -37,13 +37,13 @@ export default function UnlockPopup({ onContinue, onEndless }: UnlockPopupProps)
           </div>
 
           {/* Card description */}
-          <p className="text-[8px] text-slate-300 leading-normal">
+          <p className="text-[8px] text-stone-300 leading-normal">
             Elindeki tüm çift (spinner) taşların çarpanını ikiye katlar!
           </p>
         </div>
       </div>
 
-      <div className="bg-slate-950/50 rounded-xl p-4 border border-slate-800 text-xs text-slate-350 leading-relaxed font-outfit mb-6 text-left">
+      <div className="bg-stone-950/50 rounded-xl p-4 border border-stone-800 text-xs text-stone-350 leading-relaxed font-outfit mb-6 text-left">
         🎉 <strong>Tebrikler Küratör!</strong> Chain Domino Seferini tamamlayarak efsanevi <span className="text-teal-400 font-bold">Süper Domino Ustası</span> tılsımının kilidini kalıcı olarak açtınız.
       </div>
 
@@ -56,7 +56,7 @@ export default function UnlockPopup({ onContinue, onEndless }: UnlockPopupProps)
         </button>
         <button
           onClick={onContinue}
-          className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:translate-y-0.5 text-xs font-pixel font-bold text-slate-950 shadow-md border-b-4 border-amber-700 transition"
+          className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:translate-y-0.5 text-xs font-pixel font-bold text-stone-950 shadow-md border-b-4 border-amber-700 transition"
         >
           ANA MENÜYE DÖN (MAIN MENU)
         </button>

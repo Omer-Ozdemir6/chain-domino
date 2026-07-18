@@ -575,6 +575,7 @@ export class RunState {
   totalRerolls = 0;
   totalPurchases = 0;
   defeatedBy = '';
+  handTypePlayCounts: Record<HandType, number> = { STRAIGHT: 0, BRANCHED: 0, LOOP: 0 };
 
   private roundHooks: CharmHooks[] = [];
 
@@ -650,6 +651,7 @@ export class RunState {
     this.totalRerolls = 0;
     this.totalPurchases = 0;
     this.defeatedBy = '';
+    this.handTypePlayCounts = { STRAIGHT: 0, BRANCHED: 0, LOOP: 0 };
 
     // An empty placeholder round so `game` is always defined the instant a run starts — lets the
     // UI keep the board/HUD mounted as a persistent backdrop behind blind-select/shop/reward
@@ -1370,6 +1372,7 @@ export class RunState {
       if (res.ok && res.scoreGained !== undefined) {
         this.totalCardsPlayed += unscoredStoneCount;
         this.bestHandScore = Math.max(this.bestHandScore, res.scoreGained);
+        this.handTypePlayCounts[handType] = (this.handTypePlayCounts[handType] ?? 0) + 1;
 
         // Award $3 per golden stone submitted
         this.money += unscoredGoldenCount * 3;
