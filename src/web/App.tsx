@@ -763,15 +763,16 @@ export default function App() {
   function handleNewRun(): void {
     const deck = run.selectedDeck;
     const stake = run.selectedStake;
-    reset((freshRun) => freshRun.initializeRun(deck, stake));
+    const challengeId = run.activeChallengeId;
+    reset((freshRun) => freshRun.initializeRun(deck, stake, challengeId));
     setSelection(null);
     setMessage(null);
     setActiveSpellIndex(null);
   }
 
-  function handleStartRun(deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', chestId: import('../game/RunState.js').ChestId | null = null): void {
+  function handleStartRun(deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', chestId: import('../game/RunState.js').ChestId | null = null, challengeId: string | null = null): void {
     act((_g) => {
-      run.initializeRun(deck, stake);
+      run.initializeRun(deck, stake, challengeId);
       if (chestId) run.selectChest(chestId);
       return null;
     });

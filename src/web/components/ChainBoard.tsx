@@ -77,7 +77,7 @@ function layoutGraph(
   function visit(nodeId: string, pos: Vec, incoming: Dir | null): void {
     positions.set(nodeId, pos);
     const node = nodesById.get(nodeId)!;
-    const dirs = assignDirections(node.isDouble, incoming);
+    const dirs = assignDirections(node.isDouble && board.isBranchingEnabled(), incoming);
     nodeDirs.set(nodeId, dirs);
 
     board.getSlots(nodeId).forEach((slot, i) => {

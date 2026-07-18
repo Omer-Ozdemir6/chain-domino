@@ -61,6 +61,8 @@ export interface RunConfig {
   maxCharmSlots: number;
   shopSize: number;
   rerollCost: number;
+  /** Every blind target multiplied by this — 1 normally, 2 for the "Altın Ateş" challenge. */
+  targetMultiplier?: number;
 }
 
 // Halved relative to the original curve: the natural-sum + hand-type-level scoring engine (plus
@@ -515,6 +517,9 @@ export class RunState {
   phase: RunPhase = 'START_SCREEN';
   ownedCharmIds: string[] = [];
   currentTarget: number;
+  /** Which StartScreen challenge (if any) this run was started under — 'ch_no_charms',
+   *  'ch_doubles_only', 'ch_golden_rush', 'ch_speed_chain', or null for a normal run. */
+  activeChallengeId: string | null = null;
   /** Total score carried across every blind of the run — blinds add on top of it instead of resetting to 0. */
   cumulativeScore = 0;
   game!: GameState;
@@ -586,16 +591,23 @@ export class RunState {
   /** Set for one tick when an onSubmitFail charm rescues the round — App.tsx reads then clears it. */
   lastRescueCharmName: string | null = null;
 
+  /** The constructor-configured slot count — the baseline `initializeRun` restores to for a
+   *  normal (non-"Tılsımsız Sefer") run, instead of always snapping back to the global default
+   *  and silently discarding a caller's own override (as a plain `new RunState({...})` does). */
+  private readonly baseMaxCharmSlots: number;
+
   constructor(config: Partial<RunConfig> = {}) {
     this.config = { ...DEFAULT_RUN_CONFIG, ...config };
+    this.baseMaxCharmSlots = this.config.maxCharmSlots;
     this.money = this.config.startingMoney;
     this.currentTarget = this.config.startingTarget;
     this.currentRerollCost = this.config.rerollCost;
   }
 
-  initializeRun(deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED'): void {
+  initializeRun(deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', challengeId: string | null = null): void {
     this.selectedDeck = deck;
     this.selectedStake = stake;
+    this.activeChallengeId = challengeId;
     this.money = deck === 'YELLOW' ? 8 : 4;
     this.currentTarget = ANTE_TARGETS[1];
     this.cumulativeScore = 0;
@@ -626,8 +638,15 @@ export class RunState {
     this.charmDurability = {};
     this.perishedCharmMessage = null;
 
+    // "Tılsımsız Sefer": no charm slots at all — the shop's own slotsFull check (0 >= 0) then
+    // naturally disables every charm/rune "SATIN AL" button without needing a separate guard.
+    this.config.maxCharmSlots = challengeId === 'ch_no_charms' ? 0 : this.baseMaxCharmSlots;
+    // "Altın Ateş": every blind target doubled — reset to 1 for every other challenge/normal run
+    // so a previous run's challenge setting can never leak into the next one.
+    this.config.targetMultiplier = challengeId === 'ch_golden_rush' ? 2 : 1;
+
     // Generate persistent customDeck
-    const initialStones: DominoStone[] = [];
+    let initialStones: DominoStone[] = [];
     const maxPips = this.config.maxPips ?? 6;
     for (let left = 0; left <= maxPips; left++) {
       for (let right = left; right <= maxPips; right++) {
@@ -637,8 +656,15 @@ export class RunState {
           leftVal: left,
           rightVal: right,
           modifier: 'NORMAL',
+          // "Altın Ateş": the whole deck starts golden (each play worth +$3), balanced by
+          // doubled blind targets above.
+          isGolden: challengeId === 'ch_golden_rush' ? true : undefined,
         });
       }
+    }
+    // "Çiftler Festivali": strip every non-double out of the deck, leaving only spinners.
+    if (challengeId === 'ch_doubles_only') {
+      initialStones = initialStones.filter((s) => s.leftVal === s.rightVal);
     }
     this.customDeck = initialStones;
     this.draftOffers = [];
@@ -676,7 +702,7 @@ export class RunState {
   getBlindTarget(blindType: 'SMALL' | 'BIG' | 'BOSS'): number {
     const multiplier = this.selectedStake === 'RED' ? 1.25 : 1.0;
     const factor = blindType === 'SMALL' ? 0.6 : blindType === 'BIG' ? 1.0 : 1.5;
-    return Math.round(this.currentTarget * factor * multiplier);
+    return Math.round(this.currentTarget * factor * multiplier * (this.config.targetMultiplier ?? 1));
   }
 
   skipBlind(blindType: 'SMALL' | 'BIG'): void {
@@ -1324,6 +1350,8 @@ export class RunState {
       .map((id) => CHARMS.find((c) => c.id === id))
       .find((c) => c?.placementMode === 'SEQUENCE');
     this.game.board.setMatchMode(sequenceCharm ? 'SEQUENCE' : 'PIP');
+    // "Tek Zincir": doubles no longer branch — they just pass the chain straight through.
+    this.game.board.setBranchingEnabled(this.activeChallengeId !== 'ch_speed_chain');
 
     this.activatedCharmIdsThisTurn.clear();
     this.lastActivationTurn = this.game.turn;

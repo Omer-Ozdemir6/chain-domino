@@ -126,9 +126,21 @@ export class Board {
   /** 'PIP' (classic end-matching) by default; 'SEQUENCE' while a rule-bending charm like Kozmik
    *  Karadelik is owned. Set once per round by RunState.startRound(). */
   private matchMode: MatchMode = 'PIP';
+  /** true normally — a double (spinner) opens up to 4 slots. false for the "Tek Zincir" challenge:
+   *  doubles are treated exactly like plain stones (2 slots, straight pass-through), so the chain
+   *  can never branch. Set once per round by RunState.startRound(). */
+  private branchingEnabled = true;
 
   setMatchMode(mode: MatchMode): void {
     this.matchMode = mode;
+  }
+
+  setBranchingEnabled(enabled: boolean): void {
+    this.branchingEnabled = enabled;
+  }
+
+  isBranchingEnabled(): boolean {
+    return this.branchingEnabled;
   }
 
   private orient(stone: DominoStone, requiredValue: number): DominoStone | null {
@@ -187,8 +199,9 @@ export class Board {
 
   private createRootNode(stone: DominoStone): InternalNode {
     const isDouble = stone.leftVal === stone.rightVal;
+    const branches = isDouble && this.branchingEnabled;
     const nodeId = stone.id;
-    const slots: BoardSlot[] = isDouble
+    const slots: BoardSlot[] = branches
       ? Array.from({ length: 4 }, (_, i) => ({ slotId: `${nodeId}#${i}`, value: stone.leftVal, state: 'OPEN' as const }))
       : [
           { slotId: `${nodeId}#0`, value: stone.leftVal, state: 'OPEN' as const },
@@ -212,8 +225,9 @@ export class Board {
   /** `oriented.leftVal` is the attach (closed) side by convention; slot #0 is always that side. */
   private createChildNode(oriented: DominoStone): InternalNode {
     const isDouble = oriented.leftVal === oriented.rightVal;
+    const branches = isDouble && this.branchingEnabled;
     const nodeId = oriented.id;
-    const slots: BoardSlot[] = isDouble
+    const slots: BoardSlot[] = branches
       ? Array.from({ length: 4 }, (_, i) => ({
           slotId: `${nodeId}#${i}`,
           value: oriented.leftVal,
@@ -527,7 +541,7 @@ export class Board {
     const slotIndexOf = (slotId: SlotId): number => Number(slotId.slice(slotId.lastIndexOf('#') + 1));
     const walk = (nodeId: string, incoming: Dir | null): boolean => {
       const node = this.nodes.get(nodeId)!;
-      const dirs = assignDirections(node.isDouble, incoming);
+      const dirs = assignDirections(node.isDouble && this.branchingEnabled, incoming);
       const childEdges = unfrozenEdges.filter((e) => e.parentNodeId === nodeId);
       const childDirs = childEdges.map((e) => dirs[slotIndexOf(e.parentSlotId)]);
       const isForkHere = childDirs.length >= 2 && !(childDirs.length === 2 && OPPOSITE[childDirs[0]] === childDirs[1]);

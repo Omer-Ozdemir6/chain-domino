@@ -4,7 +4,7 @@ import { STARTING_CHESTS } from '../../game/RunState.js';
 import type { ChestId } from '../../game/RunState.js';
 
 interface StartScreenProps {
-  onStart: (deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', chestId: ChestId | null) => void;
+  onStart: (deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', chestId: ChestId | null, challengeId?: string | null) => void;
 }
 
 type TabState = 'MAIN' | 'DECK_SELECT' | 'STAKE_SELECT' | 'CHALLENGES' | 'SETUP';
@@ -397,10 +397,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                   {ch.unlocked && (
                     <button
                       type="button"
-                      onClick={() => {
-                        // For now, start a normal run — challenge modifiers can be integrated later
-                        onStart(deck, stake, selectedChest);
-                      }}
+                      onClick={() => onStart(deck, stake, selectedChest, ch.id)}
                       className="w-full py-2 rounded-lg bg-fuchsia-700 hover:bg-fuchsia-600 text-[12px] font-bold font-pixel text-white uppercase tracking-wider shadow border-b-2 border-fuchsia-900 transition cursor-pointer"
                     >
                       MÜCADELEYE BAŞLA

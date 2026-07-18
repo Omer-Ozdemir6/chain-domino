@@ -586,4 +586,49 @@ describe('RunState', () => {
       expect(result.stoneSteps[result.stoneSteps.length - 1].chipsAfter).toBe(result.baseChips);
     });
   });
+
+  describe('StartScreen challenges', () => {
+    it('ch_no_charms drops maxCharmSlots to 0 and a normal run afterward restores it', () => {
+      const run = new RunState({ maxCharmSlots: 4 });
+      run.initializeRun('RED', 'WHITE', 'ch_no_charms');
+      expect(run.config.maxCharmSlots).toBe(0);
+
+      run.initializeRun('RED', 'WHITE', null);
+      expect(run.config.maxCharmSlots).toBe(4);
+    });
+
+    it('ch_doubles_only leaves nothing but doubles in the starting deck', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE', 'ch_doubles_only');
+      expect(run.customDeck.length).toBeGreaterThan(0);
+      expect(run.customDeck.every((s) => s.leftVal === s.rightVal)).toBe(true);
+    });
+
+    it('ch_golden_rush starts every stone golden and doubles every blind target', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE', 'ch_golden_rush');
+      expect(run.customDeck.every((s) => s.isGolden)).toBe(true);
+      run.startBlind('SMALL');
+      const normalRun = new RunState();
+      normalRun.initializeRun('RED', 'WHITE', null);
+      normalRun.startBlind('SMALL');
+      expect(run.game.config.targetScore).toBe(normalRun.game.config.targetScore * 2);
+
+      // A subsequent normal run must not inherit the doubled target.
+      run.initializeRun('RED', 'WHITE', null);
+      run.startBlind('SMALL');
+      expect(run.game.config.targetScore).toBe(normalRun.game.config.targetScore);
+    });
+
+    it('ch_speed_chain disables branching on the board', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE', 'ch_speed_chain');
+      run.startBlind('SMALL');
+      expect(run.game.board.isBranchingEnabled()).toBe(false);
+
+      run.initializeRun('RED', 'WHITE', null);
+      run.startBlind('SMALL');
+      expect(run.game.board.isBranchingEnabled()).toBe(true);
+    });
+  });
 });
