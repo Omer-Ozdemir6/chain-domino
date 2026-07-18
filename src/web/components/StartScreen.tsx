@@ -1,7 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Tile from './Tile.js';
 import { STARTING_CHESTS } from '../../game/RunState.js';
 import type { ChestId } from '../../game/RunState.js';
+import { playSound } from './SoundSynth.js';
+
+// The domino-tile pip-lighting boot moment that used to be its own full-screen intro page now
+// plays right here on the main menu itself: a 6|3 tile's 9 pips ignite one at a time out of the
+// dark, then the hero title/tagline fly in from top/bottom, then the menu cards appear.
+const BOOT_PIP_POSITIONS: Array<[number, number]> = [
+  // Left half (value 6) — 2 columns x 3 rows.
+  [20, 20], [38, 20],
+  [20, 50], [38, 50],
+  [20, 80], [38, 80],
+  // Right half (value 3) — classic diagonal.
+  [68, 20], [79, 50], [90, 80],
+];
+const BOOT_PIP_START_DELAY_MS = 400;
+const BOOT_PIP_STEP_MS = 170;
 
 interface StartScreenProps {
   onStart: (deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', chestId: ChestId | null, challengeId?: string | null) => void;
@@ -122,6 +137,30 @@ export default function StartScreen({ onStart }: StartScreenProps) {
   const [tab, setTab] = useState<TabState>('MAIN');
   const [selectedChest, setSelectedChest] = useState<ChestId | null>(null);
 
+  // Boot sequence played once per mount: 'pips' (dark, tile igniting) -> 'texts' (curtain opens,
+  // title/tagline fly in) -> 'buttons' (menu cards appear, screen is fully interactive).
+  const [bootStage, setBootStage] = useState<'pips' | 'texts' | 'buttons'>('pips');
+
+  useEffect(() => {
+    const tickTimers = BOOT_PIP_POSITIONS.map((_, i) =>
+      setTimeout(() => playSound('pulse', i * 2), BOOT_PIP_START_DELAY_MS + i * BOOT_PIP_STEP_MS)
+    );
+    const textsTimer = setTimeout(() => {
+      playSound('chime');
+      setBootStage('texts');
+    }, BOOT_PIP_START_DELAY_MS + BOOT_PIP_POSITIONS.length * BOOT_PIP_STEP_MS + 500);
+    const buttonsTimer = setTimeout(
+      () => setBootStage('buttons'),
+      BOOT_PIP_START_DELAY_MS + BOOT_PIP_POSITIONS.length * BOOT_PIP_STEP_MS + 500 + 900
+    );
+    return () => {
+      tickTimers.forEach(clearTimeout);
+      clearTimeout(textsTimer);
+      clearTimeout(buttonsTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // The chosen starting chest grows and cracks open, then a light/dust vortex bursts out and
   // fills the screen — `onStart` only actually fires once the vortex flash is fully opaque, so
   // the instant screen swap underneath (Sefer Kurulumu -> Kabine Eşikleri) is masked by it.
@@ -135,7 +174,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
   const chestIcon = selectedChest ? STARTING_CHESTS.find((c) => c.id === selectedChest)?.icon ?? '📦' : '📦';
 
   return (
-    <div className="absolute inset-0 w-full h-full flex flex-col justify-between p-6 md:p-10 select-none overflow-hidden swirl-red-blue-bg">
+    <div className="absolute inset-0 w-full h-full flex flex-col justify-between p-6 md:p-10 select-none overflow-hidden swirl-amber-bg">
 
       {/* ── Animated felt texture overlay ── */}
       <div className="absolute inset-0 pointer-events-none z-0" style={{
@@ -159,11 +198,13 @@ export default function StartScreen({ onStart }: StartScreenProps) {
         </span>
       ))}
 
-      {/* ── Top watermark — each corner drops in from its own edge ── */}
-      <div className="flex justify-between items-center text-[12px] text-emerald-700/50 font-bold uppercase tracking-[0.25em] z-10">
-        <span className="animate-hero-fly-left" style={{ animationDelay: '850ms' }}>Chain Domino</span>
-        <span className="animate-hero-fly-right" style={{ animationDelay: '850ms' }}>v1.2.0</span>
-      </div>
+      {/* ── Top watermark — each corner drops in from its own edge, once the curtain opens ── */}
+      {bootStage !== 'pips' && (
+        <div className="flex justify-between items-center text-[12px] text-emerald-700/50 font-bold uppercase tracking-[0.25em] z-10">
+          <span className="animate-hero-fly-left">Chain Domino</span>
+          <span className="animate-hero-fly-right">v1.2.0</span>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════
            MAIN LOGO — Centered hero section
@@ -171,48 +212,53 @@ export default function StartScreen({ onStart }: StartScreenProps) {
       <div className="flex-1 flex flex-col items-center justify-center gap-3 my-auto z-10">
         <div className="relative flex flex-col items-center select-none">
 
-          {/* Ambient glow rings */}
-          <div className="absolute w-72 h-72 rounded-full border border-emerald-500/10 animate-pulse z-0" />
-          <div className="absolute w-80 h-80 rounded-full border border-dashed border-amber-600/15 animate-spin [animation-duration:30s] z-0" />
-          <div className="absolute w-64 h-64 rounded-full bg-emerald-500/5 blur-3xl z-0" />
+          {bootStage !== 'pips' && (
+            <>
+              {/* Ambient glow rings */}
+              <div className="absolute w-72 h-72 rounded-full border border-emerald-500/10 animate-pulse z-0" />
+              <div className="absolute w-80 h-80 rounded-full border border-dashed border-amber-600/15 animate-spin [animation-duration:30s] z-0" />
+              <div className="absolute w-64 h-64 rounded-full bg-emerald-500/5 blur-3xl z-0" />
 
-          {/* CHAIN — slides in from off the left edge */}
-          <h1 className="text-7xl md:text-9xl font-black tracking-[0.15em] font-pixel z-10 leading-none animate-hero-fly-left" style={{ animationDelay: '0ms' }}>
-            <span
-              className="text-transparent bg-clip-text bg-gradient-to-b from-emerald-300 via-emerald-500 to-teal-700"
-              style={{ textShadow: '0 0 40px rgba(16,185,129,0.4)' }}
-            >
-              CHAIN
-            </span>
-          </h1>
+              {/* CHAIN — drops in from above */}
+              <h1 className="text-7xl md:text-9xl font-black tracking-[0.15em] font-pixel z-10 leading-none animate-hero-fly-top" style={{ animationDelay: '0ms' }}>
+                <span
+                  className="text-transparent bg-clip-text bg-gradient-to-b from-emerald-300 via-emerald-500 to-teal-700"
+                  style={{ textShadow: '0 0 40px rgba(16,185,129,0.4)' }}
+                >
+                  CHAIN
+                </span>
+              </h1>
 
-          {/* Golden Domino centerpiece — drops in from above */}
-          <div className="my-3 z-10 relative animate-hero-drop-in" style={{ animationDelay: '250ms' }}>
-            <div className="absolute -inset-3 bg-amber-400/20 rounded-2xl blur-xl animate-pulse" />
-            <div className="absolute -inset-1 bg-gradient-to-br from-amber-400/30 to-transparent rounded-xl" />
-            <Tile left={1} right={6} vertical={false} isGolden={true} />
-          </div>
+              {/* Golden Domino centerpiece — the same 6|3 tile that was just igniting, now fully lit */}
+              <div className="my-3 z-10 relative animate-hero-drop-in" style={{ animationDelay: '150ms' }}>
+                <div className="absolute -inset-3 bg-amber-400/20 rounded-2xl blur-xl animate-pulse" />
+                <div className="absolute -inset-1 bg-gradient-to-br from-amber-400/30 to-transparent rounded-xl" />
+                <Tile left={6} right={3} vertical={false} isGolden={true} />
+              </div>
 
-          {/* DOMINO — slides in from off the right edge */}
-          <h1 className="text-7xl md:text-9xl font-black tracking-[0.15em] font-pixel z-10 leading-none animate-hero-fly-right" style={{ animationDelay: '150ms' }}>
-            <span
-              className="text-transparent bg-clip-text bg-gradient-to-b from-amber-300 via-amber-500 to-orange-700"
-              style={{ textShadow: '0 0 40px rgba(245,158,11,0.4)' }}
-            >
-              DOMINO
-            </span>
-          </h1>
+              {/* DOMINO — rises in from below */}
+              <h1 className="text-7xl md:text-9xl font-black tracking-[0.15em] font-pixel z-10 leading-none animate-hero-fly-bottom" style={{ animationDelay: '250ms' }}>
+                <span
+                  className="text-transparent bg-clip-text bg-gradient-to-b from-amber-300 via-amber-500 to-orange-700"
+                  style={{ textShadow: '0 0 40px rgba(245,158,11,0.4)' }}
+                >
+                  DOMINO
+                </span>
+              </h1>
 
-          {/* Tagline — rises up from below */}
-          <p className="mt-4 text-[13px] md:text-sm text-emerald-500/60 font-medium tracking-[0.3em] uppercase font-pixel animate-hero-fly-up" style={{ animationDelay: '650ms' }}>
-            Zincirini Kur · Puanını Yükselt
-          </p>
+              {/* Tagline — rises up from below */}
+              <p className="mt-4 text-[13px] md:text-sm text-emerald-500/60 font-medium tracking-[0.3em] uppercase font-pixel animate-hero-fly-up" style={{ animationDelay: '600ms' }}>
+                Zincirini Kur · Puanını Yükselt
+              </p>
+            </>
+          )}
         </div>
       </div>
 
       {/* ══════════════════════════════════════
-           MENU CARDS — Bottom row
+           MENU CARDS — Bottom row, only once the boot sequence has fully settled
          ══════════════════════════════════════ */}
+      {bootStage === 'buttons' && (
       <div className="w-full max-w-4xl mx-auto flex flex-wrap gap-4 justify-center items-stretch pb-2 z-10">
 
         {/* BAŞLAT Card */}
@@ -220,7 +266,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           type="button"
           onClick={() => setTab('SETUP')}
           className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-emerald-600/60 bg-gradient-to-b from-emerald-900/50 to-emerald-950/80 cursor-pointer select-none"
-          style={{ animationDelay: '400ms', '--glow': 'rgba(16,185,129,0.4)' } as React.CSSProperties}
+          style={{ animationDelay: '0ms', '--glow': 'rgba(16,185,129,0.4)' } as React.CSSProperties}
         >
           <span className="text-4xl">🎮</span>
           <span className="font-pixel text-base font-black text-emerald-300 tracking-wider">BAŞLAT</span>
@@ -232,7 +278,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           type="button"
           onClick={() => setTab('DECK_SELECT')}
           className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-sky-700/50 bg-gradient-to-b from-sky-950/50 to-stone-950/80 cursor-pointer select-none"
-          style={{ animationDelay: '480ms', '--glow': 'rgba(14,165,233,0.3)' } as React.CSSProperties}
+          style={{ animationDelay: '80ms', '--glow': 'rgba(14,165,233,0.3)' } as React.CSSProperties}
         >
           <span className="text-4xl">🃏</span>
           <span className="font-pixel text-base font-black text-sky-300 tracking-wider">DESTE</span>
@@ -244,7 +290,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           type="button"
           onClick={() => setTab('STAKE_SELECT')}
           className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-rose-700/50 bg-gradient-to-b from-rose-950/50 to-stone-950/80 cursor-pointer select-none"
-          style={{ animationDelay: '560ms', '--glow': 'rgba(244,63,94,0.3)' } as React.CSSProperties}
+          style={{ animationDelay: '160ms', '--glow': 'rgba(244,63,94,0.3)' } as React.CSSProperties}
         >
           <span className="text-4xl">🏆</span>
           <span className="font-pixel text-base font-black text-rose-300 tracking-wider">ZORLUK</span>
@@ -256,13 +302,36 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           type="button"
           onClick={() => setTab('CHALLENGES')}
           className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-fuchsia-700/50 bg-gradient-to-b from-fuchsia-950/50 to-stone-950/80 cursor-pointer select-none"
-          style={{ animationDelay: '640ms', '--glow': 'rgba(192,38,211,0.3)' } as React.CSSProperties}
+          style={{ animationDelay: '240ms', '--glow': 'rgba(192,38,211,0.3)' } as React.CSSProperties}
         >
           <span className="text-4xl">⚔️</span>
           <span className="font-pixel text-base font-black text-fuchsia-300 tracking-wider">MÜCADELE</span>
           <span className="text-[11px] text-fuchsia-500/70 font-bold leading-tight text-center">4 Mücadele Aktif</span>
         </button>
       </div>
+      )}
+
+      {/* ══════════════════════════════════════
+           BOOT SEQUENCE — a 6|3 domino tile ignites pip by pip on a black curtain, which then
+           parts to reveal the hero above (see the 'texts'/'buttons' branches for the rest).
+         ══════════════════════════════════════ */}
+      <div
+        className={`absolute inset-0 z-30 bg-black pointer-events-none transition-opacity duration-700 ${bootStage === 'pips' ? 'opacity-100' : 'opacity-0'}`}
+      />
+      {bootStage === 'pips' && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+          <div className="relative w-64 h-32 md:w-80 md:h-40 rounded-2xl border-2 border-amber-900/60 bg-stone-950/50">
+            <div className="absolute inset-y-2 left-1/2 w-px bg-amber-900/50 -translate-x-1/2" />
+            {BOOT_PIP_POSITIONS.map(([x, y], i) => (
+              <span
+                key={i}
+                className="absolute w-4 h-4 md:w-5 md:h-5 rounded-full bg-amber-300 shadow-[0_0_18px_6px_rgba(251,191,36,0.7)] opacity-0 animate-pip-ignite"
+                style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${BOOT_PIP_START_DELAY_MS + i * BOOT_PIP_STEP_MS}ms` }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════
            OVERLAY DIALOGS

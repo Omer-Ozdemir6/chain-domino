@@ -14,7 +14,6 @@ import ShopScreen, { renderUpgradeIcon } from './components/ShopScreen.js';
 import RoundRewardScreen from './components/RoundRewardScreen.js';
 import RunOverScreen from './components/RunOverScreen.js';
 import StartScreen from './components/StartScreen.js';
-import IntroScreen from './components/IntroScreen.js';
 import BlindSelectScreen from './components/BlindSelectScreen.js';
 import UnlockPopup from './components/UnlockPopup.js';
 import { playSound } from './components/SoundSynth.js';
@@ -108,10 +107,6 @@ export default function App() {
   // at a time) since this needs to hold an arbitrary multi-select set instead.
   const [isDiscardMode, setIsDiscardMode] = useState(false);
   const [discardTargets, setDiscardTargets] = useState<Set<string>>(new Set());
-  // "Müzenin Kapıları Aralanıyor" — a one-time dark title-card shown before the main menu on
-  // this page load only (never replays on subsequent runs/resets within the same session).
-  const [introDone, setIntroDone] = useState(false);
-
   // Faz 14: PixiJS effect layer handles — board layer (candlelight background + Amber spark /
   // Obsidian shatter particles) and the antique lens vignette overlay over the whole canvas.
   const pixiBoardRef = useRef<PixiEffectsLayerHandle | null>(null);
@@ -942,9 +937,7 @@ export default function App() {
   // navigating to a separate screen — the header/board/hands stay mounted underneath at all times.
   const overlayClass = 'absolute inset-0 z-50 flex items-center justify-center bg-stone-950/85 backdrop-blur-sm overflow-hidden p-4 animate-fade-in';
 
-  if (delayedPhase === 'START_SCREEN' && !introDone) {
-    content = <IntroScreen onEnter={() => setIntroDone(true)} />;
-  } else if (delayedPhase === 'START_SCREEN') {
+  if (delayedPhase === 'START_SCREEN') {
     content = (
       <div className="absolute inset-0 flex items-center justify-center bg-stone-950 overflow-hidden swirl-bg p-4 animate-table-arrive">
         <StartScreen onStart={handleStartRun} />
