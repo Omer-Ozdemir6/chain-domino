@@ -49,10 +49,14 @@ export default function StoneHand({
     }
   }, [selectedId]);
 
+  // A gently fanned "hand of cards" arc instead of a flat row — the center stone sits highest
+  // and level, each stone further out tilts and dips a little more, like it's being held.
+  const mid = (stones.length - 1) / 2;
+
   return (
     <div>
       <h2 className="text-[8px] md:text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-0.5 md:mb-1">Taşlar</h2>
-      <div className="h-28 md:h-32 lg:h-36 flex flex-nowrap overflow-x-auto gap-1 md:gap-1.5 lg:gap-2 pt-12 pb-1 scrollbar-none items-end">
+      <div className="h-28 md:h-32 lg:h-36 flex flex-nowrap justify-center overflow-x-auto pt-12 pb-1 scrollbar-none items-end">
         {stones.length === 0 && (
           <div className="h-14 w-20 md:h-16 md:w-24 lg:h-18 lg:w-28 rounded-lg border border-dashed border-slate-700/60 flex flex-col items-center justify-center gap-0.5 text-slate-600 select-none">
             <span className="text-base opacity-40">🕯️</span>
@@ -84,59 +88,80 @@ export default function StoneHand({
 
           const hasInfo = Boolean(s.isGolden || s.modifier || s.leftUpgrade || s.rightUpgrade);
 
+          // Fan geometry: distance from the center stone drives both the tilt and how far it
+          // dips down, like a hand of cards held from below.
+          const d = index - mid;
+          const fanRotate = d * 3.2;
+          const fanDip = d * d * 1.7;
+
           return (
+            // Outer layer: the fan's own rotate/dip, set once per hand and never animated —
+            // a CSS animation on `transform` (the deal-in/gather-back keyframes on the layer
+            // just inside this one) would otherwise fully overwrite this static tilt instead of
+            // combining with it, so it has to live on its own untouched element.
             <div
               key={s.id}
-              ref={isSelected ? selectedTileRef : undefined}
-              className={[
-                animationClass,
-                activationClass,
-                'shrink-0 relative transition-all duration-200',
-                selectedClass,
-                isSpellTargeting || isCharmTargeting ? 'ring-2 ring-violet-400/70 rounded-lg cursor-pointer' : '',
-                isDiscardMode ? `rounded-lg cursor-pointer ${isMarkedForDiscard ? 'ring-2 ring-rose-400' : 'ring-1 ring-rose-500/30 hover:ring-rose-400/60'}` : '',
-              ].join(' ')}
+              className="shrink-0 relative"
               style={{
-                animationDelay: isGathering ? gatherDelay : dealDelay,
-                animationFillMode: isGathering ? 'forwards' : undefined,
+                transform: `rotate(${fanRotate}deg) translateY(${fanDip}px)`,
+                marginLeft: index === 0 ? undefined : '-12px',
+                zIndex: index,
               }}
             >
-              {isMarkedForDiscard && (
-                <span className="absolute -top-2 -right-2 z-40 w-5 h-5 rounded-full bg-rose-500 border-2 border-slate-950 flex items-center justify-center text-[10px] font-black text-white pointer-events-none animate-fade-in">
-                  ✕
-                </span>
-              )}
-              {isSelected && hasInfo && selectedRect && createPortal(
+              <div
+                className={[animationClass, activationClass].join(' ')}
+                style={{
+                  animationDelay: isGathering ? gatherDelay : dealDelay,
+                  animationFillMode: isGathering ? 'forwards' : undefined,
+                }}
+              >
                 <div
-                  className="fixed w-48 bg-slate-950/95 border-2 border-cyan-500/80 rounded-xl p-2.5 shadow-[0_0_15px_rgba(6,182,212,0.4)] text-[9px] leading-relaxed text-slate-100 z-[9999] animate-fade-in text-center select-none font-sans pointer-events-none"
-                  style={{ left: selectedRect.left + selectedRect.width / 2, top: selectedRect.top - 10, transform: 'translate(-50%, -100%)' }}
+                  ref={isSelected ? selectedTileRef : undefined}
+                  className={[
+                    'relative transition-all duration-200',
+                    selectedClass,
+                    isSpellTargeting || isCharmTargeting ? 'ring-2 ring-violet-400/70 rounded-lg cursor-pointer' : '',
+                    isDiscardMode ? `rounded-lg cursor-pointer ${isMarkedForDiscard ? 'ring-2 ring-rose-400' : 'ring-1 ring-rose-500/30 hover:ring-rose-400/60'}` : '',
+                  ].join(' ')}
                 >
-                  <div className="font-pixel text-[10px] text-cyan-400 font-bold mb-1 tracking-wider border-b border-cyan-900/40 pb-0.5">TAŞ ÖZELLİKLERİ</div>
-                  <div className="flex flex-col gap-1 text-left">
-                    {s.isGolden && <div className="text-amber-300 font-semibold">• Altın Taş (Oynandığında +$3)</div>}
-                    {s.modifier === 'IVORY' && <div className="text-slate-200 font-semibold">• Fildişi Rünü (+15 Taban Puan)</div>}
-                    {s.modifier === 'OBSIDIAN' && <div className="text-purple-400 font-semibold">• Obsidyen Rünü (Çarpan x2, %25 Kırılma)</div>}
-                    {s.modifier === 'AMBER' && <div className="text-amber-500 font-semibold">• Kehribar Rünü (Komşuları eşitler)</div>}
-                    {((s.leftUpgrade && s.leftUpgrade > 0) || (s.rightUpgrade && s.rightUpgrade > 0)) && (
-                      <div className="text-cyan-400 font-semibold">
-                        • Geliştirilmiş (+{(s.leftUpgrade || 0) + (s.rightUpgrade || 0)} Nokta)
+                  {isMarkedForDiscard && (
+                    <span className="absolute -top-2 -right-2 z-40 w-5 h-5 rounded-full bg-rose-500 border-2 border-slate-950 flex items-center justify-center text-[10px] font-black text-white pointer-events-none animate-fade-in">
+                      ✕
+                    </span>
+                  )}
+                  {isSelected && hasInfo && selectedRect && createPortal(
+                    <div
+                      className="fixed w-48 bg-slate-950/95 border-2 border-cyan-500/80 rounded-xl p-2.5 shadow-[0_0_15px_rgba(6,182,212,0.4)] text-[9px] leading-relaxed text-slate-100 z-[9999] animate-fade-in text-center select-none font-sans pointer-events-none"
+                      style={{ left: selectedRect.left + selectedRect.width / 2, top: selectedRect.top - 10, transform: 'translate(-50%, -100%)' }}
+                    >
+                      <div className="font-pixel text-[10px] text-cyan-400 font-bold mb-1 tracking-wider border-b border-cyan-900/40 pb-0.5">TAŞ ÖZELLİKLERİ</div>
+                      <div className="flex flex-col gap-1 text-left">
+                        {s.isGolden && <div className="text-amber-300 font-semibold">• Altın Taş (Oynandığında +$3)</div>}
+                        {s.modifier === 'IVORY' && <div className="text-slate-200 font-semibold">• Fildişi Rünü (+15 Taban Puan)</div>}
+                        {s.modifier === 'OBSIDIAN' && <div className="text-purple-400 font-semibold">• Obsidyen Rünü (Çarpan x2, %25 Kırılma)</div>}
+                        {s.modifier === 'AMBER' && <div className="text-amber-500 font-semibold">• Kehribar Rünü (Komşuları eşitler)</div>}
+                        {((s.leftUpgrade && s.leftUpgrade > 0) || (s.rightUpgrade && s.rightUpgrade > 0)) && (
+                          <div className="text-cyan-400 font-semibold">
+                            • Geliştirilmiş (+{(s.leftUpgrade || 0) + (s.rightUpgrade || 0)} Nokta)
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>,
-                document.body
-              )}
-              <Tile
-                left={s.leftVal}
-                right={s.rightVal}
-                leftUpgrade={s.leftUpgrade}
-                rightUpgrade={s.rightUpgrade}
-                selected={isSelected}
-                onClick={() => onSelect(s.id)}
-                isGolden={s.isGolden}
-                modifier={s.modifier}
-                spellEffect={tileSpellEffect}
-              />
+                    </div>,
+                    document.body
+                  )}
+                  <Tile
+                    left={s.leftVal}
+                    right={s.rightVal}
+                    leftUpgrade={s.leftUpgrade}
+                    rightUpgrade={s.rightUpgrade}
+                    selected={isSelected}
+                    onClick={() => onSelect(s.id)}
+                    isGolden={s.isGolden}
+                    modifier={s.modifier}
+                    spellEffect={tileSpellEffect}
+                  />
+                </div>
+              </div>
             </div>
           );
         })}

@@ -352,6 +352,13 @@ export default function ShopScreen({
     rect: { top: number; left: number; right: number; bottom: number };
   } | null>(null);
 
+  // A hovered/pinned offer-card tooltip left floating over the sealed-pack/draft overlays once a
+  // purchase opened one of them — the card underneath it is gone (covered by the full-screen
+  // overlay) but the tooltip itself had no reason to close, so it just sat there stuck on top.
+  useEffect(() => {
+    if (packIsPending) setHoveredDetails(null);
+  }, [packIsPending]);
+
   function handleCardEnter(e: React.MouseEvent<HTMLElement>, details: { name: string; type: string; description: string; rarity?: string; cost?: number; id: string }) {
     const r = e.currentTarget.getBoundingClientRect();
     const rect = { top: r.top, left: r.left, right: r.right, bottom: r.bottom };

@@ -750,13 +750,6 @@ export default function App() {
     setSelection(null);
   }
 
-  function handleSkip(): void {
-    act((g) => g.skipTurn());
-    if (run.phase === 'PLAYING' && game.status === 'PLAYING') act((g) => g.drawForTurn());
-    setMessage(null);
-    setSelection(null);
-  }
-
   function handleRestart(): void {
     reset();
     setSelection(null);
@@ -1060,7 +1053,6 @@ export default function App() {
             isDiscardMode={isDiscardMode}
             discardTargetCount={discardTargets.size}
             onCancelDiscard={handleCancelDiscard}
-            onSkip={handleSkip}
             message={message}
             activeBossId={run.activeBossId}
             activeBlind={run.activeBlind}
@@ -1205,12 +1197,12 @@ export default function App() {
           </main>
 
           {/* Action Row for Portrait */}
-          <div className="shrink-0 grid grid-cols-3 gap-1.5 p-2 bg-slate-900 border-t-4 border-slate-950">
+          <div className="shrink-0 grid grid-cols-2 gap-1.5 p-2 bg-slate-900 border-t-4 border-slate-950">
             <button
               type="button"
               onClick={handleSubmit}
               disabled={!canSubmitNow}
-              className={`col-span-3 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:translate-y-0.5 text-sm font-bold text-white shadow border-b-2 border-emerald-800 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase font-pixel ${formulaReadyNow && canSubmitNow ? 'animate-pulse ring-2 ring-emerald-300' : ''}`}
+              className={`col-span-2 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:translate-y-0.5 text-sm font-bold text-white shadow border-b-2 border-emerald-800 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase font-pixel ${formulaReadyNow && canSubmitNow ? 'animate-pulse ring-2 ring-emerald-300' : ''}`}
             >
               HESAPLA / GÖNDER
             </button>
@@ -1240,14 +1232,6 @@ export default function App() {
                 GERİ AL
               </button>
             )}
-            <button
-              type="button"
-              onClick={handleSkip}
-              disabled={!canRecoverNow}
-              className="py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/30 active:translate-y-0.5 text-xs font-bold text-rose-400 border border-rose-500/20 transition disabled:opacity-30 disabled:cursor-not-allowed uppercase font-pixel"
-            >
-              ATLA
-            </button>
           </div>
         </div>
       );
@@ -1280,7 +1264,6 @@ export default function App() {
             isDiscardMode={isDiscardMode}
             discardTargetCount={discardTargets.size}
             onCancelDiscard={handleCancelDiscard}
-            onSkip={handleSkip}
             message={message}
             activeBossId={run.activeBossId}
             activeBlind={run.activeBlind}
@@ -1309,9 +1292,10 @@ export default function App() {
                 />
               </div>
               
-              {/* Spells slot bar */}
-              <div className="w-24 md:w-28 lg:w-36 shrink-0 bg-slate-950/20 p-1 md:p-1.5 lg:p-2 rounded-xl border border-slate-800/40 h-22 md:h-26 lg:h-32 flex flex-col justify-between">
-                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-between font-pixel">
+              {/* Spells slot bar — same card footprint as the charm slots, no boxed panel behind
+                  it, so it reads as sitting directly on the table rather than in its own tray. */}
+              <div className="shrink-0 flex flex-col items-center gap-1">
+                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2 font-pixel">
                   <span>Büyüler ({run.consumables.length}/{run.maxConsumableSlots})</span>
                   {activeSpellIndex !== null && (
                     <button onClick={() => setActiveSpellIndex(null)} className="text-[8px] text-rose-450 font-bold uppercase font-pixel">
@@ -1320,20 +1304,20 @@ export default function App() {
                   )}
                 </div>
                 {spellGuidance && (
-                  <div className="rounded bg-amber-950/80 border border-amber-600/40 text-amber-200 text-[8px] leading-tight px-1.5 py-1 shadow-md animate-fade-in">
+                  <div className="rounded bg-amber-950/80 border border-amber-600/40 text-amber-200 text-[8px] leading-tight px-1.5 py-1 shadow-md animate-fade-in max-w-52">
                     {spellGuidance}
                   </div>
                 )}
-                <div className="flex gap-2 flex-1 mt-1.5 items-center justify-center">
+                <div className="flex gap-1.5 md:gap-2 lg:gap-3 items-center justify-center">
                   {Array.from({ length: run.maxConsumableSlots }, (_, i) => {
                     const item = run.consumables[i];
                     if (!item) {
                       return (
                         <div
                           key={`empty-${i}`}
-                          className="w-8 h-12 md:w-10 md:h-14 lg:w-12 lg:h-18 rounded-lg border border-dashed border-slate-800 bg-slate-950/25 flex items-center justify-center shrink-0"
+                          className="w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 rounded-lg border-2 border-dashed border-slate-700 bg-slate-950/25 flex items-center justify-center shrink-0"
                         >
-                          <svg className="slot-silhouette w-5 h-7 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <svg className="slot-silhouette w-9 h-11 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M12 22s7-4 7-9V6l-7-3-7 3v7c0 5 7 9 7 9z" />
                           </svg>
                         </div>
@@ -1351,11 +1335,11 @@ export default function App() {
                       <InfoTooltip key={`${item}-${i}`} text={tooltipContent} widthClass="w-52" side="left">
                         <button
                           onClick={() => handleSpellClick(i)}
-                          className={`w-8 h-12 md:w-10 md:h-14 lg:w-12 lg:h-18 rounded-lg border-2 transition select-none flex items-center justify-center relative shrink-0 ${
+                          className={`w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 rounded-lg border-2 transition select-none flex items-center justify-center relative shrink-0 ${
                             isActive ? 'border-amber-500 bg-amber-950/40 ring-1 ring-amber-500 shadow-md animate-pulse' : 'border-slate-850 bg-slate-950/30 hover:border-slate-700'
                           }`}
                         >
-                          <div className="scale-40 md:scale-50 lg:scale-60 transform origin-center">
+                          <div className="scale-90 md:scale-100 transform origin-center">
                             {renderUpgradeIcon(item)}
                           </div>
                         </button>
@@ -1419,8 +1403,9 @@ export default function App() {
               )}
             </div>
 
-            {/* Row 3: Domino Hand + draw deck remaining */}
-            <div className="flex gap-1.5 md:gap-2 lg:gap-3 shrink-0 items-end justify-between bg-slate-950/20 p-1.5 md:p-2 lg:p-2.5 rounded-xl border border-slate-800/40 overflow-visible relative z-20">
+            {/* Row 3: Domino Hand + draw deck remaining — no panel chrome, sits directly on
+                the felt table like Row 1's charm/spell slots. */}
+            <div className="flex gap-1.5 md:gap-2 lg:gap-3 shrink-0 items-end justify-between overflow-visible relative z-20">
               <div className="flex-1 min-w-0 overflow-visible">
                 <StoneHand
                   stones={game.hand}
@@ -1436,14 +1421,14 @@ export default function App() {
                 />
               </div>
 
-              {/* Deck remaining pile indicator */}
-              <div className="w-14 md:w-16 lg:w-20 shrink-0 flex flex-col items-center justify-center border-l border-slate-800/40 pl-1.5 md:pl-2 lg:pl-3">
-                <div className="w-8 h-11 md:w-9 md:h-12 lg:w-10 lg:h-14 bg-red-800 rounded-lg border-2 border-red-700/80 shadow-[0_4px_6px_rgba(0,0,0,0.5)] flex items-center justify-center font-pixel text-slate-200 text-xs md:text-sm font-bold leading-none animate-pulse relative overflow-hidden select-none">
-                  <div className="absolute inset-1 border border-red-650/40 rounded flex items-center justify-center">
-                    <span className="text-xs opacity-40">🀲</span>
+              {/* Deck remaining pile indicator — same footprint as a charm/spell card */}
+              <div className="shrink-0 flex flex-col items-center justify-center gap-1">
+                <div className="w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 bg-red-800 rounded-lg border-2 border-red-700/80 shadow-[0_4px_6px_rgba(0,0,0,0.5)] flex items-center justify-center font-pixel text-slate-200 text-xs md:text-sm font-bold leading-none animate-pulse relative overflow-hidden select-none">
+                  <div className="absolute inset-1.5 border border-red-650/40 rounded flex items-center justify-center">
+                    <span className="text-2xl md:text-3xl opacity-40">🀲</span>
                   </div>
                 </div>
-                <span className="text-[9px] font-mono text-slate-400 font-bold mt-1 whitespace-nowrap">
+                <span className="text-[9px] font-mono text-slate-400 font-bold whitespace-nowrap">
                   {game.stoneDeck.remaining}/28
                 </span>
               </div>
@@ -1452,7 +1437,7 @@ export default function App() {
 
           {isStuck && (
             <div className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-lg bg-rose-950/85 border border-rose-500/40 px-4 py-2 text-[10px] font-bold text-rose-400 animate-bounce shadow-lg z-30 font-pixel">
-              Elindeki hiçbir taş zincire uymuyor — Geri Al veya Turu Atla.
+              Elindeki hiçbir taş zincire uymuyor — Geri Al veya Taş Değiştir.
             </div>
           )}
         </div>

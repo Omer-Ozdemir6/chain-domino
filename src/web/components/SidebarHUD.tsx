@@ -45,7 +45,6 @@ interface SidebarHUDProps {
   canUndo: boolean;
   onSubmit: () => void;
   onUndo: () => void;
-  onSkip: () => void;
   onDiscard: () => void;
   /** "TAŞI DEĞİŞTİR" is armed (hand stones are now tappable to mark for discard) — changes the
    *  button into a "confirm N" state and reveals a cancel affordance beside it. */
@@ -107,7 +106,6 @@ export default function SidebarHUD({
   canUndo,
   onSubmit,
   onUndo,
-  onSkip,
   onDiscard,
   isDiscardMode = false,
   discardTargetCount = 0,
@@ -351,15 +349,6 @@ export default function SidebarHUD({
             </button>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={onSkip}
-          disabled={!canRecover}
-          className="btn-arcade btn-arcade-slate w-full py-2 rounded-xl text-[12px] font-black text-rose-355 uppercase font-pixel"
-        >
-          TURU ATLA
-        </button>
       </div>
     </aside>
   );

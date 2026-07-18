@@ -182,9 +182,9 @@ export default function CharmBar({
           </h2>
         </div>
       )}
-      <div className={layout === 'vertical' 
-        ? "flex flex-col gap-3 overflow-y-auto max-h-[52vh] pr-1 py-1 scrollbar-none" 
-        : "flex flex-row flex-nowrap gap-1.5 md:gap-2 lg:gap-3 pb-10 md:pb-14 -mb-8 md:-mb-12 scrollbar-none relative z-30 overflow-visible"
+      <div className={layout === 'vertical'
+        ? "flex flex-col gap-3 overflow-y-auto max-h-[52vh] pr-1 py-1 scrollbar-none"
+        : "flex flex-row flex-nowrap justify-center gap-1.5 md:gap-2 lg:gap-3 pb-10 md:pb-14 -mb-8 md:-mb-12 scrollbar-none relative z-30 overflow-visible"
       }>
         {Array.from({ length: maxCharmSlots }, (_, i) => {
           const charm = charms[i];

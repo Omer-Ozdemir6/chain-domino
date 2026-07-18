@@ -1,4 +1,4 @@
-import { Container, Graphics } from 'pixi.js';
+import { BlurFilter, Container, Graphics } from 'pixi.js';
 
 interface Particle {
   gfx: Graphics;
@@ -15,6 +15,8 @@ interface Particle {
   vine?: boolean;
   /** An expanding ring — grows via scale instead of moving, alpha fades as it grows. */
   shockwave?: boolean;
+  /** The soft blurred bloom disc accompanying a shockwave ring — grows faster, fades faster. */
+  glowCore?: boolean;
 }
 
 /** A minimal, dependency-free particle pool driven straight off the Pixi ticker — no physics
@@ -51,8 +53,29 @@ export function createParticleSystem() {
     const ctrlX = mx + normalX * bulge;
     const ctrlY = my + normalY * bulge;
 
+    // A soft, wide, blurred glow stroke UNDER the crisp vine line, both blended additively —
+    // this is what actually reads as "glowing energy" against the dark felt instead of a flat
+    // tinted line: the blur+add combo is the standard cheap bloom technique, real light-bleed
+    // instead of a faded shape.
+    const glowVine = new Graphics();
+    glowVine.moveTo(fromX, fromY).quadraticCurveTo(ctrlX, ctrlY, toX, toY).stroke({ width: 11, color, alpha: 0.7, cap: 'round' });
+    glowVine.filters = [new BlurFilter({ strength: 5 })];
+    glowVine.blendMode = 'add';
+    container.addChild(glowVine);
+    particles.push({
+      gfx: glowVine,
+      vx: 0,
+      vy: 0,
+      gravity: 0,
+      rotationSpeed: 0,
+      life: 0,
+      maxLife: 0.75,
+      vine: true,
+    });
+
     const vine = new Graphics();
-    vine.moveTo(fromX, fromY).quadraticCurveTo(ctrlX, ctrlY, toX, toY).stroke({ width: 3, color, alpha: 0.9, cap: 'round' });
+    vine.moveTo(fromX, fromY).quadraticCurveTo(ctrlX, ctrlY, toX, toY).stroke({ width: 3, color: 0xfff4d6, alpha: 1, cap: 'round' });
+    vine.blendMode = 'add';
     container.addChild(vine);
     particles.push({
       gfx: vine,
@@ -65,36 +88,59 @@ export function createParticleSystem() {
       vine: true,
     });
 
-    const leafCount = Math.min(4, Math.max(2, Math.round(dist / 24)));
+    const leafCount = Math.min(5, Math.max(3, Math.round(dist / 20)));
     for (let i = 1; i <= leafCount; i++) {
       const t = i / (leafCount + 1);
       const qx = (1 - t) * (1 - t) * fromX + 2 * (1 - t) * t * ctrlX + t * t * toX;
       const qy = (1 - t) * (1 - t) * fromY + 2 * (1 - t) * t * ctrlY + t * t * toY;
       const leaf = new Graphics();
-      leaf.circle(0, 0, 2 + Math.random()).fill({ color, alpha: 0.95 });
+      leaf.circle(0, 0, 3 + Math.random() * 1.5).fill({ color: 0xfff4d6, alpha: 1 });
+      leaf.blendMode = 'add';
       leaf.x = qx;
       leaf.y = qy;
       container.addChild(leaf);
       particles.push({
         gfx: leaf,
-        vx: (Math.random() - 0.5) * 8,
-        vy: -(6 + Math.random() * 10),
+        vx: (Math.random() - 0.5) * 10,
+        vy: -(8 + Math.random() * 12),
         gravity: 0,
         rotationSpeed: 0,
         life: 0,
-        maxLife: 0.5 + Math.random() * 0.3,
+        maxLife: 0.55 + Math.random() * 0.3,
       });
     }
   }
 
   /** A circular energy pulse expanding outward from a stone the instant it locks into place —
-   *  fires on every placement, not just Amber-sealed ones. */
-  function spawnShockwave(x: number, y: number, color: number = 0xd9a441) {
+   *  fires on every placement, not just Amber-sealed ones. A soft additive bloom disc plus a
+   *  bright crisp ring on top, both blended additively, instead of one flat-alpha stroke — the
+   *  bloom is what actually reads as "light", the ring gives it a defined edge. */
+  function spawnShockwave(x: number, y: number, color: number = 0xffcc55) {
+    const glow = new Graphics();
+    glow.circle(0, 0, 24).fill({ color, alpha: 0.75 });
+    glow.filters = [new BlurFilter({ strength: 7 })];
+    glow.blendMode = 'add';
+    glow.x = x;
+    glow.y = y;
+    glow.scale.set(0.2);
+    container.addChild(glow);
+    particles.push({
+      gfx: glow,
+      vx: 0,
+      vy: 0,
+      gravity: 0,
+      rotationSpeed: 0,
+      life: 0,
+      maxLife: 0.4,
+      glowCore: true,
+    });
+
     const gfx = new Graphics();
     // Radius tuned to clearly outgrow a domino tile's own half-width before it's done fading —
     // a ring that never grows past the tile it's confirming would stay hidden behind it the
     // whole time (tiles are drawn as opaque DOM elements above this canvas).
-    gfx.circle(0, 0, 20).stroke({ width: 5, color, alpha: 1 });
+    gfx.circle(0, 0, 20).stroke({ width: 5, color: 0xfff4d6, alpha: 1 });
+    gfx.blendMode = 'add';
     gfx.x = x;
     gfx.y = y;
     gfx.scale.set(0.2);
@@ -106,7 +152,7 @@ export function createParticleSystem() {
       gravity: 0,
       rotationSpeed: 0,
       life: 0,
-      maxLife: 0.45,
+      maxLife: 0.5,
       shockwave: true,
     });
   }
@@ -199,6 +245,10 @@ export function createParticleSystem() {
         // A slower-than-linear fade so the ring is still reasonably visible once it's grown
         // large enough to actually peek out past the tile's edges, not already gone by then.
         p.gfx.alpha = Math.pow(1 - t, 0.6);
+      } else if (p.glowCore) {
+        const t = p.life / p.maxLife;
+        p.gfx.scale.set(0.2 + t * 2.4);
+        p.gfx.alpha = 0.75 * (1 - t);
       } else {
         p.gfx.alpha = 1 - p.life / p.maxLife;
       }
