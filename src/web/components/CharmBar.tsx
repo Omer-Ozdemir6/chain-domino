@@ -97,6 +97,127 @@ const SPECIAL_GLYPHS: Record<string, { path: React.ReactNode; colorClass: string
     colorClass: 'text-fuchsia-500 dark:text-fuchsia-400',
     path: <><path d="M2 12 C6 5 18 5 22 12 C18 19 6 19 2 12 Z" /><circle cx="12" cy="12" r="3.5" /></>,
   },
+  // A mirrored pair of wings split by a dashed axis — "symmetry/pairing", for the even-sum lover.
+  add_even_lover: {
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    path: <><path d="M12 3v18" strokeDasharray="2 2" /><path d="M12 6c-3 0-6 2-6 6s3 6 6 6" /><path d="M12 6c3 0 6 2 6 6s-3 6-6 6" /></>,
+  },
+  // A single solitary diamond with a filled core — "unpaired", for the odd-sum lover.
+  add_odd_lover: {
+    colorClass: 'text-teal-600 dark:text-teal-400',
+    path: <><path d="M12 2 L19 12 L12 22 L5 12 Z" /><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" /></>,
+  },
+  // An anvil — "heavy load" for the high-value bonus.
+  add_high_value: {
+    colorClass: 'text-orange-600 dark:text-orange-400',
+    path: <><path d="M5 15h5l1-3h7a2 2 0 0 1 2 2v2H5z" /><path d="M9 12V8a1 1 0 0 1 1-1h2v5" /><path d="M7 18h10" /></>,
+  },
+  // A feather — "light load" for the low-value bonus.
+  add_low_value: {
+    colorClass: 'text-cyan-600 dark:text-cyan-400',
+    path: <><path d="M20 4c-6 0-14 4-14 12 0 2 1 4 3 4 8 0 12-8 12-14 0-.7-.1-1.4-.3-2z" /><path d="M9 15 20 4" /><path d="M12 15h-3" /><path d="M14.5 12h-3" /></>,
+  },
+  // A doubled domino face (matching pips both ends) topped with a small mastery star.
+  add_expert: {
+    colorClass: 'text-emerald-700 dark:text-emerald-400',
+    path: <><rect x="6" y="5" width="12" height="16" rx="2" /><line x1="6" y1="13" x2="18" y2="13" /><circle cx="9" cy="9" r="1.1" fill="currentColor" stroke="none" /><circle cx="15" cy="9" r="1.1" fill="currentColor" stroke="none" /><circle cx="9" cy="17" r="1.1" fill="currentColor" stroke="none" /><circle cx="15" cy="17" r="1.1" fill="currentColor" stroke="none" /><path d="M12 1.3l.6 1.3 1.4.2-1 1 .2 1.4-1.2-.7-1.2.7.2-1.4-1-1 1.4-.2z" fill="currentColor" stroke="none" /></>,
+  },
+  // A zigzag streak line — consecutive matches firing one after another.
+  add_streak: {
+    colorClass: 'text-lime-600 dark:text-lime-400',
+    path: <path d="M3 13h4l2-6 4 12 2-6h6" />,
+  },
+  // A diagonal chain of three linked rings — a long, well-forged chain.
+  subtract_expert: {
+    colorClass: 'text-rose-700 dark:text-rose-400',
+    path: <><circle cx="6" cy="7" r="3" /><circle cx="12" cy="12" r="3" /><circle cx="18" cy="17" r="3" /></>,
+  },
+  // A hand mirror — swap the two ends of a stone.
+  alchemists_mirror: {
+    colorClass: 'text-cyan-500 dark:text-cyan-300',
+    path: <><circle cx="12" cy="9" r="6" /><path d="M12 15v7" /><path d="M9 22h6" /></>,
+  },
+  // An inkwell with a quill resting in it.
+  ancient_inkwell: {
+    colorClass: 'text-amber-700 dark:text-amber-400',
+    path: <><path d="M6 10h12l-1 9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2z" /><ellipse cx="12" cy="10" rx="6" ry="2" /><path d="M16 8 21 2" /></>,
+  },
+  // Two offset squares linked by a dashed bridge — a mirrored, doubled reflection.
+  binary_mirror: {
+    colorClass: 'text-sky-600 dark:text-sky-400',
+    path: <><rect x="2.5" y="6" width="8" height="8" rx="1" /><rect x="13.5" y="10" width="8" height="8" rx="1" /><path d="M10.5 10l3 0" strokeDasharray="1.5 1.5" /></>,
+  },
+  // Interlocking woven waves — a loom pulling stones into a single chain.
+  chain_weaver: {
+    colorClass: 'text-indigo-600 dark:text-indigo-400',
+    path: <><path d="M3 7c3.5 0 3.5 4 7 4s3.5-4 7-4 3.5 4 4 4" /><path d="M3 13c3.5 0 3.5 4 7 4s3.5-4 7-4 3.5 4 4 4" /></>,
+  },
+  // A round clockface with two swinging pendulum arms — distinct from cosmic_pendulum's simple
+  // lollipop swing, this one reads more like an actual mechanical clock.
+  chrono_pendulum: {
+    colorClass: 'text-sky-500 dark:text-sky-300',
+    path: <><circle cx="12" cy="8" r="5.2" /><path d="M12 8 12 4.5" /><path d="M12 8 14.6 9.6" /><path d="M12 13 10 20" /><path d="M12 13 14 20" /><circle cx="10" cy="20.3" r="1.2" fill="currentColor" stroke="none" /><circle cx="14" cy="20.3" r="1.2" fill="currentColor" stroke="none" /></>,
+  },
+  // A five-pip die face — cosmic luck.
+  cosmic_dice: {
+    colorClass: 'text-violet-500 dark:text-violet-400',
+    path: <><rect x="4" y="4" width="16" height="16" rx="3" /><circle cx="8.3" cy="8.3" r="1.2" fill="currentColor" stroke="none" /><circle cx="15.7" cy="8.3" r="1.2" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" /><circle cx="8.3" cy="15.7" r="1.2" fill="currentColor" stroke="none" /><circle cx="15.7" cy="15.7" r="1.2" fill="currentColor" stroke="none" /></>,
+  },
+  // Concentric dashed rings collapsing into a solid center — an accretion disk around a void.
+  cosmic_singularity: {
+    colorClass: 'text-purple-600 dark:text-purple-400',
+    path: <><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="5.5" strokeDasharray="2 2" /><circle cx="12" cy="12" r="9" strokeDasharray="3 3" opacity="0.55" /></>,
+  },
+  // An hourglass with a jagged crack running through its neck.
+  cracked_hourglass: {
+    colorClass: 'text-red-600 dark:text-red-400',
+    path: <><path d="M6 3h12" /><path d="M6 21h12" /><path d="M7 3c0 5 5 7 5 9s-5 4-5 9" /><path d="M17 3c0 5-5 7-5 9s5 4 5 9" /><path d="M9.5 8l3 2.2-2 2.8" strokeWidth="1.3" /></>,
+  },
+  // An auctioneer's gavel mid-strike.
+  curators_gavel: {
+    colorClass: 'text-amber-600 dark:text-amber-400',
+    path: <><path d="M14 3l7 7-2 2-7-7z" /><path d="M12 8l4 4" /><path d="M3 21l7-7" /><path d="M2 22l3-3" /></>,
+  },
+  // A crystal ball with two glinting inner sparkles on a stand — a doubled/twinned prophecy.
+  double_oracle: {
+    colorClass: 'text-fuchsia-600 dark:text-fuchsia-400',
+    path: <><circle cx="12" cy="11" r="7" /><circle cx="9.5" cy="9.5" r="1" fill="currentColor" stroke="none" /><circle cx="14.5" cy="9.5" r="1" fill="currentColor" stroke="none" /><path d="M7 20h10" /></>,
+  },
+  // Three concentric rings rippling out from a center point — sound bouncing back.
+  echo_chamber: {
+    colorClass: 'text-sky-600 dark:text-sky-400',
+    path: <><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="8.5" opacity="0.5" /></>,
+  },
+  // A rounded nesting-doll silhouette with a curved "biting" mouth line.
+  gluttonous_matryoshka: {
+    colorClass: 'text-rose-600 dark:text-rose-400',
+    path: <><path d="M12 2c-3 0-5 2-5 5 0 1.5.7 2.5 1.5 3.3C6.8 11.5 5 14 5 17c0 3 3 5 7 5s7-2 7-5c0-3-1.8-5.5-3.5-6.7.8-.8 1.5-1.8 1.5-3.3 0-3-2-5-5-5z" /><path d="M9.3 15.5c.6 1 1.6 1.5 2.7 1.5s2.1-.5 2.7-1.5" /></>,
+  },
+  // An abacus frame with beads on two rods.
+  golden_abacus: {
+    colorClass: 'text-amber-500 dark:text-amber-400',
+    path: <><rect x="4" y="4" width="16" height="16" rx="1.5" /><line x1="4" y1="9.5" x2="20" y2="9.5" /><line x1="4" y1="14.5" x2="20" y2="14.5" /><circle cx="8" cy="9.5" r="1.3" fill="currentColor" stroke="none" /><circle cx="13" cy="9.5" r="1.3" fill="currentColor" stroke="none" /><circle cx="10" cy="14.5" r="1.3" fill="currentColor" stroke="none" /><circle cx="16" cy="14.5" r="1.3" fill="currentColor" stroke="none" /></>,
+  },
+  // Four soft draping folds — a veil.
+  ivory_veil: {
+    colorClass: 'text-stone-400 dark:text-stone-300',
+    path: <><path d="M4 4c2 4 2 8 0 16" /><path d="M9.3 4c2 4 2 8 0 16" /><path d="M14.7 4c2 4 2 8 0 16" /><path d="M20 4c2 4 2 8 0 16" /></>,
+  },
+  // A domed treasure chest with a small lock plate.
+  noble_ivory_chest: {
+    colorClass: 'text-amber-500 dark:text-amber-300',
+    path: <><rect x="4" y="10" width="16" height="10" rx="1.5" /><path d="M4 10c0-4 3.5-7 8-7s8 3 8 7" /><rect x="10" y="12" width="4" height="4" rx="0.5" fill="currentColor" stroke="none" /></>,
+  },
+  // An almond eye with a solid gem-cut iris.
+  obsidian_eye: {
+    colorClass: 'text-purple-500 dark:text-purple-400',
+    path: <><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none" /></>,
+  },
+  // A wavy-bottomed ghost with two dot eyes and a small coin beside it.
+  thrifty_phantom: {
+    colorClass: 'text-stone-300 dark:text-stone-200',
+    path: <><path d="M6 20V11a6 6 0 0 1 12 0v9l-2-2-2 2-2-2-2 2-2-2z" /><circle cx="9.5" cy="10.5" r="1" fill="currentColor" stroke="none" /><circle cx="14.5" cy="10.5" r="1" fill="currentColor" stroke="none" /></>,
+  },
 };
 
 function genericCharmGlyph(id: string) {

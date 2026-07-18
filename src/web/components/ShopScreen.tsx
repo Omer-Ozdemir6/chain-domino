@@ -99,6 +99,19 @@ function renderVoucherIcon(id: string) {
   if (artwork) {
     return <img src={artwork} alt="" className="w-14 h-14 object-contain mx-auto drop-shadow" />;
   }
+  if (id === 'voucher_bargaining_power') {
+    // Two coin-purses on a scale, tipped toward the fuller one — haggling the reroll price down.
+    return (
+      <svg className="w-10 h-14" viewBox="0 0 100 130">
+        <path d="M50 20 L50 45" stroke="#D97706" strokeWidth="4" strokeLinecap="round" />
+        <path d="M20 45 L80 45" stroke="#D97706" strokeWidth="4" strokeLinecap="round" />
+        <path d="M20 45 L10 68 A12 12 0 0 0 30 68 Z" fill="#FBBF24" stroke="#D97706" strokeWidth="3" />
+        <path d="M80 45 L68 60 A9 9 0 0 0 82 60 Z" fill="#78350F" stroke="#D97706" strokeWidth="3" />
+        <circle cx="50" cy="95" r="20" fill="#78350F" stroke="#D97706" strokeWidth="4" />
+        <text x="50" y="102" textAnchor="middle" fill="#FBBF24" fontSize="20" fontWeight="bold" fontFamily="monospace">$</text>
+      </svg>
+    );
+  }
   return (
     <svg className="w-10 h-14" viewBox="0 0 100 130">
       <rect x="15" y="35" width="70" height="60" rx="6" fill="#78350F" stroke="#D97706" strokeWidth="4" />
