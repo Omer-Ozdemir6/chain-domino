@@ -159,10 +159,10 @@ export default function StartScreen({ onStart }: StartScreenProps) {
         </span>
       ))}
 
-      {/* ── Top watermark ── */}
+      {/* ── Top watermark — each corner drops in from its own edge ── */}
       <div className="flex justify-between items-center text-[12px] text-emerald-700/50 font-bold uppercase tracking-[0.25em] z-10">
-        <span>Chain Domino</span>
-        <span>v1.2.0</span>
+        <span className="animate-hero-fly-left" style={{ animationDelay: '850ms' }}>Chain Domino</span>
+        <span className="animate-hero-fly-right" style={{ animationDelay: '850ms' }}>v1.2.0</span>
       </div>
 
       {/* ══════════════════════════════════════
@@ -176,8 +176,8 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           <div className="absolute w-80 h-80 rounded-full border border-dashed border-amber-600/15 animate-spin [animation-duration:30s] z-0" />
           <div className="absolute w-64 h-64 rounded-full bg-emerald-500/5 blur-3xl z-0" />
 
-          {/* CHAIN */}
-          <h1 className="text-7xl md:text-9xl font-black tracking-[0.15em] font-pixel z-10 leading-none animate-charm-in-rare" style={{ animationDelay: '0ms' }}>
+          {/* CHAIN — slides in from off the left edge */}
+          <h1 className="text-7xl md:text-9xl font-black tracking-[0.15em] font-pixel z-10 leading-none animate-hero-fly-left" style={{ animationDelay: '0ms' }}>
             <span
               className="text-transparent bg-clip-text bg-gradient-to-b from-emerald-300 via-emerald-500 to-teal-700"
               style={{ textShadow: '0 0 40px rgba(16,185,129,0.4)' }}
@@ -186,15 +186,15 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             </span>
           </h1>
 
-          {/* Golden Domino centerpiece */}
-          <div className="my-3 z-10 transform rotate-12 scale-[1.4] relative animate-charm-in-legendary" style={{ animationDelay: '200ms' }}>
+          {/* Golden Domino centerpiece — drops in from above */}
+          <div className="my-3 z-10 relative animate-hero-drop-in" style={{ animationDelay: '250ms' }}>
             <div className="absolute -inset-3 bg-amber-400/20 rounded-2xl blur-xl animate-pulse" />
             <div className="absolute -inset-1 bg-gradient-to-br from-amber-400/30 to-transparent rounded-xl" />
             <Tile left={1} right={6} vertical={false} isGolden={true} />
           </div>
 
-          {/* DOMINO */}
-          <h1 className="text-7xl md:text-9xl font-black tracking-[0.15em] font-pixel z-10 leading-none animate-charm-in-rare" style={{ animationDelay: '120ms' }}>
+          {/* DOMINO — slides in from off the right edge */}
+          <h1 className="text-7xl md:text-9xl font-black tracking-[0.15em] font-pixel z-10 leading-none animate-hero-fly-right" style={{ animationDelay: '150ms' }}>
             <span
               className="text-transparent bg-clip-text bg-gradient-to-b from-amber-300 via-amber-500 to-orange-700"
               style={{ textShadow: '0 0 40px rgba(245,158,11,0.4)' }}
@@ -203,8 +203,8 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             </span>
           </h1>
 
-          {/* Tagline */}
-          <p className="mt-4 text-[13px] md:text-sm text-emerald-500/60 font-medium tracking-[0.3em] uppercase font-pixel animate-fade-in" style={{ animationDelay: '600ms' }}>
+          {/* Tagline — rises up from below */}
+          <p className="mt-4 text-[13px] md:text-sm text-emerald-500/60 font-medium tracking-[0.3em] uppercase font-pixel animate-hero-fly-up" style={{ animationDelay: '650ms' }}>
             Zincirini Kur · Puanını Yükselt
           </p>
         </div>

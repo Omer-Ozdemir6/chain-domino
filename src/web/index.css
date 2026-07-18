@@ -731,6 +731,48 @@ body {
   animation: slide-in-row 650ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
+/* Main menu hero entrance — each word/element arrives from a different edge of the screen
+   instead of just popping into place, so the title reads as "assembling itself" on load. */
+@keyframes hero-fly-left {
+  0% { opacity: 0; transform: translateX(-45vw) rotate(-8deg); }
+  65% { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0) rotate(0deg); }
+}
+.animate-hero-fly-left {
+  animation: hero-fly-left 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes hero-fly-right {
+  0% { opacity: 0; transform: translateX(45vw) rotate(8deg); }
+  65% { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0) rotate(0deg); }
+}
+.animate-hero-fly-right {
+  animation: hero-fly-right 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* The golden tile drops in from above and settles into its resting tilt+scale — that resting
+   state has to live in this keyframe's 100% (rotate(12deg) scale(1.4)) rather than as separate
+   Tailwind rotate-12/scale-[1.4] utility classes, since this animation's own `transform` fully
+   replaces theirs the moment it plays instead of combining with them. */
+@keyframes hero-drop-in {
+  0% { opacity: 0; transform: translateY(-50vh) rotate(-50deg) scale(0.5); }
+  70% { opacity: 1; }
+  84% { transform: translateY(10px) rotate(18deg) scale(1.45); }
+  100% { opacity: 1; transform: translateY(0) rotate(12deg) scale(1.4); }
+}
+.animate-hero-drop-in {
+  animation: hero-drop-in 1050ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes hero-fly-up {
+  0% { opacity: 0; transform: translateY(70px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-hero-fly-up {
+  animation: hero-fly-up 700ms ease-out both;
+}
+
 @keyframes charm-in-rare {
   0% { transform: scale(0.7) rotate(0deg); opacity: 0; }
   25% { transform: scale(1.1) rotate(-6deg); opacity: 1; }
