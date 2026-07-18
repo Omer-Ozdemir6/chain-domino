@@ -120,7 +120,7 @@ const CORE_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'overtime',
-    name: 'Ekstra Mesai',
+    name: 'Dördüncü Taşın Fısıltısı',
     description: 'Zincirin 4. taşından itibaren her taşa +3 Çarpan ekler.',
     cost: 7,
     rarity: 'UNCOMMON',
@@ -174,8 +174,8 @@ const CORE_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'loss_insurance',
-    name: 'Kayıp Sigortası',
-    description: 'Bu turun taban puanı asla 0\'ın altına düşmez.',
+    name: 'Koruyucu Muska',
+    description: 'Bu elin taban puanı asla 0\'ın altına düşmez.',
     cost: 6,
     rarity: 'COMMON',
     createHooks: () => ({
@@ -512,8 +512,8 @@ const POSITIONAL_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'minimalist',
-    name: 'Minimalist',
-    description: 'Bu tur TAM OLARAK 2 taş oynayıp gönderirseniz Çarpanı +12 artırır.',
+    name: 'Cimri Ustanın Sırrı',
+    description: 'Bu elde TAM OLARAK 2 taş oynayıp gönderirseniz Çarpanı +12 artırır.',
     cost: 6,
     rarity: 'UNCOMMON',
     createHooks: () => ({
@@ -795,8 +795,8 @@ const SYNERGY_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'synergy_harmony_overtime',
-    name: 'Uyum ve Mesai',
-    description: "Dörtlü Uyum ve Ekstra Mesai'ye BİRLİKTE sahipsen, 4. taştan itibaren ekstra +4.",
+    name: 'Uyum ve Fısıltı',
+    description: "Dörtlü Uyum ve Dördüncü Taşın Fısıltısı'na BİRLİKTE sahipsen, 4. taştan itibaren ekstra +4.",
     cost: 9,
     rarity: 'UNCOMMON',
     createHooks: (ctx) => {
@@ -912,7 +912,7 @@ const NUMBER_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'six_pack',
-    name: 'Altılı Paket',
+    name: 'Altılı Bereket',
     description: 'İçinde 6 pip olan taş başına +5 puan.',
     cost: 5,
     rarity: 'COMMON',
@@ -922,7 +922,7 @@ const NUMBER_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'total_recall',
-    name: 'Toplu Hafıza',
+    name: 'Kadim Hafıza',
     description: 'Zincirdeki taş sayısı kadar +1 ekstra puan.',
     cost: 7,
     rarity: 'UNCOMMON',
