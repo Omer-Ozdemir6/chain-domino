@@ -576,8 +576,8 @@ export default function App() {
           setCharmPopupText(null);
           setActiveScoringCharmId(null);
           setActiveCharmPopupText(null);
-          setTimeout(runNextCharmStep, 900);
-        }, 3200);
+          setTimeout(runNextCharmStep, 450);
+        }, 1700);
       } else {
         function finish() {
           setStepPopup(null);
