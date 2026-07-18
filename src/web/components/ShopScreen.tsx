@@ -66,6 +66,8 @@ interface ShopScreenProps {
   onSkipDraft: () => void;
   onFuse?: (charmAId: string, charmBId: string) => void;
   fusedCharmIds?: string[];
+  /** Sell an owned charm for half its cost back, freeing its slot. Only actionable in the shop. */
+  onSell?: (charmId: string) => void;
   activeTag?: SkipTag | null;
   /** Rün Kesesi (Rune Pack) flow: buy -> pick 1 of 3 -> pick K existing customDeck stones -> apply. */
   runeOffers: RuneOptionDef[];
@@ -296,6 +298,7 @@ export default function ShopScreen({
   onSkipDraft,
   onFuse,
   fusedCharmIds,
+  onSell,
   activeTag,
   runeOffers,
   onChooseRune,
@@ -947,6 +950,32 @@ export default function ShopScreen({
     );
   }
 
+  // A compact, always-visible list of every owned charm with a one-click sell action (half its
+  // cost back) — separate from the Fusion Forge's inventory below, which only lists charms that
+  // are part of a fusion recipe and would otherwise be the only owned-charm display in the shop.
+  const sellableCharmsSection = onSell && ownedCharms.length > 0 && (
+    <div className="shrink-0">
+      <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block mb-1.5">
+        Tılsımlarınız (satmak için tıklayın)
+      </span>
+      <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+        {ownedCharms.map((charm) => (
+          <button
+            key={charm.id}
+            type="button"
+            onClick={() => onSell(charm.id)}
+            title={`Sat: $${Math.round(charm.cost / 2)}`}
+            className="group flex items-center gap-1.5 pl-1.5 pr-2 py-1 rounded-lg border border-stone-800 bg-stone-900/40 text-stone-400 hover:border-rose-500/60 hover:bg-rose-950/20 hover:text-rose-300 transition text-left"
+          >
+            <span className="text-sm shrink-0 leading-none">{renderCharmIcon(charm.id)}</span>
+            <span className="text-[11px] max-w-24 truncate">{charm.name}</span>
+            <span className="text-[10px] font-pixel font-bold text-emerald-500 group-hover:text-rose-300 shrink-0">${Math.round(charm.cost / 2)}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   if (isPortrait) {
     return (
       <div className="relative w-full h-full flex flex-col bg-stone-900 border-2 border-stone-950 p-3 gap-3 select-none overflow-y-auto">
@@ -1008,6 +1037,12 @@ export default function ShopScreen({
           <div className="flex flex-row flex-wrap gap-3 justify-center items-start shrink-0">
             <Fragment key={rerollKey}>{offers.map((offer, i) => (<div key={i} className="animate-shop-card-in" style={{ animationDelay: `${i * 70}ms` }}>{renderOfferCard(offer)}</div>))}</Fragment>
           </div>
+
+          {sellableCharmsSection && (
+            <div className="border-t border-stone-800/50 pt-3 mt-2">
+              {sellableCharmsSection}
+            </div>
+          )}
 
           {/* Fusion in Portrait */}
           <div className="border-t border-stone-800/50 pt-3 mt-2">
@@ -1157,6 +1192,12 @@ export default function ShopScreen({
 
       {/* 3. Right Column: Fusion Forge (Side-by-side setup) */}
       <div className="w-64 md:w-72 lg:w-80 xl:w-96 bg-stone-950/75 border border-stone-800/80 rounded-2xl p-2 md:p-3 lg:p-4 flex flex-col shrink-0 h-full min-h-0">
+        {sellableCharmsSection && (
+          <div className="border-b border-stone-800 pb-3 mb-3 shrink-0">
+            {sellableCharmsSection}
+          </div>
+        )}
+
         <div className="flex items-center gap-2 border-b border-stone-800 pb-2 shrink-0 select-none">
           <span className="text-lg">🏛️</span>
           <h3 className="text-[13px] font-bold uppercase tracking-wider text-amber-500 font-pixel">

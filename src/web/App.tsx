@@ -860,8 +860,14 @@ export default function App() {
   }
 
   function handleSell(charmId: string): void {
-    shop((r) => r.sellCharm(charmId));
-    playSound('place');
+    const def = CHARMS.find((c) => c.id === charmId);
+    const res = shop((r) => r.sellCharm(charmId));
+    if (res.ok) {
+      playSound('place');
+      setMessage(`${def?.name ?? 'Tılsım'} satıldı! (+$${res.refund})`);
+    } else {
+      setMessage('Hata: ' + res.error);
+    }
   }
 
   function handleFuse(charmAId: string, charmBId: string): void {
@@ -962,6 +968,7 @@ export default function App() {
           onSkipDraft={handleSkipDraft}
           onFuse={handleFuse}
           fusedCharmIds={run.fusedCharmIds}
+          onSell={handleSell}
           activeTag={run.activeTag}
           runeOffers={run.runeOffers}
           onChooseRune={handleChooseRune}
