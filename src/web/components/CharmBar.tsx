@@ -638,24 +638,41 @@ const SPECIAL_GLYPHS: Record<string, { path: React.ReactNode; colorClass: string
   },
 };
 
+/** A soft radial-gradient medallion sitting behind an icon's linework — the linework alone read
+ *  as thin, flat clip-art next to Balatro's painted item art. A tinted glow disc + a drop-shadow
+ *  on the strokes gives real depth/weight without risking a blind per-path fill pass across 95
+ *  hand-authored icons (several are pure open linework — zigzags, crosshairs — that a naive fill
+ *  would auto-close into an ugly stray polygon). currentColor ties the medallion to each icon's
+ *  own accent color, so it never needs its own color prop. */
+function IconMedallion({ children, colorClass }: { children: React.ReactNode; colorClass: string }) {
+  return (
+    <span className="relative inline-block w-9 h-9 mx-auto">
+      <span className={`absolute inset-0 rounded-full ${colorClass} opacity-[0.16] blur-[3px]`} style={{ background: 'radial-gradient(circle, currentColor 0%, currentColor 55%, transparent 78%)' }} />
+      <svg
+        className={`relative w-9 h-9 ${colorClass} drop-shadow-[0_1.5px_1px_rgba(0,0,0,0.5)]`}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {children}
+      </svg>
+    </span>
+  );
+}
+
 function genericCharmGlyph(id: string) {
   const special = SPECIAL_GLYPHS[id];
   if (special) {
-    return (
-      <svg className={`w-8 h-8 mx-auto ${special.colorClass}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        {special.path}
-      </svg>
-    );
+    return <IconMedallion colorClass={special.colorClass}>{special.path}</IconMedallion>;
   }
 
   const op = ['add', 'subtract', 'multiply', 'divide'].find((o) => id.startsWith(`${o}_`));
   const category = op ? id.slice(op.length + 1).replace(/_lover$/, '') : '';
   const colorClass = op ? OP_GLYPH_COLOR[op] : 'text-stone-500 dark:text-stone-400';
-  return (
-    <svg className={`w-8 h-8 mx-auto ${colorClass}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      {categoryGlyphPath(category)}
-    </svg>
-  );
+  return <IconMedallion colorClass={colorClass}>{categoryGlyphPath(category)}</IconMedallion>;
 }
 
 export function renderCharmIcon(id: string) {
