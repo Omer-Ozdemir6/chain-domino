@@ -455,12 +455,12 @@ export default function ShopScreen({
           onMouseEnter={(e) => handleCardEnter(e, itemDetails)}
           onMouseLeave={handleCardLeave}
           onClick={(e) => handleCardClick(e, itemDetails)}
-          className={`balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${borderClass}`}
+          className={`balatro-card relative flex flex-col justify-between w-32 h-48 md:w-40 md:h-60 lg:w-44 lg:h-66 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${borderClass}`}
         >
           {renderPriceBadge(charm.cost)}
           <div className={`absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-stone-950/40 z-10 ${gemClass}`} title={charm.curse ? 'Lanetli' : charm.rarity} />
 
-          <div className="flex-1 flex items-center justify-center transform scale-[1.3] origin-center my-auto pointer-events-none">
+          <div className="flex-1 flex items-center justify-center transform scale-[1.9] origin-center my-auto pointer-events-none">
             {renderCharmIcon(charm.id)}
           </div>
 
@@ -471,7 +471,7 @@ export default function ShopScreen({
               onBuy(charm.id);
             }}
             disabled={disabled}
-            className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition cursor-pointer"
+            className="w-full py-2 md:py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base lg:text-lg font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition cursor-pointer"
           >
             SATIN AL
           </button>
@@ -497,12 +497,12 @@ export default function ShopScreen({
           onMouseEnter={(e) => handleCardEnter(e, itemDetails)}
           onMouseLeave={handleCardLeave}
           onClick={(e) => handleCardClick(e, itemDetails)}
-          className="balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 border-amber-600/80 bg-amber-950/20 shadow-[0_0_10px_rgba(217,119,6,0.3)] transition shrink-0 cursor-pointer hover:scale-105 active:scale-95"
+          className="balatro-card relative flex flex-col justify-between w-32 h-48 md:w-40 md:h-60 lg:w-44 lg:h-66 p-2.5 rounded-xl border-2 border-amber-600/80 bg-amber-950/20 shadow-[0_0_10px_rgba(217,119,6,0.3)] transition shrink-0 cursor-pointer hover:scale-105 active:scale-95"
         >
           {renderPriceBadge(voucher.cost)}
           <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-stone-950/40 z-10 bg-amber-500 shadow-[0_0_8px_#d97706]" title="Ferman" />
 
-          <div className="flex-1 flex items-center justify-center transform scale-[1.3] origin-center my-auto pointer-events-none">
+          <div className="flex-1 flex items-center justify-center transform scale-[1.9] origin-center my-auto pointer-events-none">
             {renderVoucherIcon(voucher.id)}
           </div>
 
@@ -544,12 +544,12 @@ export default function ShopScreen({
           onMouseEnter={(e) => handleCardEnter(e, itemDetails)}
           onMouseLeave={handleCardLeave}
           onClick={(e) => handleCardClick(e, itemDetails)}
-          className={`balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${boosterBorder}`}
+          className={`balatro-card relative flex flex-col justify-between w-32 h-48 md:w-40 md:h-60 lg:w-44 lg:h-66 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${boosterBorder}`}
         >
           {renderPriceBadge(pack.cost)}
           <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-stone-950/40 z-10 bg-indigo-500 shadow-[0_0_8px_#6366f1]" title="Kese" />
 
-          <div className="flex-1 flex items-center justify-center transform scale-[0.9] origin-center my-auto pointer-events-none">
+          <div className="flex-1 flex items-center justify-center transform scale-[1.3] origin-center my-auto pointer-events-none">
             {renderBoosterIcon(pack.id)}
           </div>
 
@@ -560,7 +560,7 @@ export default function ShopScreen({
               onBuy(pack.id);
             }}
             disabled={disabled}
-            className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base font-bold font-pixel text-white shadow border-b-2 border-indigo-850 transition cursor-pointer"
+            className="w-full py-2 md:py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base lg:text-lg font-bold font-pixel text-white shadow border-b-2 border-indigo-850 transition cursor-pointer"
           >
             SATIN AL
           </button>
@@ -586,12 +586,12 @@ export default function ShopScreen({
           onMouseEnter={(e) => handleCardEnter(e, itemDetails)}
           onMouseLeave={handleCardLeave}
           onClick={(e) => handleCardClick(e, itemDetails)}
-          className="balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 border-rose-600/80 bg-rose-950/20 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95"
+          className="balatro-card relative flex flex-col justify-between w-32 h-48 md:w-40 md:h-60 lg:w-44 lg:h-66 p-2.5 rounded-xl border-2 border-rose-600/80 bg-rose-950/20 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95"
         >
           {renderPriceBadge(pack.cost)}
           <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-stone-950/40 z-10 bg-rose-500 shadow-[0_0_8px_#f43f5e]" title="Rün Kesesi" />
 
-          <div className="flex-1 flex items-center justify-center transform scale-[0.9] origin-center my-auto pointer-events-none">
+          <div className="flex-1 flex items-center justify-center transform scale-[1.3] origin-center my-auto pointer-events-none">
             {renderRuneIcon()}
           </div>
 
@@ -602,7 +602,7 @@ export default function ShopScreen({
               onBuy(pack.id);
             }}
             disabled={disabled}
-            className="w-full py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base font-bold font-pixel text-white shadow border-b-2 border-rose-850 transition cursor-pointer"
+            className="w-full py-2 md:py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base lg:text-lg font-bold font-pixel text-white shadow border-b-2 border-rose-850 transition cursor-pointer"
           >
             SATIN AL
           </button>
@@ -629,12 +629,12 @@ export default function ShopScreen({
           onMouseEnter={(e) => handleCardEnter(e, itemDetails)}
           onMouseLeave={handleCardLeave}
           onClick={(e) => handleCardClick(e, itemDetails)}
-          className={`balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${borderClass}`}
+          className={`balatro-card relative flex flex-col justify-between w-32 h-48 md:w-40 md:h-60 lg:w-44 lg:h-66 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${borderClass}`}
         >
           {renderPriceBadge(book.cost)}
           <div className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-stone-950/40 z-10 bg-rose-500 shadow-[0_0_8px_#f43f5e]" title="Teorem Kitabı" />
 
-          <div className="flex-1 flex items-center justify-center text-4xl origin-center my-auto pointer-events-none text-rose-450 drop-shadow">
+          <div className="flex-1 flex items-center justify-center text-6xl origin-center my-auto pointer-events-none text-rose-450 drop-shadow">
             📖
           </div>
 
@@ -645,7 +645,7 @@ export default function ShopScreen({
               onBuy(book.id);
             }}
             disabled={disabled}
-            className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition cursor-pointer"
+            className="w-full py-2 md:py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base lg:text-lg font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition cursor-pointer"
           >
             SATIN AL
           </button>
@@ -672,12 +672,12 @@ export default function ShopScreen({
         onMouseEnter={(e) => handleCardEnter(e, itemDetails)}
           onMouseLeave={handleCardLeave}
           onClick={(e) => handleCardClick(e, itemDetails)}
-        className={`balatro-card relative flex flex-col justify-between w-24 h-36 md:w-28 md:h-42 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${borderClass}`}
+        className={`balatro-card relative flex flex-col justify-between w-32 h-48 md:w-40 md:h-60 lg:w-44 lg:h-66 p-2.5 rounded-xl border-2 transition shrink-0 cursor-pointer hover:scale-105 active:scale-95 ${borderClass}`}
       >
         {renderPriceBadge(upgrade.cost)}
         <div className={`absolute top-2.5 right-2.5 w-3 h-3 rounded-full border border-stone-950/40 z-10 ${gemColor}`} title="Büyü" />
 
-        <div className="flex-1 flex items-center justify-center transform scale-[1.3] origin-center my-auto pointer-events-none">
+        <div className="flex-1 flex items-center justify-center transform scale-[1.9] origin-center my-auto pointer-events-none">
           {renderUpgradeIcon(upgrade.id)}
         </div>
 
@@ -688,7 +688,7 @@ export default function ShopScreen({
             onBuy(upgrade.id);
           }}
           disabled={disabled}
-          className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition cursor-pointer"
+          className="w-full py-2 md:py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-sm md:text-base lg:text-lg font-bold font-pixel text-white shadow border-b-2 border-emerald-800 transition cursor-pointer"
         >
           SATIN AL
         </button>
@@ -723,7 +723,7 @@ export default function ShopScreen({
               key={stone.id}
               onClick={() => onDraftSelect(stone.id)}
               style={{ '--fan-rot': `${fanOffset}deg`, animationDelay: `${i * 90}ms` } as React.CSSProperties}
-              className={`flex flex-col items-center justify-between p-3.5 w-24 h-36 md:w-30 md:h-44 rounded-2xl border-2 cursor-pointer transform hover:scale-105 active:scale-95 transition animate-pack-fan-in ${modifierBorder}`}
+              className={`flex flex-col items-center justify-between p-3.5 w-32 h-48 md:w-40 md:h-60 lg:w-44 lg:h-66 rounded-2xl border-2 cursor-pointer transform hover:scale-105 active:scale-95 transition animate-pack-fan-in ${modifierBorder}`}
             >
               <span className="text-[9.5px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-stone-950/80 mb-2 text-white">
                 {modifierLabel}
