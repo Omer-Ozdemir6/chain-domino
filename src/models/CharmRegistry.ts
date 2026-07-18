@@ -834,8 +834,8 @@ const LEGENDARY_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'legendary_double_edge',
-    name: 'Efsanevi İkilik',
-    description: 'Bu turun taban puanını 2 katına çıkarır (pozitifse), AMA negatifse 3 katına çıkarır.',
+    name: 'İki Ağızlı Kama',
+    description: 'Lanetli bir antika kama: bu elin taban puanını 2 katına çıkarır (pozitifse), AMA negatifse 3 katına çıkarır.',
     cost: 18,
     rarity: 'LEGENDARY',
     curse: true,
@@ -969,8 +969,8 @@ const NUMBER_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'legendary_final_boss',
-    name: 'Son Patron',
-    description: "Round'u 1 tur veya daha az kullanarak kazanırsan +$40 verir.",
+    name: 'Şimşek Kahini',
+    description: "Raundu 1 hamle veya daha az kullanarak kazanırsan +$40 verir.",
     cost: 25,
     rarity: 'LEGENDARY',
     createHooks: () => ({ onRoundEnd: (ctx) => (ctx.turnsUsed <= 1 ? 40 : 0) }),
@@ -1126,7 +1126,7 @@ const BASE_FUSION_COMPONENTS: readonly CharmDef[] = [
 const FUSION_CHARMS: readonly CharmDef[] = [
   {
     id: 'fusion_grand_resonance',
-    name: '⚡ Büyük Rezonans',
+    name: 'Büyük Rezonans',
     description: '[FÜZ] cosmic_pendulum + heart_matryoshka: Çiftli taş başına +8 chip VE çiftli taşlar çarpanı +0.5 artırır.',
     cost: 0,
     rarity: 'LEGENDARY',
@@ -1139,7 +1139,7 @@ const FUSION_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'fusion_twin_oracle',
-    name: '🔮 İkiz Kehanet',
+    name: 'İkiz Kehanet',
     description: '[FÜZ] double_oracle + binary_mirror: Çift taşlardan gelen puan 2 katına çıkar ve her zincir +10 taban puan kazandırır.',
     cost: 0,
     rarity: 'LEGENDARY',
@@ -1152,7 +1152,7 @@ const FUSION_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'fusion_lucky_ledger',
-    name: '📒 Şanslı Defter',
+    name: 'Şanslı Defter',
     description: '[FÜZ] golden_abacus + thrifty_phantom: Her Altın Taş +$5 ve her tur sonu +$2 ekstra ödül kazandırır.',
     cost: 0,
     rarity: 'LEGENDARY',
@@ -1166,7 +1166,7 @@ const FUSION_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'fusion_resonant_chain',
-    name: '🔗 Rezonans Zinciri',
+    name: 'Rezonans Zinciri',
     description: '[FÜZ] chain_weaver + echo_chamber: 4+ taş zincirlerde Çarpan ×2 ve zincirdeki her taşa +3 puan.',
     cost: 0,
     rarity: 'LEGENDARY',
@@ -1179,7 +1179,7 @@ const FUSION_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'fusion_prism_eye',
-    name: '🌈 Prizma Gözü',
+    name: 'Prizma Gözü',
     description: '[FÜZ] obsidian_eye + ivory_veil: Her Obsidyen taş +8 Çarpan, her Fildişi taş +20 Taban Puan ekler.',
     cost: 0,
     rarity: 'LEGENDARY',
@@ -1228,7 +1228,7 @@ const SIGNATURE_CHARMS: readonly CharmDef[] = [
   },
   {
     id: 'cosmic_singularity',
-    name: 'Kozmik Karadelik',
+    name: 'Kadim Boşluk Küresi',
     description: 'Domino eşleşme kuralını tamamen geçersiz kılar: taşlar artık eşit değil, ARDIŞIK sayılarla dizilir. 5 el sonra yok olur.',
     cost: 10,
     rarity: 'LEGENDARY',
