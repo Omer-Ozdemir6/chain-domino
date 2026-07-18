@@ -39,6 +39,44 @@
   50% { box-shadow: 0 0 18px 4px rgba(217, 158, 74, 0.45); }
 }
 
+/* A single domino pip catching light in the dark, one at a time, before the curtain opens.
+   The (-50%,-50%) centering translate has to live INSIDE every keyframe alongside the scale —
+   an inline style `transform` on the same element would just get fully overwritten the instant
+   this animation starts (a CSS animation targeting `transform` replaces the whole computed value,
+   it doesn't compose with a separately-set inline transform). */
+@keyframes pip-ignite {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+  55% { opacity: 1; transform: translate(-50%, -50%) scale(1.5); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.animate-pip-ignite {
+  animation: pip-ignite 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes intro-tile-in {
+  0% { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-intro-tile-in {
+  animation: intro-tile-in 0.8s ease-out both;
+}
+
+/* Two solid black panels parting like a theater curtain to reveal the logo underneath. */
+@keyframes curtain-open-left {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+@keyframes curtain-open-right {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(100%); }
+}
+.animate-curtain-open-left {
+  animation: curtain-open-left 0.85s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+}
+.animate-curtain-open-right {
+  animation: curtain-open-right 0.85s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+}
+
 /* The camera "passes through" the logo toward the table underneath. */
 @keyframes intro-zoom-out {
   0% { opacity: 1; transform: scale(1); }
