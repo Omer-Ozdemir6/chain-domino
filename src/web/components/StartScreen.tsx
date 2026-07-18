@@ -15,8 +15,12 @@ const BOOT_PIP_POSITIONS: Array<[number, number]> = [
   // Right half (value 3) — classic diagonal.
   [68, 20], [79, 50], [90, 80],
 ];
-const BOOT_PIP_START_DELAY_MS = 400;
-const BOOT_PIP_STEP_MS = 170;
+// A slow, deliberate ceremony — closer to a game's own splash sequence than a quick transition.
+const BOOT_PIP_START_DELAY_MS = 600;
+const BOOT_PIP_STEP_MS = 550;
+const BOOT_PIPS_DONE_MS = BOOT_PIP_START_DELAY_MS + (BOOT_PIP_POSITIONS.length - 1) * BOOT_PIP_STEP_MS + 700;
+const BOOT_FRAME_MS = 1100;
+const BOOT_BACKGROUND_MS = 1200;
 
 interface StartScreenProps {
   onStart: (deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', chestId: ChestId | null, challengeId?: string | null) => void;
@@ -137,25 +141,30 @@ export default function StartScreen({ onStart }: StartScreenProps) {
   const [tab, setTab] = useState<TabState>('MAIN');
   const [selectedChest, setSelectedChest] = useState<ChestId | null>(null);
 
-  // Boot sequence played once per mount: 'pips' (dark, tile igniting) -> 'texts' (curtain opens,
-  // title/tagline fly in) -> 'buttons' (menu cards appear, screen is fully interactive).
-  const [bootStage, setBootStage] = useState<'pips' | 'texts' | 'buttons'>('pips');
+  // Boot sequence played once per mount, each beat its own deliberate moment instead of a quick
+  // transition: 'pips' (dark, tile igniting one pip at a time) -> 'frame' (the tile's border
+  // materializes around them) -> 'background' (the black curtain fades back to the table's own
+  // color WHILE the hero title/tile/tagline fly in at the same time, so nothing sits on a dead
+  // blank screen waiting its turn) -> 'buttons' (menu cards appear, screen fully interactive).
+  const [bootStage, setBootStage] = useState<'pips' | 'frame' | 'background' | 'buttons'>('pips');
 
   useEffect(() => {
     const tickTimers = BOOT_PIP_POSITIONS.map((_, i) =>
       setTimeout(() => playSound('pulse', i * 2), BOOT_PIP_START_DELAY_MS + i * BOOT_PIP_STEP_MS)
     );
-    const textsTimer = setTimeout(() => {
+    let t = BOOT_PIPS_DONE_MS;
+    const frameTimer = setTimeout(() => {
       playSound('chime');
-      setBootStage('texts');
-    }, BOOT_PIP_START_DELAY_MS + BOOT_PIP_POSITIONS.length * BOOT_PIP_STEP_MS + 500);
-    const buttonsTimer = setTimeout(
-      () => setBootStage('buttons'),
-      BOOT_PIP_START_DELAY_MS + BOOT_PIP_POSITIONS.length * BOOT_PIP_STEP_MS + 500 + 900
-    );
+      setBootStage('frame');
+    }, t);
+    t += BOOT_FRAME_MS;
+    const backgroundTimer = setTimeout(() => setBootStage('background'), t);
+    t += BOOT_BACKGROUND_MS + 900;
+    const buttonsTimer = setTimeout(() => setBootStage('buttons'), t);
     return () => {
       tickTimers.forEach(clearTimeout);
-      clearTimeout(textsTimer);
+      clearTimeout(frameTimer);
+      clearTimeout(backgroundTimer);
       clearTimeout(buttonsTimer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,7 +208,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
       ))}
 
       {/* ── Top watermark — each corner drops in from its own edge, once the curtain opens ── */}
-      {bootStage !== 'pips' && (
+      {(bootStage === 'background' || bootStage === 'buttons') && (
         <div className="flex justify-between items-center text-[12px] text-emerald-700/50 font-bold uppercase tracking-[0.25em] z-10">
           <span className="animate-hero-fly-left">Chain Domino</span>
           <span className="animate-hero-fly-right">v1.2.0</span>
@@ -212,7 +221,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
       <div className="flex-1 flex flex-col items-center justify-center gap-3 my-auto z-10">
         <div className="relative flex flex-col items-center select-none">
 
-          {bootStage !== 'pips' && (
+          {(bootStage === 'background' || bootStage === 'buttons') && (
             <>
               {/* Ambient glow rings */}
               <div className="absolute w-72 h-72 rounded-full border border-emerald-500/10 animate-pulse z-0" />
@@ -312,16 +321,31 @@ export default function StartScreen({ onStart }: StartScreenProps) {
       )}
 
       {/* ══════════════════════════════════════
-           BOOT SEQUENCE — a 6|3 domino tile ignites pip by pip on a black curtain, which then
-           parts to reveal the hero above (see the 'texts'/'buttons' branches for the rest).
+           BOOT SEQUENCE — a 6|3 domino tile ignites pip by pip in the dark; once every pip is
+           lit, its frame materializes around them; only then does the black curtain fade back to
+           the table's own color underneath (see the 'texts'/'buttons' branches for the rest).
          ══════════════════════════════════════ */}
       <div
-        className={`absolute inset-0 z-30 bg-black pointer-events-none transition-opacity duration-700 ${bootStage === 'pips' ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 z-30 bg-black pointer-events-none transition-opacity ease-in-out ${bootStage === 'background' || bootStage === 'buttons' ? 'opacity-0 duration-1000' : 'opacity-100 duration-0'}`}
       />
-      {bootStage === 'pips' && (
+      {(bootStage === 'pips' || bootStage === 'frame') && (
         <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
-          <div className="relative w-64 h-32 md:w-80 md:h-40 rounded-2xl border-2 border-amber-900/60 bg-stone-950/50">
-            <div className="absolute inset-y-2 left-1/2 w-px bg-amber-900/50 -translate-x-1/2" />
+          <div className="relative w-64 h-32 md:w-80 md:h-40">
+            {/* No frame at all while the pips are still igniting — it fades and grows into place
+                only once every pip is already lit, a distinct beat rather than something that was
+                quietly there the whole time. */}
+            <div
+              className="absolute inset-0 rounded-2xl border-2 border-amber-900/60 bg-stone-950/50 transition-all ease-out"
+              style={{
+                opacity: bootStage === 'frame' ? 1 : 0,
+                transform: bootStage === 'frame' ? 'scale(1)' : 'scale(0.85)',
+                transitionDuration: `${BOOT_FRAME_MS}ms`,
+              }}
+            />
+            <div
+              className="absolute inset-y-2 left-1/2 w-px bg-amber-900/50 -translate-x-1/2 transition-opacity"
+              style={{ opacity: bootStage === 'frame' ? 1 : 0, transitionDuration: `${BOOT_FRAME_MS}ms`, transitionDelay: bootStage === 'frame' ? '200ms' : '0ms' }}
+            />
             {BOOT_PIP_POSITIONS.map(([x, y], i) => (
               <span
                 key={i}
