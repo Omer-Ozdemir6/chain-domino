@@ -1,6 +1,5 @@
 import type { CharmDef, CharmRarity } from '../../models/Charm.js';
 import InfoTooltip from './InfoTooltip.js';
-import { CHARM_ICON_MAP } from './charmIconMap.js';
 
 const RARITY_CARD_CLASS: Record<CharmRarity, string> = {
   COMMON: 'border-stone-400 bg-stone-50/95 text-stone-800 dark:border-stone-600 dark:bg-stone-900/90 dark:text-stone-200 shadow-sm',
@@ -496,6 +495,147 @@ const SPECIAL_GLYPHS: Record<string, { path: React.ReactNode; colorClass: string
     colorClass: 'text-amber-700 dark:text-amber-400',
     path: <path d="M5 12v4a5 5 0 0 0 5 5h2a5 5 0 0 0 5-5v-6M8 12V8a2 2 0 0 1 4 0v4M12 11V7a2 2 0 0 1 4 0v5M16 12v-3a2 2 0 0 1 4 0v3" />,
   },
+
+  // --- Synergy (bespoke) — pairing/combo motifs, since each rewards owning two other charms ---
+  // Four nodes in a diamond, cross-linked — four masters united.
+  synergy_all_masters: {
+    colorClass: 'text-amber-600 dark:text-amber-400',
+    path: <><circle cx="12" cy="5" r="2" /><circle cx="19" cy="12" r="2" /><circle cx="12" cy="19" r="2" /><circle cx="5" cy="12" r="2" /><path d="M12 7v10M7 12h10" opacity="0.4" /></>,
+  },
+  // Two coin pouches side by side, small and large.
+  synergy_economy_duo: {
+    colorClass: 'text-amber-600 dark:text-amber-400',
+    path: <><path d="M6 9a2.5 2.5 0 0 1 5 0v.6h.9a.8.8 0 0 1 .8.9l-.7 5.6a1.6 1.6 0 0 1-1.6 1.4H7.6A1.6 1.6 0 0 1 6 15.9L5.3 10.5a.8.8 0 0 1 .8-.9H6z" /><path d="M13.5 13a2 2 0 0 1 4 0v.5h.6a.7.7 0 0 1 .7.8l-.6 4.4a1.3 1.3 0 0 1-1.3 1.1h-2a1.3 1.3 0 0 1-1.3-1.1l-.6-4.4a.7.7 0 0 1 .7-.8h.6z" opacity="0.75" /></>,
+  },
+  // A shield with a faded, warded-off crack.
+  synergy_curse_ward: {
+    colorClass: 'text-indigo-600 dark:text-indigo-400',
+    path: <><path d="M12 2 20 5.5v5c0 5.2-3.5 8.7-8 10.5-4.5-1.8-8-5.3-8-10.5v-5z" /><path d="M9 9l3 3-2 1 3 4" strokeWidth="1.1" opacity="0.45" /></>,
+  },
+  // A small heart and a small sun overlapping.
+  synergy_small_simple: {
+    colorClass: 'text-pink-500 dark:text-pink-400',
+    path: <><path d="M9 15c-2.5-2-4-3.5-4-5.5A2.5 2.5 0 0 1 9 7.5 2.5 2.5 0 0 1 13 9.5c0 2-1.5 3.5-4 5.5z" /><circle cx="16.5" cy="7.5" r="2.6" /><path d="M16.5 3.3v1M16.5 10.7v1M12.9 7.5h1M20.1 7.5h1" strokeWidth="1" /></>,
+  },
+  // Two harmony nodes above a soft whisper wave.
+  synergy_harmony_overtime: {
+    colorClass: 'text-teal-600 dark:text-teal-400',
+    path: <><circle cx="8" cy="7" r="1.8" /><circle cx="16" cy="7" r="1.8" /><path d="M9.5 8.5l2.5 2.5M14.5 8.5l-2.5 2.5" opacity="0.5" /><path d="M4 18c4-2.5 8-2.5 16 0" strokeDasharray="1.5 2" /></>,
+  },
+  // A clock reaching its final moment beside a coin.
+  synergy_finisher_duo: {
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    path: <><circle cx="9" cy="10" r="6" /><path d="M9 6v4l3 2" strokeWidth="1.2" /><circle cx="18.5" cy="17" r="3.4" fill="currentColor" fillOpacity="0.35" /></>,
+  },
+  // A four-way cross converging on a solid core — two experts, one union.
+  synergy_expert_masters: {
+    colorClass: 'text-emerald-700 dark:text-emerald-400',
+    path: <><path d="M6 6l5 5M18 6l-5 5M6 18l5-5M18 18l-5-5" strokeWidth="1.2" /><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" /></>,
+  },
+
+  // --- Legendary (remaining, bespoke) ---
+  // A four-link horizontal chain wrapped in a faint aura — the whole chain, blessed.
+  legendary_universal_chain: {
+    colorClass: 'text-amber-500 dark:text-amber-300',
+    path: <><circle cx="4.5" cy="12" r="2.3" /><circle cx="9.5" cy="12" r="2.3" /><circle cx="14.5" cy="12" r="2.3" /><circle cx="19.5" cy="12" r="2.3" /><circle cx="12" cy="12" r="10.5" strokeDasharray="2 3" opacity="0.4" /></>,
+  },
+  // A double-edged dagger blade.
+  legendary_double_edge: {
+    colorClass: 'text-rose-600 dark:text-rose-400',
+    path: <><path d="M12 2 14 9 12 22 10 9Z" /><path d="M8 9h8" /></>,
+  },
+  // Two fully overlapping circles — grand harmony/unity.
+  legendary_grand_harmony: {
+    colorClass: 'text-amber-500 dark:text-amber-300',
+    path: <><circle cx="9" cy="12" r="6" /><circle cx="15" cy="12" r="6" /></>,
+  },
+  // A reaching arm ending at a solid gold coin.
+  legendary_midas: {
+    colorClass: 'text-amber-500 dark:text-amber-300',
+    path: <><path d="M3 20c1-5 3-11 9-11s8 6 9 11" /><circle cx="18" cy="6" r="3" fill="currentColor" stroke="none" /></>,
+  },
+  // A lightning bolt with a dark oracle's eye at its core.
+  legendary_final_boss: {
+    colorClass: 'text-amber-400 dark:text-amber-300',
+    path: <><path d="M13 3 7 13h4.5l-2 8 8-11h-4.5z" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.2" fill="#1c1917" stroke="none" /></>,
+  },
+
+  // --- Numeric-coincidence (bespoke) ---
+  // A stylized "7" with a lucky sparkle.
+  lucky_seven: {
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    path: <><path d="M6 5h12l-7 15" strokeWidth="2" /><path d="M19 2l.6 1.3 1.4.2-1 1 .2 1.4-1.2-.7-1.2.7.2-1.4-1-1 1.4-.2z" fill="currentColor" stroke="none" /></>,
+  },
+  // A double-six domino tile with a crack down the middle — unlucky twelve.
+  unlucky_thirteen: {
+    colorClass: 'text-rose-600 dark:text-rose-400',
+    path: <><rect x="5" y="4" width="14" height="16" rx="2" /><circle cx="8" cy="8" r="1" fill="currentColor" stroke="none" /><circle cx="8" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="8" cy="16" r="1" fill="currentColor" stroke="none" /><circle cx="16" cy="8" r="1" fill="currentColor" stroke="none" /><circle cx="16" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="16" cy="16" r="1" fill="currentColor" stroke="none" /><path d="M9 3l2 4.5-2 3.5" strokeWidth="1.1" /></>,
+  },
+  // Two overlapping exclamation marks — twice the trouble.
+  double_trouble: {
+    colorClass: 'text-red-600 dark:text-red-400',
+    path: <><path d="M8 4h5l-1 9H9z" /><circle cx="10.5" cy="15.5" r="1" fill="currentColor" stroke="none" /><path d="M14 7h5l-1 9h-3z" opacity="0.55" /><circle cx="16.5" cy="18.5" r="1" fill="currentColor" stroke="none" opacity="0.55" /></>,
+  },
+  // A bare circle framed by four corner rays — an aura around emptiness.
+  zero_hero: {
+    colorClass: 'text-sky-600 dark:text-sky-400',
+    path: <><circle cx="12" cy="12" r="6" /><path d="M6 6l-2-2M18 6l2-2M6 18l-2 2M18 18l2 2" strokeWidth="1.1" opacity="0.5" /></>,
+  },
+  // A classic six-pip die face.
+  six_pack: {
+    colorClass: 'text-amber-600 dark:text-amber-400',
+    path: <><rect x="5" y="5" width="14" height="14" rx="3" /><circle cx="9" cy="9" r="1" fill="currentColor" stroke="none" /><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="9" cy="15" r="1" fill="currentColor" stroke="none" /><circle cx="15" cy="9" r="1" fill="currentColor" stroke="none" /><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="15" cy="15" r="1" fill="currentColor" stroke="none" /></>,
+  },
+  // An open book with a glowing memory orb.
+  total_recall: {
+    colorClass: 'text-indigo-600 dark:text-indigo-400',
+    path: <><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z" /><path d="M5 4v13a3 3 0 0 0 3 3" opacity="0.5" /><circle cx="12" cy="10" r="2" fill="currentColor" fillOpacity="0.4" /></>,
+  },
+  // A steady open palm.
+  steady_hand: {
+    colorClass: 'text-stone-400 dark:text-stone-300',
+    path: <path d="M12 3v9M9 5v7M15 5v7M6 9v5a6 6 0 0 0 6 6h1a6 6 0 0 0 6-6V9" strokeWidth="1.3" />,
+  },
+  // A crescent moon with a jagged nightmare glint.
+  negative_nightmare: {
+    colorClass: 'text-purple-600 dark:text-purple-400',
+    path: <><path d="M15 3a9 9 0 1 0 6 15 7 7 0 0 1-6-15z" fill="currentColor" fillOpacity="0.15" /><path d="M9 12l1.5 1.5L9 15" strokeWidth="1.1" /></>,
+  },
+  // A coin secured with a small padlock.
+  thrifty_spender: {
+    colorClass: 'text-amber-600 dark:text-amber-400',
+    path: <><circle cx="12" cy="14" r="6" /><rect x="10" y="10" width="4" height="3" rx="1" /><path d="M10.5 10V8.5a1.5 1.5 0 0 1 3 0V10" strokeWidth="1" /></>,
+  },
+  // A tally-counter box with two beads.
+  node_counter: {
+    colorClass: 'text-sky-600 dark:text-sky-400',
+    path: <><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M4 12h16" strokeWidth="1.1" /><circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none" /></>,
+  },
+  // A watching eye with five short rays — the fifth omen.
+  high_five: {
+    colorClass: 'text-fuchsia-600 dark:text-fuchsia-400',
+    path: <><circle cx="12" cy="12" r="4" /><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" /><path d="M12 3v3M12 18v3M4 8l2.5 1.5M17.5 14.5L20 16M4 16l2.5-1.5M17.5 9.5L20 8" strokeWidth="1.1" /></>,
+  },
+  // A medal with a checkmark — a perfect score.
+  perfect_ten: {
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    path: <><circle cx="12" cy="9" r="6" /><path d="M9 9l2 2 4-4" strokeWidth="1.4" /><path d="M9 14l-2 7 5-3 5 3-2-7" /></>,
+  },
+  // A shape and its faded twin split by a dashed mirror axis.
+  mirror_image: {
+    colorClass: 'text-cyan-600 dark:text-cyan-400',
+    path: <><rect x="4" y="6" width="6" height="12" rx="1" /><rect x="14" y="6" width="6" height="12" rx="1" opacity="0.4" /><path d="M12 4v16" strokeDasharray="1.5 1.5" /></>,
+  },
+  // A stacked deck of dominoes.
+  flat_bonus_strong: {
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    path: <><rect x="7" y="10" width="10" height="8" rx="1" /><rect x="5" y="7" width="10" height="8" rx="1" opacity="0.7" /><rect x="9" y="4" width="10" height="8" rx="1" opacity="0.45" /></>,
+  },
+  // A bullseye target with an arrow dead center — a perfect landing.
+  perfect_landing: {
+    colorClass: 'text-amber-500 dark:text-amber-300',
+    path: <><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4.5" /><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" /><path d="M19 5l-5.3 5.3" strokeWidth="1.3" /></>,
+  },
 };
 
 function genericCharmGlyph(id: string) {
@@ -519,10 +659,6 @@ function genericCharmGlyph(id: string) {
 }
 
 export function renderCharmIcon(id: string) {
-  const artwork = CHARM_ICON_MAP[id];
-  if (artwork) {
-    return <img src={artwork} alt="" className="w-10 h-10 object-contain mx-auto drop-shadow" />;
-  }
   return genericCharmGlyph(id);
 }
 

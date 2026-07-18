@@ -3,7 +3,6 @@ import type { ShopOffer, SkipTag, RuneOptionDef } from '../../game/RunState.js';
 import { FUSION_RECIPES } from '../../game/RunState.js';
 import { CHARMS } from '../../models/CharmRegistry.js';
 import { renderCharmIcon } from './CharmBar.js';
-import { VOUCHER_ICON_MAP, CONSUMABLE_ICON_MAP } from './charmIconMap.js';
 import type { DominoStone } from '../../models/types.js';
 import { Fragment, useEffect, useState } from 'react';
 
@@ -95,10 +94,6 @@ const GEM_CLASS: Record<CharmDef['rarity'], string> = {
 const CURSE_GEM = 'bg-fuchsia-500 shadow-[0_0_10px_#d946ef] animate-pulse';
 
 function renderVoucherIcon(id: string) {
-  const artwork = VOUCHER_ICON_MAP[id];
-  if (artwork) {
-    return <img src={artwork} alt="" className="w-14 h-14 object-contain mx-auto drop-shadow" />;
-  }
   if (id === 'voucher_bargaining_power') {
     // Two coin-purses on a scale, tipped toward the fuller one — haggling the reroll price down.
     return (
@@ -109,6 +104,49 @@ function renderVoucherIcon(id: string) {
         <path d="M80 45 L68 60 A9 9 0 0 0 82 60 Z" fill="#78350F" stroke="#D97706" strokeWidth="3" />
         <circle cx="50" cy="95" r="20" fill="#78350F" stroke="#D97706" strokeWidth="4" />
         <text x="50" y="102" textAnchor="middle" fill="#FBBF24" fontSize="20" fontWeight="bold" fontFamily="monospace">$</text>
+      </svg>
+    );
+  }
+  if (id === 'voucher_wide_pockets') {
+    // A museum display case — the +1 charm slot as literally more cabinet room.
+    return (
+      <svg className="w-10 h-14" viewBox="0 0 100 130">
+        <path d="M15 40 L50 20 L85 40 L85 100 L15 100 Z" fill="none" stroke="#D97706" strokeWidth="4" />
+        <path d="M15 40 L85 40" stroke="#D97706" strokeWidth="3" />
+        <rect x="35" y="55" width="30" height="35" rx="2" fill="#FBBF24" fillOpacity="0.25" stroke="#D97706" strokeWidth="2.5" />
+        <path d="M50 25 L50 40" stroke="#D97706" strokeWidth="2.5" />
+      </svg>
+    );
+  }
+  if (id === 'voucher_wizard_bag') {
+    // A drawstring pouch scattering a few sparkles.
+    return (
+      <svg className="w-10 h-14" viewBox="0 0 100 130">
+        <path d="M30 45 Q30 30 50 30 Q70 30 70 45 L75 95 A12 12 0 0 1 63 107 H37 A12 12 0 0 1 25 95 Z" fill="#4C1D95" stroke="#A78BFA" strokeWidth="4" />
+        <path d="M32 46 Q50 55 68 46" fill="none" stroke="#A78BFA" strokeWidth="2.5" />
+        <path d="M50 15 l2 5 5 1-4 3 1 5-4-3-4 3 1-5-4-3 5-1z" fill="#FBBF24" stroke="none" />
+      </svg>
+    );
+  }
+  if (id === 'voucher_rich_start') {
+    // A treasure chest overflowing with coins.
+    return (
+      <svg className="w-10 h-14" viewBox="0 0 100 130">
+        <rect x="20" y="55" width="60" height="40" rx="4" fill="#78350F" stroke="#D97706" strokeWidth="4" />
+        <path d="M20 55c0-16 13-28 30-28s30 12 30 28" fill="none" stroke="#D97706" strokeWidth="4" />
+        <circle cx="35" cy="52" r="8" fill="#FBBF24" stroke="#D97706" strokeWidth="2.5" />
+        <circle cx="50" cy="46" r="9" fill="#FBBF24" stroke="#D97706" strokeWidth="2.5" />
+        <circle cx="65" cy="52" r="8" fill="#FBBF24" stroke="#D97706" strokeWidth="2.5" />
+      </svg>
+    );
+  }
+  if (id === 'voucher_crystal_ball') {
+    // A prophecy orb with a swirling mist, on a stand.
+    return (
+      <svg className="w-10 h-14" viewBox="0 0 100 130">
+        <circle cx="50" cy="55" r="28" fill="#1E1B4B" fillOpacity="0.7" stroke="#818CF8" strokeWidth="4" />
+        <path d="M38 45c4 8 4 14 0 20M50 40c5 10 5 20 0 30M62 45c-4 8-4 14 0 20" fill="none" stroke="#C4B5FD" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M30 90h40l-6 12H36z" fill="#4C1D95" stroke="#818CF8" strokeWidth="3" />
       </svg>
     );
   }
@@ -123,10 +161,6 @@ function renderVoucherIcon(id: string) {
 }
 
 export function renderUpgradeIcon(id: string) {
-  const consumableArt = CONSUMABLE_ICON_MAP[id];
-  if (consumableArt) {
-    return <img src={consumableArt} alt="" className="w-14 h-14 object-contain mx-auto drop-shadow" />;
-  }
   if (id === 'consumable_magnet') {
     return (
       <svg className="w-10 h-14" viewBox="0 0 100 130">
