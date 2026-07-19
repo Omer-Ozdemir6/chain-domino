@@ -17,6 +17,18 @@ export type RunPhase =
   | 'CONGRATS_UNLOCK'
   | 'GAMBLERS_LAST_STAND';
 
+/** Zorluk Pulları (Stakes) — each tier stacks every earlier tier's effect on top of its own,
+ *  from a standard run (WHITE) up to the hardest (RED): BLUE inflates reroll cost
+ *  geometrically instead of by a flat +1, GREEN (which includes BLUE) also compounds blind
+ *  targets +15% faster per ante, and RED (which includes both) additionally raises every
+ *  blind's own target by 25% — RED's own effect predates the other two tiers and its exact
+ *  number is unchanged, it just now sits on top of GREEN's and BLUE's instead of alone. */
+export type StakeId = 'WHITE' | 'BLUE' | 'GREEN' | 'RED';
+const STAKE_ORDER: readonly StakeId[] = ['WHITE', 'BLUE', 'GREEN', 'RED'];
+function stakeAtLeast(stake: StakeId, tier: StakeId): boolean {
+  return STAKE_ORDER.indexOf(stake) >= STAKE_ORDER.indexOf(tier);
+}
+
 /** Result of a resolved "Kumarbazın Son Şansı" (Gambler's Last Stand) roll — shown once by the
  *  UI, then cleared. */
 export interface GamblersLastStandResult {
@@ -610,7 +622,7 @@ export class RunState {
 
   // Run Setup selections
   selectedDeck: 'RED' | 'BLUE' | 'YELLOW' = 'RED';
-  selectedStake: 'WHITE' | 'RED' = 'WHITE';
+  selectedStake: StakeId = 'WHITE';
   activeBlind: 'SMALL' | 'BIG' | 'BOSS' | null = null;
 
   // Phase 3: Boss / Chest / Fusion
@@ -684,7 +696,7 @@ export class RunState {
     return run;
   }
 
-  initializeRun(deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', challengeId: string | null = null): void {
+  initializeRun(deck: 'RED' | 'BLUE' | 'YELLOW', stake: StakeId, challengeId: string | null = null): void {
     this.seed = generateRunSeed();
     this.selectedDeck = deck;
     this.selectedStake = stake;
@@ -783,9 +795,12 @@ export class RunState {
   /** The score this blind requires — each blind (Small/Big/Boss) is independent and starts fresh
    *  from 0, matching Balatro's actual blind structure (score never carries over between blinds). */
   getBlindTarget(blindType: 'SMALL' | 'BIG' | 'BOSS'): number {
-    const multiplier = this.selectedStake === 'RED' ? 1.25 : 1.0;
+    const redMultiplier = this.selectedStake === 'RED' ? 1.25 : 1.0;
+    // GREEN (and RED, which includes it) compounds +15% per ante already played — ante 1 is
+    // unaffected (round starts at 1), ante 2 is already ×1.15, ante 8 is ×1.15^7 ≈ ×2.66.
+    const greenGrowth = stakeAtLeast(this.selectedStake, 'GREEN') ? Math.pow(1.15, this.round - 1) : 1.0;
     const factor = blindType === 'SMALL' ? 0.6 : blindType === 'BIG' ? 1.0 : 1.5;
-    return Math.round(this.currentTarget * factor * multiplier * (this.config.targetMultiplier ?? 1));
+    return Math.round(this.currentTarget * factor * redMultiplier * greenGrowth * (this.config.targetMultiplier ?? 1));
   }
 
   skipBlind(blindType: 'SMALL' | 'BIG'): void {
@@ -1182,7 +1197,11 @@ export class RunState {
     if (this.money < this.currentRerollCost) return { ok: false, error: 'Yeterli paran yok.' };
 
     this.money -= this.currentRerollCost;
-    this.currentRerollCost += 1; // Reroll Inflation!
+    // BLUE Pul (and GREEN/RED, which include it): cost doubles instead of the standard +1 flat
+    // step — $2, $4, $8, $16... instead of $2, $3, $4, $5.
+    this.currentRerollCost = stakeAtLeast(this.selectedStake, 'BLUE')
+      ? this.currentRerollCost * 2
+      : this.currentRerollCost + 1;
     this.totalRerolls += 1;
     this.shopOffers = this.rollShopOffers();
     return { ok: true };

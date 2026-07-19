@@ -974,4 +974,58 @@ describe('RunState', () => {
       expect(run.getCharmLevel('echo_chamber')).toBe(1);
     });
   });
+
+  describe('Zorluk Pulları (Stakes)', () => {
+    it('WHITE and BLUE leave blind targets unchanged from the base', () => {
+      const white = new RunState();
+      white.initializeRun('RED', 'WHITE');
+      const blue = new RunState();
+      blue.initializeRun('RED', 'BLUE');
+      expect(blue.getBlindTarget('SMALL')).toBe(white.getBlindTarget('SMALL'));
+    });
+
+    it('GREEN compounds blind targets +15% per ante already played', () => {
+      const white = new RunState();
+      white.initializeRun('RED', 'WHITE');
+      const green = new RunState();
+      green.initializeRun('RED', 'GREEN');
+
+      // Ante 1 (round starts at 1): no compounding yet.
+      expect(green.getBlindTarget('SMALL')).toBe(white.getBlindTarget('SMALL'));
+
+      // Ante 3: ×1.15^2 on top of the same base target.
+      white.round = 3;
+      green.round = 3;
+      expect(green.getBlindTarget('SMALL')).toBe(Math.round(white.getBlindTarget('SMALL') * Math.pow(1.15, 2)));
+    });
+
+    it('RED stacks its own +25% on top of GREEN\'s compounding', () => {
+      const green = new RunState();
+      green.initializeRun('RED', 'GREEN');
+      green.round = 4;
+      const red = new RunState();
+      red.initializeRun('RED', 'RED');
+      red.round = 4;
+
+      expect(red.getBlindTarget('BIG')).toBe(Math.round(green.getBlindTarget('BIG') * 1.25));
+    });
+
+    it('WHITE rerolls inflate by a flat +1; BLUE (and GREEN/RED) double instead', () => {
+      const white = new RunState();
+      white.initializeRun('RED', 'WHITE');
+      white.phase = 'SHOP';
+      white.money = 1000;
+      const baseCost = white.currentRerollCost;
+      white.rerollShop();
+      expect(white.currentRerollCost).toBe(baseCost + 1);
+
+      const blue = new RunState();
+      blue.initializeRun('RED', 'BLUE');
+      blue.phase = 'SHOP';
+      blue.money = 1000;
+      const blueBaseCost = blue.currentRerollCost;
+      blue.rerollShop();
+      expect(blue.currentRerollCost).toBe(blueBaseCost * 2);
+    });
+  });
 });

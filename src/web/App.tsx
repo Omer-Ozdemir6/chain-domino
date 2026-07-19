@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
-import type { RunConfig } from '../game/RunState.js';
+import type { RunConfig, StakeId } from '../game/RunState.js';
 import { SHOP_UPGRADES, BOSS_BLINDS } from '../game/RunState.js';
 import type { SlotId } from '../models/Board.js';
 import { CHARMS } from '../models/CharmRegistry.js';
@@ -774,7 +774,7 @@ export default function App() {
     setActiveSpellIndex(null);
   }
 
-  function handleStartRun(deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', chestId: import('../game/RunState.js').ChestId | null = null, challengeId: string | null = null): void {
+  function handleStartRun(deck: 'RED' | 'BLUE' | 'YELLOW', stake: StakeId, chestId: import('../game/RunState.js').ChestId | null = null, challengeId: string | null = null): void {
     act((_g) => {
       run.initializeRun(deck, stake, challengeId);
       if (chestId) run.selectChest(chestId);

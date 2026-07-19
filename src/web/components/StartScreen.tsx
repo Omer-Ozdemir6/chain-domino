@@ -5,6 +5,7 @@ import type { ChestId } from '../../game/RunState.js';
 import { playSound } from './SoundSynth.js';
 import SettingsButton from './SettingsButton.js';
 import CollectionScreen from './CollectionScreen.js';
+import type { StakeId } from '../../game/RunState.js';
 
 // The domino-tile pip-lighting boot moment that used to be its own full-screen intro page now
 // plays right here on the main menu itself: a 6|3 tile's 9 pips ignite one at a time out of the
@@ -25,7 +26,7 @@ const BOOT_FRAME_MS = 1100;
 const BOOT_BACKGROUND_MS = 1200;
 
 interface StartScreenProps {
-  onStart: (deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', chestId: ChestId | null, challengeId?: string | null) => void;
+  onStart: (deck: 'RED' | 'BLUE' | 'YELLOW', stake: StakeId, chestId: ChestId | null, challengeId?: string | null) => void;
 }
 
 type TabState = 'MAIN' | 'DECK_SELECT' | 'STAKE_SELECT' | 'CHALLENGES' | 'SETUP' | 'COLLECTION';
@@ -122,24 +123,44 @@ const DECK_INFO: Record<'RED' | 'BLUE' | 'YELLOW', { name: string; color: string
   },
 };
 
-const STAKE_INFO: Record<'WHITE' | 'RED', { name: string; desc: string; color: string; borderActive: string }> = {
+const STAKE_INFO: Record<StakeId, { name: string; desc: string; color: string; borderActive: string; badgeClass: string; letter: string }> = {
   WHITE: {
     name: 'Beyaz Pul',
     desc: 'Standart hedefler ve temel zorluk.',
     color: 'text-stone-200',
     borderActive: 'border-stone-300 bg-stone-900/40 shadow-[0_0_10px_rgba(255,255,255,0.1)]',
+    badgeClass: 'border-stone-400 bg-white text-stone-800',
+    letter: 'B',
+  },
+  BLUE: {
+    name: 'Mavi Pul',
+    desc: 'Mağaza yenileme ücreti katlanarak artar ($2, $4, $8...).',
+    color: 'text-sky-400',
+    borderActive: 'border-sky-500 bg-sky-950/30 shadow-[0_0_12px_rgba(56,189,248,0.25)]',
+    badgeClass: 'border-sky-700 bg-sky-500 text-white',
+    letter: 'M',
+  },
+  GREEN: {
+    name: 'Yeşil Pul',
+    desc: 'Mavi Pul + hedef skorlar her safhada %15 daha hızlı büyür.',
+    color: 'text-emerald-400',
+    borderActive: 'border-emerald-500 bg-emerald-950/30 shadow-[0_0_12px_rgba(52,211,153,0.25)]',
+    badgeClass: 'border-emerald-700 bg-emerald-500 text-white',
+    letter: 'Y',
   },
   RED: {
     name: 'Kırmızı Pul',
-    desc: 'Hedef skorlar %25 daha yüksek.',
+    desc: 'Yeşil Pul + hedef skorlar sabit %25 daha yüksek.',
     color: 'text-red-400',
     borderActive: 'border-red-500 bg-red-950/30 shadow-[0_0_12px_rgba(239,68,68,0.25)]',
+    badgeClass: 'border-red-700 bg-red-500 text-white animate-pulse',
+    letter: 'K',
   },
 };
 
 export default function StartScreen({ onStart }: StartScreenProps) {
   const [deck, setDeck] = useState<'RED' | 'BLUE' | 'YELLOW'>('RED');
-  const [stake, setStake] = useState<'WHITE' | 'RED'>('WHITE');
+  const [stake, setStake] = useState<StakeId>('WHITE');
   const [tab, setTab] = useState<TabState>('MAIN');
   const [selectedChest, setSelectedChest] = useState<ChestId | null>(null);
 
@@ -429,7 +450,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
             </h2>
 
             <div className="grid grid-cols-2 gap-3 mt-4">
-              {(['WHITE', 'RED'] as const).map((s) => {
+              {(['WHITE', 'BLUE', 'GREEN', 'RED'] as const).map((s) => {
                 const info = STAKE_INFO[s];
                 const isActive = stake === s;
                 return (
@@ -439,10 +460,8 @@ export default function StartScreen({ onStart }: StartScreenProps) {
                     className={`menu-card flex flex-col items-center gap-2 p-4 rounded-xl border-2 text-center transition cursor-pointer select-none ${isActive ? info.borderActive : 'border-stone-800 bg-stone-950/40 hover:border-stone-700'}`}
                     style={{ '--glow': 'transparent' } as React.CSSProperties}
                   >
-                    <div className={`w-10 h-10 rounded-full border-4 flex items-center justify-center font-pixel text-base font-black shadow ${
-                      s === 'WHITE' ? 'border-stone-400 bg-white text-stone-800' : 'border-red-700 bg-red-500 text-white animate-pulse'
-                    }`}>
-                      {s === 'WHITE' ? 'W' : 'R'}
+                    <div className={`w-10 h-10 rounded-full border-4 flex items-center justify-center font-pixel text-base font-black shadow ${info.badgeClass}`}>
+                      {info.letter}
                     </div>
                     <span className={`text-sm font-bold ${info.color}`}>{info.name}</span>
                     <span className="text-[12px] text-stone-400 leading-tight">{info.desc}</span>
