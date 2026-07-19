@@ -1068,7 +1068,7 @@ export default function App() {
 
     if (isPortrait) {
       content = (
-        <div className="w-full h-full flex flex-col bg-stone-950 text-stone-100 select-none overflow-hidden">
+        <div className="w-full h-full flex flex-col bg-stone-950 swirl-bg text-stone-100 select-none overflow-hidden">
           <SidebarHUD
             layout="topbar"
             round={run.round}
@@ -1278,7 +1278,7 @@ export default function App() {
     } else {
       // Classic layout (SidebarHUD on left, play board on right)
       content = (
-        <div className="w-full h-full flex flex-row bg-stone-950 text-stone-100 select-none overflow-hidden relative">
+        <div className="w-full h-full flex flex-row bg-stone-950 swirl-bg text-stone-100 select-none overflow-hidden relative">
           {/* Vertical SidebarHUD on the left */}
           <SidebarHUD
             layout="sidebar"
