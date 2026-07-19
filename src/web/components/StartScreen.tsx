@@ -3,6 +3,7 @@ import Tile from './Tile.js';
 import { STARTING_CHESTS } from '../../game/RunState.js';
 import type { ChestId } from '../../game/RunState.js';
 import { playSound } from './SoundSynth.js';
+import SettingsButton from './SettingsButton.js';
 import CollectionScreen from './CollectionScreen.js';
 
 // The domino-tile pip-lighting boot moment that used to be its own full-screen intro page now
@@ -213,6 +214,12 @@ export default function StartScreen({ onStart }: StartScreenProps) {
         <div className="flex justify-between items-center text-[12px] text-emerald-700/50 font-bold uppercase tracking-[0.25em] z-10">
           <span className="animate-hero-fly-left">Chain Domino</span>
           <span className="animate-hero-fly-right">v1.2.0</span>
+        </div>
+      )}
+
+      {bootStage === 'buttons' && (
+        <div className="absolute top-4 right-4 z-30">
+          <SettingsButton />
         </div>
       )}
 

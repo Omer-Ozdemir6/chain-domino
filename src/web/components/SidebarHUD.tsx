@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GameStatus } from '../../game/GameState.js';
 import type { HandType } from '../../models/types.js';
 import { BOSS_BLINDS } from '../../game/RunState.js';
+import SettingsButton from './SettingsButton.js';
 
 /** True for a brief window right after `value` drops — drives a floating "-1" callout beside a
  *  countdown badge (turns left, discards left) so the player actually sees it tick down, instead
@@ -185,6 +186,7 @@ export default function SidebarHUD({
             <span className="block text-[12px] text-stone-500 uppercase font-bold leading-none">Cüzdan</span>
             <span className="font-pixel text-base text-emerald-400">${money}</span>
           </div>
+          <SettingsButton compact />
         </div>
       </div>
     );
@@ -192,6 +194,9 @@ export default function SidebarHUD({
 
   return (
     <aside className="w-56 lg:w-64 xl:w-80 bg-stone-900 border-r-4 border-stone-950 p-3 lg:p-4 xl:p-5 flex flex-col gap-3 lg:gap-4 text-white shrink-0 select-none h-full shadow-[5px_0_15px_rgba(0,0,0,0.5)] z-20 balatro-panel">
+      <div className="flex justify-end shrink-0 -mb-1">
+        <SettingsButton compact />
+      </div>
       {/* 1. Ante & Raunt Row */}
       <div className="flex gap-2.5 items-center justify-between shrink-0">
         <div className="flex-1 bg-stone-950/70 border border-stone-800 rounded-xl px-3 py-2 text-center shadow-inner">
