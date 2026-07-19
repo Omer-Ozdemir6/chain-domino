@@ -2,7 +2,7 @@ import { useReducer, useRef } from 'react';
 import { RunState, type RunConfig } from '../../game/RunState.js';
 import type { GameState } from '../../game/GameState.js';
 import { loadSavedRun, saveRun } from '../persistence.js';
-import { recordDiscoveries } from '../collection.js';
+import { recordDiscoveries, evaluateUnlocks, loadUnlockedIds } from '../collection.js';
 
 /**
  * RunState is a mutable class, not immutable data. This hook keeps a single stable
@@ -18,6 +18,7 @@ export function useRunState(config?: Partial<RunConfig>) {
   const ref = useRef<RunState | null>(null);
   if (!ref.current) {
     ref.current = loadSavedRun() ?? new RunState(config);
+    ref.current.unlockedIds = loadUnlockedIds();
     recordDiscoveries(ref.current);
   }
   const run = ref.current;
@@ -26,6 +27,7 @@ export function useRunState(config?: Partial<RunConfig>) {
   function act<T>(fn: (game: GameState) => T): T {
     const result = run.act(fn);
     saveRun(run);
+    evaluateUnlocks(run);
     bump();
     return result;
   }
@@ -35,6 +37,7 @@ export function useRunState(config?: Partial<RunConfig>) {
     const result = fn(run);
     saveRun(run);
     recordDiscoveries(run);
+    evaluateUnlocks(run);
     bump();
     return result;
   }
@@ -46,6 +49,7 @@ export function useRunState(config?: Partial<RunConfig>) {
    *  'START_SCREEN', and saveRun() treats that phase as "nothing to persist" and clears it. */
   function reset(after?: (freshRun: RunState) => void): void {
     ref.current = new RunState(config);
+    ref.current.unlockedIds = loadUnlockedIds();
     after?.(ref.current);
     saveRun(ref.current);
     bump();

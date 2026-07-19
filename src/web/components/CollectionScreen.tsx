@@ -4,6 +4,7 @@ import { SHOP_UPGRADES, VOUCHERS } from '../../game/RunState.js';
 import { renderCharmIcon } from './CharmBar.js';
 import { renderVoucherIcon, renderUpgradeIcon, RARITY_BORDER, GEM_CLASS } from './ShopScreen.js';
 import { loadDiscovered } from '../collection.js';
+import { UNLOCKS } from '../../game/unlocks.js';
 
 interface CollectionScreenProps {
   onBack: () => void;
@@ -18,6 +19,7 @@ export default function CollectionScreen({ onBack }: CollectionScreenProps) {
   const charmSeen = new Set(discovered.charms);
   const voucherSeen = new Set(discovered.vouchers);
   const upgradeSeen = new Set(discovered.upgrades);
+  const unlockConditionById = new Map(UNLOCKS.map((u) => [u.id, u.description]));
 
   const tabs: Array<{ id: CollectionTab; label: string; count: number; total: number }> = [
     { id: 'CHARMS', label: 'Tılsımlar', count: charmSeen.size, total: CHARMS.length },
@@ -61,10 +63,11 @@ export default function CollectionScreen({ onBack }: CollectionScreenProps) {
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5">
               {CHARMS.map((charm) => {
                 const isSeen = charmSeen.has(charm.id);
+                const unlockHint = unlockConditionById.get(charm.id);
                 return (
                   <div
                     key={charm.id}
-                    title={isSeen ? charm.description : undefined}
+                    title={isSeen ? charm.description : unlockHint}
                     className={`relative flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 text-center select-none ${
                       isSeen ? RARITY_BORDER[charm.rarity] : 'border-stone-800 bg-stone-950/60'
                     }`}
@@ -78,6 +81,9 @@ export default function CollectionScreen({ onBack }: CollectionScreenProps) {
                     <span className={`text-[10px] font-pixel font-bold leading-tight ${isSeen ? 'text-stone-200' : 'text-stone-700'}`}>
                       {isSeen ? charm.name : '???'}
                     </span>
+                    {!isSeen && unlockHint && (
+                      <span className="text-[8.5px] text-amber-700/80 leading-tight">{unlockHint}</span>
+                    )}
                   </div>
                 );
               })}
@@ -88,10 +94,11 @@ export default function CollectionScreen({ onBack }: CollectionScreenProps) {
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5">
               {VOUCHERS.map((voucher) => {
                 const isSeen = voucherSeen.has(voucher.id);
+                const unlockHint = unlockConditionById.get(voucher.id);
                 return (
                   <div
                     key={voucher.id}
-                    title={isSeen ? voucher.description : undefined}
+                    title={isSeen ? voucher.description : unlockHint}
                     className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 text-center select-none ${
                       isSeen ? 'border-amber-700/60 bg-amber-950/20' : 'border-stone-800 bg-stone-950/60'
                     }`}
@@ -102,6 +109,9 @@ export default function CollectionScreen({ onBack }: CollectionScreenProps) {
                     <span className={`text-[10px] font-pixel font-bold leading-tight ${isSeen ? 'text-stone-200' : 'text-stone-700'}`}>
                       {isSeen ? voucher.name : '???'}
                     </span>
+                    {!isSeen && unlockHint && (
+                      <span className="text-[8.5px] text-amber-700/80 leading-tight">{unlockHint}</span>
+                    )}
                   </div>
                 );
               })}

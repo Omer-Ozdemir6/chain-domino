@@ -1,4 +1,5 @@
 import type { RunState } from '../game/RunState.js';
+import { UNLOCKS } from '../game/unlocks.js';
 
 const COLLECTION_KEY = 'chain-domino-collection-v1';
 
@@ -6,20 +7,23 @@ export interface DiscoveredIds {
   charms: string[];
   vouchers: string[];
   upgrades: string[];
+  /** Permanently unlocked charm/voucher ids — see src/game/unlocks.ts for their conditions. */
+  unlocked: string[];
 }
 
 export function loadDiscovered(): DiscoveredIds {
   try {
     const raw = localStorage.getItem(COLLECTION_KEY);
-    if (!raw) return { charms: [], vouchers: [], upgrades: [] };
+    if (!raw) return { charms: [], vouchers: [], upgrades: [], unlocked: [] };
     const parsed = JSON.parse(raw) as Partial<DiscoveredIds>;
     return {
       charms: parsed.charms ?? [],
       vouchers: parsed.vouchers ?? [],
       upgrades: parsed.upgrades ?? [],
+      unlocked: parsed.unlocked ?? [],
     };
   } catch {
-    return { charms: [], vouchers: [], upgrades: [] };
+    return { charms: [], vouchers: [], upgrades: [], unlocked: [] };
   }
 }
 
@@ -28,6 +32,34 @@ function saveDiscovered(ids: DiscoveredIds): void {
     localStorage.setItem(COLLECTION_KEY, JSON.stringify(ids));
   } catch {
     // localStorage unavailable — collection tracking is a nice-to-have.
+  }
+}
+
+/** Loads permanently-unlocked ids as a Set, ready to hand straight to `RunState.unlockedIds`. */
+export function loadUnlockedIds(): Set<string> {
+  return new Set(loadDiscovered().unlocked);
+}
+
+/**
+ * Checks every UNLOCKS condition against the current run; any newly-met one is added to
+ * `run.unlockedIds` (so it's available in this run's own later shops too) and persisted
+ * immediately, so it stays unlocked forever even if the tab closes right after.
+ */
+export function evaluateUnlocks(run: RunState): void {
+  const current = loadDiscovered();
+  const unlocked = new Set(current.unlocked);
+  const before = unlocked.size;
+
+  for (const def of UNLOCKS) {
+    if (unlocked.has(def.id)) continue;
+    if (def.isMet(run)) {
+      unlocked.add(def.id);
+      run.unlockedIds.add(def.id);
+    }
+  }
+
+  if (unlocked.size !== before) {
+    saveDiscovered({ ...current, unlocked: [...unlocked] });
   }
 }
 
@@ -53,6 +85,6 @@ export function recordDiscoveries(run: RunState): void {
 
   const after = charms.size + vouchers.size + upgrades.size;
   if (after !== before) {
-    saveDiscovered({ charms: [...charms], vouchers: [...vouchers], upgrades: [...upgrades] });
+    saveDiscovered({ ...current, charms: [...charms], vouchers: [...vouchers], upgrades: [...upgrades] });
   }
 }

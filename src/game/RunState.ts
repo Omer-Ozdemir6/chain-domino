@@ -4,6 +4,7 @@ import type { CharmDef, CharmHooks, RoundEndContext } from '../models/Charm.js';
 import type { DominoStone, TileModifier, HandType } from '../models/types.js';
 import { calculateScore, computeStoneChips, type ScoreCalculationResult, type PlayState } from '../engine/scoreCalculator.js';
 import { createSeededRandom, generateRunSeed } from '../models/rng.js';
+import { isLockedAndNotUnlocked } from './unlocks.js';
 
 export type RunStatus = 'IN_PROGRESS' | 'WON' | 'LOST';
 export type RunPhase =
@@ -75,6 +76,7 @@ export interface RunStateSnapshot {
   config: RunConfig;
   game: GameStateSnapshot | null;
   activatedCharmIdsThisTurn?: string[];
+  unlockedIds?: string[];
   [key: string]: unknown;
 }
 
@@ -593,12 +595,18 @@ export class RunState {
 
   // Statistics tracker
   bestHandScore = 0;
+  /** Longest single-hand submission this run, in stone count — feeds the "Efsanevi Zincir" unlock. */
+  bestChainLength = 0;
   totalCardsPlayed = 0;
   totalCardsDiscarded = 0;
   totalRerolls = 0;
   totalPurchases = 0;
   defeatedBy = '';
   handTypePlayCounts: Record<HandType, number> = { STRAIGHT: 0, BRANCHED: 0, LOOP: 0 };
+  /** Charm/voucher ids permanently unlocked into the shop pool — refreshed from localStorage by
+   *  the web layer on load/restore, and grown in place as evaluateUnlocks() finds new ones met.
+   *  Kept as run state (not read from localStorage directly) so the engine stays persistence-free. */
+  unlockedIds: Set<string> = new Set();
 
   private roundHooks: CharmHooks[] = [];
 
@@ -631,6 +639,7 @@ export class RunState {
     const snap = { ...this } as unknown as RunStateSnapshot & { roundHooks?: unknown };
     snap.game = this.game ? this.game.toSnapshot() : null;
     snap.activatedCharmIdsThisTurn = Array.from(this.activatedCharmIdsThisTurn);
+    snap.unlockedIds = Array.from(this.unlockedIds);
     delete snap.roundHooks;
     return snap;
   }
@@ -642,6 +651,7 @@ export class RunState {
     (run as unknown as { activatedCharmIdsThisTurn: Set<string> }).activatedCharmIdsThisTurn = new Set(
       snap.activatedCharmIdsThisTurn ?? []
     );
+    run.unlockedIds = new Set((snap.unlockedIds as string[] | undefined) ?? []);
     (run as unknown as { roundHooks: CharmHooks[] }).roundHooks = run.phase === 'START_SCREEN' ? [] : run.wireCharms();
     return run;
   }
@@ -715,6 +725,7 @@ export class RunState {
     this.shopOffers = [];
     this.history = [];
     this.bestHandScore = 0;
+    this.bestChainLength = 0;
     this.totalCardsPlayed = 0;
     this.totalCardsDiscarded = 0;
     this.totalRerolls = 0;
@@ -1443,6 +1454,7 @@ export class RunState {
       if (res.ok && res.scoreGained !== undefined) {
         this.totalCardsPlayed += unscoredStoneCount;
         this.bestHandScore = Math.max(this.bestHandScore, res.scoreGained);
+        this.bestChainLength = Math.max(this.bestChainLength, unscoredStoneCount);
         this.handTypePlayCounts[handType] = (this.handTypePlayCounts[handType] ?? 0) + 1;
 
         // Award $3 per golden stone submitted
@@ -1602,7 +1614,9 @@ export class RunState {
     // 2 Charms (3 if "Kehanet Küresi" promised a bonus one)
     const charmSlots = this.nextShopBonusCharm ? 3 : 2;
     this.nextShopBonusCharm = false;
-    const availableCharms = CHARMS.filter((c) => !this.ownedCharmIds.includes(c.id));
+    const availableCharms = CHARMS.filter(
+      (c) => !this.ownedCharmIds.includes(c.id) && !isLockedAndNotUnlocked(c.id, this.unlockedIds)
+    );
     const shuffledCharms = [...availableCharms].sort(() => Math.random() - 0.5);
     shuffledCharms.slice(0, charmSlots).forEach((c) => {
       offers.push({ type: 'CHARM', item: { ...c } as any });
@@ -1629,7 +1643,9 @@ export class RunState {
     }
 
     // Voucher — a real chance to appear, not guaranteed every single shop visit.
-    const availableVouchers = VOUCHERS.filter((v) => !this.ownedVoucherIds.includes(v.id));
+    const availableVouchers = VOUCHERS.filter(
+      (v) => !this.ownedVoucherIds.includes(v.id) && !isLockedAndNotUnlocked(v.id, this.unlockedIds)
+    );
     if (availableVouchers.length > 0 && Math.random() < 0.5) {
       const voucher = availableVouchers[Math.floor(Math.random() * availableVouchers.length)];
       offers.push({ type: 'VOUCHER', item: { ...voucher } as any });

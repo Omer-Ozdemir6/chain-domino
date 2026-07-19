@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RunState } from '../game/RunState.js';
-import { loadDiscovered, recordDiscoveries } from './collection.js';
+import { loadDiscovered, recordDiscoveries, evaluateUnlocks, loadUnlockedIds } from './collection.js';
 
 class MemoryStorage {
   private store = new Map<string, string>();
@@ -21,7 +21,7 @@ beforeEach(() => {
 
 describe('collection.ts (meta-progression discovery tracking)', () => {
   it('starts empty when nothing has been saved', () => {
-    expect(loadDiscovered()).toEqual({ charms: [], vouchers: [], upgrades: [] });
+    expect(loadDiscovered()).toEqual({ charms: [], vouchers: [], upgrades: [], unlocked: [] });
   });
 
   it('records owned charms and shop-offer ids across all three categories', () => {
@@ -52,5 +52,48 @@ describe('collection.ts (meta-progression discovery tracking)', () => {
     recordDiscoveries(run);
 
     expect(loadDiscovered().charms.sort()).toEqual(['first_charm', 'second_charm']);
+  });
+});
+
+describe('unlock gating (collection.ts + RunState shop pool)', () => {
+  it('a locked charm never appears in shop offers before its condition is met', () => {
+    const run = new RunState();
+    run.initializeRun('RED', 'WHITE');
+    run.unlockedIds = loadUnlockedIds(); // empty — nothing unlocked yet
+
+    // rollShopOffers() is private and slot-limited/random; roll it many times and confirm the
+    // locked id never once slips through, instead of relying on a single roll (which could pass
+    // by sheer luck of not being picked even if gating were broken).
+    const seenCharmIds = new Set<string>();
+    for (let i = 0; i < 40; i++) {
+      const offers = (run as unknown as { rollShopOffers(): { type: string; item: { id: string } }[] }).rollShopOffers();
+      offers.filter((o) => o.type === 'CHARM').forEach((o) => seenCharmIds.add(o.item.id));
+    }
+    expect(seenCharmIds.has('legendary_midas')).toBe(false);
+  });
+
+  it('evaluateUnlocks persists a newly-met condition and makes it available in the same run', () => {
+    const run = new RunState();
+    run.initializeRun('RED', 'WHITE');
+    run.unlockedIds = loadUnlockedIds();
+    run.round = 5; // meets high_five's "reach round 5" condition
+
+    evaluateUnlocks(run);
+
+    expect(run.unlockedIds.has('high_five')).toBe(true);
+    expect(loadUnlockedIds().has('high_five')).toBe(true);
+  });
+
+  it('an unlock, once persisted, stays unlocked for a brand new run', () => {
+    const runA = new RunState();
+    runA.initializeRun('RED', 'WHITE');
+    runA.round = 5;
+    evaluateUnlocks(runA);
+
+    const runB = new RunState();
+    runB.initializeRun('RED', 'WHITE');
+    runB.unlockedIds = loadUnlockedIds();
+
+    expect(runB.unlockedIds.has('high_five')).toBe(true);
   });
 });
