@@ -224,6 +224,7 @@ const CORE_CHARMS: readonly CharmDef[] = [
     description: "Tek Sayı Ustası ve Eksi Ustası'na BİRLİKTE sahipsen, her taşa +2 ekler.",
     cost: 10,
     rarity: 'RARE',
+    signature: { sound: 'chime', visual: 'smoke' },
     createHooks: (ctx) => {
       const hasBoth = ctx.ownedCharmIds.includes('division_master') && ctx.ownedCharmIds.includes('subtract_master');
       return {
@@ -551,6 +552,7 @@ const CURSE_CHARMS: readonly CharmDef[] = [
     cost: 9,
     rarity: 'RARE',
     curse: true,
+    signature: { sound: 'void', visual: 'vortex' },
     createHooks: () => ({
       onCalculate: (state) => ({ ...state, chips: Math.random() < 0.5 ? state.chips * 2 : 0 }),
     }),
@@ -715,6 +717,7 @@ const CURSE_CHARMS: readonly CharmDef[] = [
     cost: 11,
     rarity: 'RARE',
     curse: true,
+    signature: { sound: 'devour', visual: 'gnaw' },
     createHooks: () => ({
       onCalculate: (state) => ({ ...state, chips: Math.random() < 0.3 ? state.chips * 3 : 0 }),
     }),
@@ -743,6 +746,7 @@ const SYNERGY_CHARMS: readonly CharmDef[] = [
     description: 'Tek Sayı, Toplam, Eksi Ustası ve Çarpan Coşkusu\'nun HEPSİNE sahipsen, her taşa ekstra +5.',
     cost: 14,
     rarity: 'RARE',
+    signature: { sound: 'chime', visual: 'vortex' },
     createHooks: (ctx) => {
       const hasAll =
         ctx.ownedCharmIds.includes('division_master') &&
@@ -828,6 +832,7 @@ const LEGENDARY_CHARMS: readonly CharmDef[] = [
     description: 'Zincirdeki HER taşa +10 puan ekler.',
     cost: 20,
     rarity: 'LEGENDARY',
+    signature: { sound: 'void', visual: 'vortex' },
     createHooks: () => ({
       onCalculate: (state, chain) => ({ ...state, chips: state.chips + chain.length * 10 }),
     }),
@@ -839,6 +844,7 @@ const LEGENDARY_CHARMS: readonly CharmDef[] = [
     cost: 18,
     rarity: 'LEGENDARY',
     curse: true,
+    signature: { sound: 'gavel', visual: 'smoke' },
     createHooks: () => ({
       onCalculate: (state) => ({ ...state, chips: state.chips > 0 ? state.chips * 2 : state.chips * 3 }),
     }),
@@ -849,6 +855,7 @@ const LEGENDARY_CHARMS: readonly CharmDef[] = [
     description: 'Zincir en az 6 taş içeriyorsa VE en az 2 çiftli taş varsa +40 bonus.',
     cost: 20,
     rarity: 'LEGENDARY',
+    signature: { sound: 'chime', visual: 'vortex' },
     createHooks: () => ({
       onCalculate: (state, chain) =>
         chain.length >= 6 && chain.filter(isDouble).length >= 2 ? { ...state, chips: state.chips + 40 } : state,
@@ -1015,6 +1022,7 @@ const NUMBER_CHARMS: readonly CharmDef[] = [
     description: "Ters Simetri ve Simetri Ödülü'ne BİRLİKTE sahipsen, her taşa sabit +3.",
     cost: 10,
     rarity: 'RARE',
+    signature: { sound: 'chime', visual: 'smoke' },
     createHooks: (ctx) => {
       const hasBoth = ctx.ownedCharmIds.includes('reverse_symmetry') && ctx.ownedCharmIds.includes('symmetry_bonus');
       return {
@@ -1100,6 +1108,7 @@ const BASE_FUSION_COMPONENTS: readonly CharmDef[] = [
     description: 'Oynanan her Obsidyen taş +4 Çarpan ekler.',
     cost: 9,
     rarity: 'RARE',
+    signature: { sound: 'gavel', visual: 'smoke' },
     createHooks: () => ({
       onCalculate: (state, chain) => {
         const count = chain.filter((s) => s.modifier === 'OBSIDIAN').length;
@@ -1130,6 +1139,7 @@ const FUSION_CHARMS: readonly CharmDef[] = [
     description: '[FÜZ] cosmic_pendulum + heart_matryoshka: Çiftli taş başına +8 chip VE çiftli taşlar çarpanı +0.5 artırır.',
     cost: 0,
     rarity: 'LEGENDARY',
+    signature: { sound: 'void', visual: 'vortex' },
     createHooks: () => ({
       onCalculate: (state, chain) => {
         const doubleCount = chain.filter(isDouble).length;
@@ -1292,6 +1302,69 @@ const SIGNATURE_CHARMS: readonly CharmDef[] = [
     signature: { sound: 'void', visual: 'smoke' },
     createHooks: () => ({
       onCalculate: (state) => ({ ...state, mult: state.mult * 5 }),
+    }),
+  },
+  {
+    id: 'blacksmiths_anvil',
+    name: 'Demirci Örsü',
+    description: 'Turda bir kez, üzerine tıklayıp elindeki bir taşı dövüp güçlendir: her iki ucuna da +1 ekler (maks 6).',
+    cost: 5,
+    rarity: 'RARE',
+    interactive: true,
+    signature: { sound: 'gavel', visual: 'smoke' },
+    createHooks: () => ({
+      onActivate: (stone) => [
+        { ...stone, leftVal: Math.min(6, stone.leftVal + 1), rightVal: Math.min(6, stone.rightVal + 1) },
+      ],
+    }),
+  },
+  {
+    id: 'blind_seers_orb',
+    name: 'Kör Falcı Küresi',
+    description: 'Turda bir kez, üzerine tıklayıp elindeki bir taşı büsbütün yeni, rastgele bir taşla değiştir.',
+    cost: 6,
+    rarity: 'RARE',
+    interactive: true,
+    signature: { sound: 'void', visual: 'vortex' },
+    createHooks: () => ({
+      onActivate: (stone) => [
+        {
+          ...stone,
+          leftVal: Math.floor(Math.random() * 7),
+          rightVal: Math.floor(Math.random() * 7),
+          isGolden: undefined,
+          modifier: undefined,
+        },
+      ],
+    }),
+  },
+  {
+    id: 'poisoned_needle',
+    name: 'Zehirli İğne',
+    description: 'Turda bir kez, üzerine tıklayıp elindeki bir taşın büyük değerli ucunu sıfırlar. Çiftli taşlara işlemez.',
+    cost: 4,
+    rarity: 'UNCOMMON',
+    interactive: true,
+    signature: { sound: 'devour', visual: 'gnaw' },
+    createHooks: () => ({
+      onActivate: (stone) => {
+        if (stone.leftVal === stone.rightVal) return null;
+        return [stone.leftVal > stone.rightVal ? { ...stone, leftVal: 0 } : { ...stone, rightVal: 0 }];
+      },
+    }),
+  },
+  {
+    id: 'mirror_universe',
+    name: 'Ayna Evreni',
+    description: 'Turda bir kez, üzerine tıklayıp elindeki bir taşın birebir kopyasını ele ekle. 3 el sonra kırılır.',
+    cost: 9,
+    rarity: 'LEGENDARY',
+    interactive: true,
+    perish: true,
+    maxDurability: 3,
+    signature: { sound: 'chime', visual: 'vortex' },
+    createHooks: () => ({
+      onActivate: (stone) => [stone, { ...stone, id: `${stone.id}_mirror` }],
     }),
   },
 ];

@@ -453,6 +453,71 @@ describe('RunState', () => {
       expect(run.game.turn).toBe(6); // incremented to 7 by submitChain, then refunded by the rescue
       expect(run.game.hand).toHaveLength(1); // just the 1 free draw
     });
+
+    it('Demirci Örsü adds +1 to both ends of a hand stone, capped at 6', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.ownedCharmIds = ['blacksmiths_anvil'];
+      run.startBlind('SMALL');
+      run.game.hand = [stone('s1', 3, 6)];
+
+      const res = run.useActiveCharm('blacksmiths_anvil', 's1');
+      expect(res.ok).toBe(true);
+      expect(run.game.hand).toHaveLength(1);
+      expect(run.game.hand[0].leftVal).toBe(4);
+      expect(run.game.hand[0].rightVal).toBe(6); // already at the cap
+    });
+
+    it('Kör Falcı Küresi replaces a hand stone with a fresh random one', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.ownedCharmIds = ['blind_seers_orb'];
+      run.startBlind('SMALL');
+      run.game.hand = [stone('s1', 3, 5)];
+
+      const res = run.useActiveCharm('blind_seers_orb', 's1');
+      expect(res.ok).toBe(true);
+      expect(run.game.hand).toHaveLength(1);
+      expect(run.game.hand[0].leftVal).toBeGreaterThanOrEqual(0);
+      expect(run.game.hand[0].leftVal).toBeLessThanOrEqual(6);
+      expect(run.game.hand[0].rightVal).toBeGreaterThanOrEqual(0);
+      expect(run.game.hand[0].rightVal).toBeLessThanOrEqual(6);
+    });
+
+    it('Zehirli İğne zeroes the higher-value end of a hand stone but refuses doubles', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.ownedCharmIds = ['poisoned_needle'];
+      run.startBlind('SMALL');
+      run.game.hand = [stone('s1', 2, 5)];
+
+      const res = run.useActiveCharm('poisoned_needle', 's1');
+      expect(res.ok).toBe(true);
+      expect(run.game.hand[0].leftVal).toBe(2);
+      expect(run.game.hand[0].rightVal).toBe(0);
+
+      const run2 = new RunState();
+      run2.initializeRun('RED', 'WHITE');
+      run2.ownedCharmIds = ['poisoned_needle'];
+      run2.startBlind('SMALL');
+      run2.game.hand = [stone('s2', 4, 4)];
+      const doubleRes = run2.useActiveCharm('poisoned_needle', 's2');
+      expect(doubleRes.ok).toBe(false);
+    });
+
+    it('Ayna Evreni clones a hand stone into a second, independent copy', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.ownedCharmIds = ['mirror_universe'];
+      run.startBlind('SMALL');
+      run.game.hand = [stone('s1', 3, 5)];
+
+      const res = run.useActiveCharm('mirror_universe', 's1');
+      expect(res.ok).toBe(true);
+      expect(run.game.hand).toHaveLength(2);
+      expect(run.game.hand.map((s) => [s.leftVal, s.rightVal])).toEqual([[3, 5], [3, 5]]);
+      expect(run.game.hand[0].id).not.toBe(run.game.hand[1].id);
+    });
   });
 
   describe('Tılsım Aşınması ve Yeni Büyü Testleri', () => {
