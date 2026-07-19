@@ -428,13 +428,16 @@ body {
   }
 }
 
+/* Warm walnut/amber swirl — matches the Garabetler Kabinesi cabinet-of-curiosities palette used
+   everywhere else (StartScreen's .swirl-amber-bg, .felt-board below), not the old cool forest-green
+   casino felt this used to be. */
 .swirl-bg {
-  background-color: #061c0e;
+  background-color: #130d07;
   background-image:
-    radial-gradient(at 10% 20%, #163e24 0px, transparent 60%),
-    radial-gradient(at 90% 10%, #0a2d17 0px, transparent 60%),
-    radial-gradient(at 50% 80%, #226437 0px, transparent 65%),
-    radial-gradient(at 80% 90%, #0a2916 0px, transparent 60%);
+    radial-gradient(at 10% 20%, #3a2a16 0px, transparent 60%),
+    radial-gradient(at 90% 10%, #2a1d10 0px, transparent 60%),
+    radial-gradient(at 50% 80%, #4a3418 0px, transparent 65%),
+    radial-gradient(at 80% 90%, #241a0d 0px, transparent 60%);
   background-size: 240% 240%;
   animation: swirl-felt 22s ease-in-out infinite;
 }
@@ -1117,18 +1120,14 @@ body {
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
-.swirl-bg {
-  background: linear-gradient(135deg, #0b251b 0%, #153c2b 30%, #0d2e20 60%, #061910 100%) !important;
-  background-size: 400% 400% !important;
-  animation: felt-wave 18s ease infinite !important;
-}
 
-/* Green felt game table board */
+/* Aged walnut tabletop — where the charm bar and domino board actually sit. Used to be green
+   casino felt; now matches the warm cabinet-wood tone the rest of the table already uses. */
 .felt-board {
-  background-color: #123e2e !important;
-  background-image: 
+  background-color: #241a10 !important;
+  background-image:
     radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0),
-    radial-gradient(ellipse at center, rgba(16, 185, 129, 0.05), transparent 70%) !important;
+    radial-gradient(ellipse at center, rgba(217, 119, 6, 0.06), transparent 70%) !important;
   background-size: 24px 24px, 100% 100% !important;
   box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.9) !important;
 }
