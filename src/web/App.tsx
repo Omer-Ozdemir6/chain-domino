@@ -10,6 +10,7 @@ import CharmBar from './components/CharmBar.js';
 import InfoTooltip from './components/InfoTooltip.js';
 import ChainBoard from './components/ChainBoard.js';
 import StoneHand from './components/StoneHand.js';
+import DeckPile from './components/DeckPile.js';
 import ShopScreen, { renderUpgradeIcon } from './components/ShopScreen.js';
 import RoundRewardScreen from './components/RoundRewardScreen.js';
 import RunOverScreen from './components/RunOverScreen.js';
@@ -1192,9 +1193,7 @@ export default function App() {
                 />
               </div>
               <div className="w-12 shrink-0 flex flex-col items-center justify-center border-l border-stone-800/40 pl-2">
-                <div className="w-6 h-9 bg-red-800 rounded border border-red-700/80 flex items-center justify-center font-pixel text-stone-200 text-xs">
-                  <span>🀲</span>
-                </div>
+                <DeckPile remaining={game.stoneDeck.remaining} total={run.customDeck.length} variant="compact" />
                 <span className="text-[10px] font-mono text-stone-400 font-bold mt-0.5">{game.stoneDeck.remaining}/{run.customDeck.length}</span>
               </div>
             </div>
@@ -1428,11 +1427,7 @@ export default function App() {
 
               {/* Deck remaining pile indicator — same footprint as a charm/spell card */}
               <div className="shrink-0 flex flex-col items-center justify-center gap-1">
-                <div className="w-18 h-26 md:w-22 md:h-32 lg:w-28 lg:h-40 bg-red-800 rounded-lg border-2 border-red-700/80 shadow-[0_4px_6px_rgba(0,0,0,0.5)] flex items-center justify-center font-pixel text-stone-200 text-xs md:text-sm font-bold leading-none animate-pulse relative overflow-hidden select-none">
-                  <div className="absolute inset-1.5 border border-red-650/40 rounded flex items-center justify-center">
-                    <span className="text-2xl md:text-3xl opacity-40">🀲</span>
-                  </div>
-                </div>
+                <DeckPile remaining={game.stoneDeck.remaining} total={run.customDeck.length} variant="full" />
                 <span className="text-[9px] font-mono text-stone-400 font-bold whitespace-nowrap">
                   {game.stoneDeck.remaining}/{run.customDeck.length}
                 </span>
