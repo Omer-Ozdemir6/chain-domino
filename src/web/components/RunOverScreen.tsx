@@ -1,4 +1,4 @@
-import type { RunStatus } from '../../game/RunState.js';
+import type { RunStatus, GamblersLastStandResult } from '../../game/RunState.js';
 import type { HandType } from '../../models/types.js';
 
 interface RunOverScreenProps {
@@ -14,6 +14,9 @@ interface RunOverScreenProps {
   defeatedBy: string;
   handTypePlayCounts: Record<HandType, number>;
   seed: string;
+  /** Set only when the run ended via a failed Kumarbazın Son Şansı roll — shown as a permanent
+   *  record of the dice/math, since the live overlay reveal is only on screen briefly. */
+  lastGambleResult: GamblersLastStandResult | null;
   /** Jumps straight into a new run with the same deck/stake — no menu detour. */
   onNewRun: () => void;
   /** Returns to the title screen's deck/stake/chest picker. */
@@ -39,6 +42,7 @@ export default function RunOverScreen({
   defeatedBy,
   handTypePlayCounts,
   seed,
+  lastGambleResult,
   onNewRun,
   onMainMenu,
 }: RunOverScreenProps) {
@@ -131,6 +135,24 @@ export default function RunOverScreen({
             </div>
           </div>
         </div>
+
+        {/* Kumarbazın Son Şansı record — the live dice reveal is only on screen briefly, so the
+            actual roll and math stay visible here for as long as the player wants to read it. */}
+        {lastGambleResult && !lastGambleResult.success && (
+          <div className="mt-3 bg-rose-950/20 rounded-xl border border-rose-900/50 p-3 text-center">
+            <span className="text-[11px] text-rose-400/80 uppercase font-bold tracking-widest">Kumarbazın Son Şansı</span>
+            <div className="mt-1.5 flex items-center justify-center gap-3 text-2xl">
+              <span>{['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][lastGambleResult.die1 - 1]}</span>
+              <span>{['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][lastGambleResult.die2 - 1]}</span>
+            </div>
+            <p className="mt-1.5 text-[12px] text-stone-400">
+              {lastGambleResult.die1} + {lastGambleResult.die2} = {lastGambleResult.die1 + lastGambleResult.die2}
+              {' × '}${lastGambleResult.wager} ={' '}
+              <span className="text-stone-200 font-bold">{lastGambleResult.scoreGained}</span> puan kazanıldı,{' '}
+              <span className="text-rose-400 font-bold">{lastGambleResult.shortfall}</span> puan gerekiyordu.
+            </p>
+          </div>
+        )}
 
         {/* Play Again Buttons (styled red-orange like screenshot) */}
         <div className="mt-8 flex flex-col gap-2">

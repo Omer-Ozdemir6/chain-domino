@@ -1462,6 +1462,7 @@ export class RunState {
     this.lastActivationTurn = this.game.turn;
     this.rescueUsedThisRound = false;
     this.lastRescueCharmName = null;
+    this.lastGambleResult = null;
 
     // ─── Boss Blind submit override ────────────────────────────
     const originalSubmit = this.game.submitChain.bind(this.game);

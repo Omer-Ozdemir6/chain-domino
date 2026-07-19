@@ -53,12 +53,18 @@ export default function GamblersLastStandScreen({ money, shortfall, result, onRo
                 {DICE_FACES[result.die2 - 1]}
               </span>
             </div>
-            <p className="mt-4 text-sm text-stone-300">
+            <p className="mt-4 text-base text-stone-300 animate-fade-in" style={{ opacity: 0, animationDelay: '900ms', animationFillMode: 'forwards' }}>
               {result.die1} + {result.die2} = <span className="font-bold text-amber-300">{result.die1 + result.die2}</span>
-              {' × '}${result.wager} = <span className="font-bold text-amber-300">{result.scoreGained}</span> puan
+              {' × '}${result.wager} = <span className="font-bold text-amber-300">{result.scoreGained}</span> puan kazanıldı
             </p>
-            <p className={`mt-3 text-xl font-pixel font-black uppercase tracking-wider ${result.success ? 'text-emerald-400' : 'text-rose-500'}`}>
-              {result.success ? 'Kazandın!' : 'Zarlar seni terk etti...'}
+            <p className="mt-1 text-[13px] text-stone-500 animate-fade-in" style={{ opacity: 0, animationDelay: '1200ms', animationFillMode: 'forwards' }}>
+              Gereken: <span className="text-rose-400 font-bold">{result.shortfall}</span> puan
+            </p>
+            <p
+              className={`mt-3 text-2xl font-pixel font-black uppercase tracking-wider animate-fade-in ${result.success ? 'text-emerald-400' : 'text-rose-500'}`}
+              style={{ opacity: 0, animationDelay: '1700ms', animationFillMode: 'forwards' }}
+            >
+              {result.success ? '🎉 Kazandın!' : '💀 Zarlar Seni Terk Etti...'}
             </p>
           </>
         )}

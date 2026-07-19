@@ -250,11 +250,15 @@ export default function App() {
   useEffect(() => {
     const realPhase = run.phase;
     if (realPhase === 'ROUND_REWARD' || realPhase === 'RUN_OVER_SCREEN') {
+      // A resolved Kumarbazın Son Şansı roll needs real time to actually read (dice values, the
+      // math, the verdict) before the screen moves on — the standard gather-delay was tuned for
+      // watching stones dissolve off the board, not for parsing a dice result under pressure.
+      const delayMs = run.lastGambleResult ? 4200 : 1450;
       setIsGathering(true);
       const timer = setTimeout(() => {
         setIsGathering(false);
         setDelayedPhase(realPhase);
-      }, 1450);
+      }, delayMs);
       return () => clearTimeout(timer);
     } else {
       setDelayedPhase(realPhase);
@@ -1492,6 +1496,7 @@ export default function App() {
               defeatedBy={run.defeatedBy}
               handTypePlayCounts={run.handTypePlayCounts}
               seed={run.seed}
+              lastGambleResult={run.lastGambleResult}
               onNewRun={handleNewRun}
               onMainMenu={handleRestart}
             />
