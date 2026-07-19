@@ -48,7 +48,7 @@ export default function RunOverScreen({
   const mostPlayedCount = handTypePlayCounts[mostPlayedType];
 
   return (
-    <div className="w-full max-w-md my-auto rounded-3xl bg-stone-900 border-4 border-stone-950 p-8 shadow-2xl text-white overflow-y-auto crt select-none animate-[fade-in_0.4s_ease-out]">
+    <div className="w-full max-w-md my-auto rounded-3xl bg-stone-900 border-4 border-stone-950 p-8 shadow-2xl text-white overflow-y-auto relative select-none animate-[fade-in_0.4s_ease-out]">
         {/* Balatro Marquee Game Over Title */}
         <h2 className={`text-5xl font-black font-pixel tracking-wider uppercase text-center drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)] ${won ? 'text-emerald-500' : 'text-rose-500 animate-pulse'}`}>
           {won ? 'RUN KAZANILDI!' : 'GAME OVER'}

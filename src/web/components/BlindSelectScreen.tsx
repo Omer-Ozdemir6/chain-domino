@@ -245,7 +245,7 @@ export default function BlindSelectScreen({
     </>
   );
 
-  const panelClass = 'rounded-3xl bg-stone-900 border-4 border-stone-950 p-8 shadow-2xl text-white crt select-none';
+  const panelClass = 'rounded-3xl bg-stone-900 border-4 border-stone-950 p-8 shadow-2xl text-white relative select-none';
 
   return (
     <div className="relative w-full max-w-xl my-auto">

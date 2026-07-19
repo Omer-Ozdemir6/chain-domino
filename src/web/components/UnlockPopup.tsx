@@ -5,7 +5,7 @@ interface UnlockPopupProps {
 
 export default function UnlockPopup({ onContinue, onEndless }: UnlockPopupProps) {
   return (
-    <div className="w-full max-w-sm my-auto rounded-3xl bg-stone-900 border-4 border-stone-950 p-6 shadow-2xl text-white crt text-center select-none animate-[fade-in_0.5s_ease-out]">
+    <div className="w-full max-w-sm my-auto rounded-3xl bg-stone-900 border-4 border-stone-950 p-6 shadow-2xl text-white relative text-center select-none animate-[fade-in_0.5s_ease-out]">
       <h2 className="text-2xl font-black font-pixel tracking-widest text-teal-400 uppercase">
         MÜZE KURTARILDI!
       </h2>

@@ -65,7 +65,7 @@ export default function RoundRewardScreen({ reward, onContinue }: RoundRewardScr
   }, []);
 
   return (
-    <div className="w-full max-w-xl max-h-[85vh] rounded-b-3xl bg-stone-900 border-4 border-t-0 border-amber-600/80 p-8 md:p-10 shadow-[0_25px_45px_rgba(0,0,0,0.85)] text-white overflow-y-auto crt select-none animate-panel-drop reward-fade-mask">
+    <div className="w-full max-w-xl max-h-[85vh] rounded-b-3xl bg-stone-900 border-4 border-t-0 border-amber-600/80 p-8 md:p-10 shadow-[0_25px_45px_rgba(0,0,0,0.85)] text-white overflow-y-auto relative select-none animate-panel-drop reward-fade-mask">
       <h2 className="text-6xl md:text-7xl font-black font-pixel tracking-widest text-center text-transparent bg-clip-text bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 drop-shadow-[0_4px_6px_rgba(0,0,0,0.95)]">
         CASH OUT
       </h2>

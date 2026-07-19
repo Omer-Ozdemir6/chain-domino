@@ -411,11 +411,6 @@ body {
 
 
 
-/* Card-table felt background — a calm, static wood-green surface (no scanlines, no CRT). */
-.crt {
-  position: relative;
-}
-
 @keyframes swirl-felt {
   0% {
     background-position: 0% 0%;
@@ -450,8 +445,9 @@ body {
     radial-gradient(at 85% 90%, rgba(180, 83, 9, 0.06) 0px, transparent 55%);
 }
 
-/* CRT Monitor scanlines, subpixels, and slight bezel glow overlay. Deliberately does NOT set
-   `position` itself (only `overflow`) — every element that uses this class already carries its
+/* Full-screen shop pack overlay: a warm vignette + faint parchment grain instead of the old
+   RGB-scanline CRT-monitor effect (clashed with the antique cabinet theme). Deliberately does NOT
+   set `position` itself (only `overflow`) — every element that uses this class already carries its
    own explicit Tailwind position utility (fixed/absolute/relative), and this rule's old
    `position: relative` had the same specificity as those utility classes, so being defined
    later in the stylesheet let it silently win the cascade and override `fixed`/`absolute` back
@@ -459,22 +455,21 @@ body {
    (draftOverlay/runePackOverlay/runeTargetOverlay/sealedPackOverlay all confined themselves to
    a random spot in the layout instead of covering the full screen). `::after` below still
    positions correctly against whatever positioning the element's own utility class provides. */
-.crt-screen {
+.pack-overlay {
   overflow: hidden;
 }
 
-.crt-screen::after {
+.pack-overlay::after {
   content: " ";
   display: block;
   position: absolute;
   top: 0; left: 0; bottom: 0; right: 0;
-  background: 
-    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.18) 50%), 
-    linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-  background-size: 100% 3px, 6px 100%;
+  background:
+    radial-gradient(ellipse at center, transparent 55%, rgba(8, 5, 2, 0.35) 100%),
+    repeating-linear-gradient(0deg, rgba(217, 119, 6, 0.015) 0px, transparent 2px, transparent 4px);
   z-index: 60;
   pointer-events: none !important;
-  opacity: 0.12;
+  opacity: 0.6;
 }
 
 /* Balatro-style card layout */
@@ -488,9 +483,7 @@ body {
 }
 
 /* Engraved wood-sign lettering — replaces the old neon-glow shop sign look. */
-.shop-neon,
-.shop-neon-green,
-.shop-neon-blue {
+.shop-engraved {
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 214, 140, 0.25);
 }
 

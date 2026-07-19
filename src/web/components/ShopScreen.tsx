@@ -341,7 +341,7 @@ export default function ShopScreen({
     setTimeout(() => setPackSeal('open'), 500);
   }
   const sealedPackOverlay = packIsPending && packSeal !== 'open' && (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-stone-950/95 z-50 p-4 font-pixel select-none crt-screen">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-stone-950/95 z-50 p-4 font-pixel select-none pack-overlay">
       <div
         onClick={handleCrackSeal}
         className={`relative cursor-pointer ${packSeal === 'sealed' ? 'animate-pack-idle-bob hover:scale-105 transition-transform' : 'animate-pack-crack'}`}
@@ -748,7 +748,7 @@ export default function ShopScreen({
 
   // Common Draft Kese Modal Overlay — only revealed once the pack's seal has been cracked open.
   const draftOverlay = draftOffers && draftOffers.length > 0 && packSeal === 'open' && (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-stone-950/95 z-50 p-4 font-pixel select-none crt-screen">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-stone-950/95 z-50 p-4 font-pixel select-none pack-overlay">
       <h2 className="text-2xl md:text-3xl text-amber-300 mb-2 drop-shadow-[0_0_10px_#fbbf24] animate-pulse">KESE AÇILIYOR</h2>
       <p className="text-sm text-stone-400 mb-8 font-sans">Taş kesesinden destenize kalıcı olarak eklemek için 1 adet taş seçin.</p>
       
@@ -807,7 +807,7 @@ export default function ShopScreen({
   // Rün Kesesi — Step 1: pick exactly 1 of 3 random rune options. Only revealed once the pack's
   // seal has been cracked open.
   const runePackOverlay = runeOffers.length > 0 && packSeal === 'open' && (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-stone-950/95 z-50 p-4 font-pixel select-none crt-screen">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-stone-950/95 z-50 p-4 font-pixel select-none pack-overlay">
       <h2 className="text-2xl md:text-3xl text-rose-350 mb-2 drop-shadow-[0_0_10px_#fb7185] animate-pulse">RÜN KESESİ AÇILIYOR</h2>
       <p className="text-sm text-stone-400 mb-8 font-sans">Bir rün seçin — seçtiğiniz rün, birden fazla taşınıza birden uygulanabilir.</p>
 
@@ -843,7 +843,7 @@ export default function ShopScreen({
 
   // Rün Kesesi — Step 2: pick up to `pendingRune.targetCount` existing customDeck stones to apply it to.
   const runeTargetOverlay = pendingRune && (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-stone-950/95 z-50 p-4 font-pixel select-none crt-screen">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-stone-950/95 z-50 p-4 font-pixel select-none pack-overlay">
       <h2 className="text-2xl md:text-3xl text-rose-350 mb-1 drop-shadow-[0_0_10px_#fb7185]">{pendingRune.name}</h2>
       <p className="text-sm text-stone-400 mb-4 font-sans text-center max-w-md">
         Destenizden {pendingRune.targetCount} taşa kadar seçin ({selectedRuneTargets.length}/{pendingRune.targetCount} seçildi).
@@ -1003,7 +1003,7 @@ export default function ShopScreen({
         {/* Controls */}
         <div className="flex gap-3 shrink-0 flex-row items-center">
           <div className="rounded-xl border-4 border-amber-800 bg-linear-to-b from-amber-700 to-amber-900 text-center shadow-md flex-1 py-2">
-            <h2 className="font-black text-amber-50 font-pixel tracking-widest uppercase shop-neon text-2xl">
+            <h2 className="font-black text-amber-50 font-pixel tracking-widest uppercase shop-engraved text-2xl">
               MAĞAZA
             </h2>
             <p className="text-[12px] font-pixel text-amber-200/80 mt-1">
@@ -1148,7 +1148,7 @@ export default function ShopScreen({
       <div className="w-28 md:w-32 lg:w-40 flex flex-col justify-between shrink-0 h-full">
         {/* Carved wooden shop sign */}
         <div className="rounded-xl border-4 border-amber-800 bg-linear-to-b from-amber-700 to-amber-900 text-center shadow-md p-3">
-          <h2 className="font-black text-amber-50 font-pixel tracking-widest uppercase shop-neon text-xl md:text-2xl lg:text-3xl">
+          <h2 className="font-black text-amber-50 font-pixel tracking-widest uppercase shop-engraved text-xl md:text-2xl lg:text-3xl">
             MAĞAZA
           </h2>
           <p className="text-[12px] font-pixel text-amber-200/80 mt-1">

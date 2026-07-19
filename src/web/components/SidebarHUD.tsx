@@ -210,7 +210,7 @@ export default function SidebarHUD({
         </div>
       )}
 
-      {/* 2. Neon LCD Score Monitor */}
+      {/* 2. LCD Score Monitor */}
       <div
         className={[
           'lcd-panel p-4 text-center flex flex-col gap-2 shrink-0 transition relative overflow-hidden',
