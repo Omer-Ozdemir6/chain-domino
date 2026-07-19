@@ -976,7 +976,7 @@ export default function App() {
         />
       </div>
     );
-  } else {
+  } else if (game) {
     // Active Play/Shop Layout
     const canSubmitNow = Boolean(
       game &&
@@ -1511,6 +1511,12 @@ export default function App() {
         </div>
       );
     }
+  } else {
+    // Transient one-frame gap: `run.game` was already cleared by a reset() (e.g. "Ana Menüye
+    // Dön") but the delayedPhase-sync effect hasn't caught up to 'START_SCREEN' yet. Render
+    // nothing rather than crash on a null `game` — the effect fires immediately after this
+    // commit and the next render picks the START_SCREEN branch above.
+    content = null;
   }
 
   return (
