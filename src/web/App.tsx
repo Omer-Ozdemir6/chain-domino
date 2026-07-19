@@ -1490,6 +1490,7 @@ export default function App() {
               totalPurchases={run.totalPurchases}
               defeatedBy={run.defeatedBy}
               handTypePlayCounts={run.handTypePlayCounts}
+              seed={run.seed}
               onNewRun={handleNewRun}
               onMainMenu={handleRestart}
             />

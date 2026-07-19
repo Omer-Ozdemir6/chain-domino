@@ -738,4 +738,53 @@ describe('RunState', () => {
       expect(snap.game).toBeNull();
     });
   });
+
+  describe('seeded shuffle (anti save-scumming)', () => {
+    it('gives every fresh run its own seed', () => {
+      const runA = new RunState();
+      const runB = new RunState();
+      expect(runA.seed).not.toBe(runB.seed);
+    });
+
+    it('regenerates the seed on every initializeRun() call', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      const firstSeed = run.seed;
+      run.initializeRun('RED', 'WHITE');
+      expect(run.seed).not.toBe(firstSeed);
+    });
+
+    it('the same seed deals the exact same stone order for the same round/blind', () => {
+      const runA = new RunState();
+      runA.initializeRun('RED', 'WHITE');
+      runA.seed = 'FIXED-SEED';
+      runA.startBlind('SMALL');
+
+      const runB = new RunState();
+      runB.initializeRun('RED', 'WHITE');
+      runB.seed = 'FIXED-SEED';
+      runB.startBlind('SMALL');
+
+      // Compare pip values, not raw ids: customDeck stones get a random id suffix at build time
+      // (unrelated to the seeded shuffle) to stay unique when duplicate pip-pairs exist.
+      const pips = (stones: DominoStone[]) => stones.map((s) => [s.leftVal, s.rightVal]);
+      expect(pips(runA.game.hand)).toEqual(pips(runB.game.hand));
+      expect(pips(runA.game.stoneDeck.getStones())).toEqual(pips(runB.game.stoneDeck.getStones()));
+    });
+
+    it('a different seed deals a different stone order', () => {
+      const runA = new RunState();
+      runA.initializeRun('RED', 'WHITE');
+      runA.seed = 'SEED-ONE';
+      runA.startBlind('SMALL');
+
+      const runB = new RunState();
+      runB.initializeRun('RED', 'WHITE');
+      runB.seed = 'SEED-TWO';
+      runB.startBlind('SMALL');
+
+      const pips = (stones: DominoStone[]) => stones.map((s) => [s.leftVal, s.rightVal]);
+      expect(pips(runA.game.hand)).not.toEqual(pips(runB.game.hand));
+    });
+  });
 });

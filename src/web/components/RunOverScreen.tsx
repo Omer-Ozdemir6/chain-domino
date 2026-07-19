@@ -13,6 +13,7 @@ interface RunOverScreenProps {
   totalPurchases: number;
   defeatedBy: string;
   handTypePlayCounts: Record<HandType, number>;
+  seed: string;
   /** Jumps straight into a new run with the same deck/stake — no menu detour. */
   onNewRun: () => void;
   /** Returns to the title screen's deck/stake/chest picker. */
@@ -37,6 +38,7 @@ export default function RunOverScreen({
   totalPurchases,
   defeatedBy,
   handTypePlayCounts,
+  seed,
   onNewRun,
   onMainMenu,
 }: RunOverScreenProps) {
@@ -113,7 +115,7 @@ export default function RunOverScreen({
           <div className="flex justify-between items-center py-1.5">
             <span className="text-stone-400">Seed</span>
             <span className="text-sm text-stone-500 font-bold uppercase tracking-wider bg-stone-950 px-2 py-0.5 rounded">
-              DOMINO-RUN
+              {seed}
             </span>
           </div>
         </div>

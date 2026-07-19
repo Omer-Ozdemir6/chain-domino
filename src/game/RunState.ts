@@ -3,6 +3,7 @@ import { CHARMS } from '../models/CharmRegistry.js';
 import type { CharmDef, CharmHooks, RoundEndContext } from '../models/Charm.js';
 import type { DominoStone, TileModifier, HandType } from '../models/types.js';
 import { calculateScore, computeStoneChips, type ScoreCalculationResult, type PlayState } from '../engine/scoreCalculator.js';
+import { createSeededRandom, generateRunSeed } from '../models/rng.js';
 
 export type RunStatus = 'IN_PROGRESS' | 'WON' | 'LOST';
 export type RunPhase =
@@ -524,6 +525,11 @@ export const FUSION_RECIPES: readonly FusionRecipe[] = [
 export class RunState {
   readonly config: RunConfig;
   round = 1; // Round acts as "Ante" number here (1 to 8)
+  /** Set fresh by initializeRun() and never touched again for this run — every stone shuffle is
+   *  derived from it (+ round/blind), so reloading a save can never "re-roll" a bad deal: the
+   *  restored snapshot already holds the exact shuffle outcome, and a brand new run from the same
+   *  seed would always deal the same stones in the same order. */
+  seed = generateRunSeed();
   money: number;
   status: RunStatus = 'IN_PROGRESS';
   phase: RunPhase = 'START_SCREEN';
@@ -641,6 +647,7 @@ export class RunState {
   }
 
   initializeRun(deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', challengeId: string | null = null): void {
+    this.seed = generateRunSeed();
     this.selectedDeck = deck;
     this.selectedStake = stake;
     this.activeChallengeId = challengeId;
@@ -1376,7 +1383,7 @@ export class RunState {
       this.game.stoneDeck.getStones().length = 0;
       this.game.stoneDeck.discard(JSON.parse(JSON.stringify(this.customDeck)));
     }
-    this.game.stoneDeck.shuffle();
+    this.game.stoneDeck.shuffle(createSeededRandom(`${this.seed}-r${this.round}-${this.activeBlind}`));
     this.roundHooks = this.wireCharms();
     this.discardsLeft = (this.selectedDeck === 'RED' ? 3 : 2) + this.extraDiscardsPerRound + this.extraDiscardsNextRound;
     this.extraDiscardsNextRound = 0; // Consume the tag bonus
