@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { RunState, SHOP_UPGRADES, BOOSTER_PACKS, RUNE_PACKS, RUNE_POOL } from './RunState.js';
+import { RunState, SHOP_UPGRADES, BOOSTER_PACKS, RUNE_PACKS, RUNE_POOL, CHARM_POLISH_MAX_LEVEL, getCharmPolishCost } from './RunState.js';
 import { CHARMS } from '../models/CharmRegistry.js';
 import type { DominoStone } from '../models/types.js';
 
@@ -873,6 +873,105 @@ describe('RunState', () => {
       expect(run.status).toBe('LOST');
       expect(run.phase).toBe('RUN_OVER_SCREEN');
       expect(run.defeatedBy).toContain('Kumarbazın Son Şansı');
+    });
+  });
+
+  describe('Cila (charm polish)', () => {
+    it('defaults every charm to level 1', () => {
+      const run = new RunState();
+      expect(run.getCharmLevel('echo_chamber')).toBe(1);
+    });
+
+    it('rejects polishing outside the shop, an unowned charm, or without enough money', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.ownedCharmIds = ['echo_chamber'];
+      run.startBlind('SMALL'); // phase = PLAYING, not SHOP
+      expect(run.polishCharm('echo_chamber').ok).toBe(false);
+
+      run.phase = 'SHOP';
+      expect(run.polishCharm('not_owned').ok).toBe(false);
+
+      run.money = 0;
+      expect(run.polishCharm('echo_chamber').ok).toBe(false);
+    });
+
+    it('spends money and raises the level by one, up to the max', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.ownedCharmIds = ['echo_chamber'];
+      run.phase = 'SHOP';
+      run.money = 100;
+
+      const firstCost = getCharmPolishCost(1);
+      const res = run.polishCharm('echo_chamber');
+      expect(res.ok).toBe(true);
+      expect(run.getCharmLevel('echo_chamber')).toBe(2);
+      expect(run.money).toBe(100 - firstCost);
+
+      for (let i = run.getCharmLevel('echo_chamber'); i < CHARM_POLISH_MAX_LEVEL; i++) {
+        expect(run.polishCharm('echo_chamber').ok).toBe(true);
+      }
+      expect(run.getCharmLevel('echo_chamber')).toBe(CHARM_POLISH_MAX_LEVEL);
+      expect(run.polishCharm('echo_chamber').ok).toBe(false); // already maxed
+    });
+
+    it('scales an onCalculate charm\'s own contribution by +20% per level', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.ownedCharmIds = ['echo_chamber']; // "+2 chips per stone in the chain"
+      run.startBlind('SMALL');
+
+      const stones = [stone('a', 1, 2), stone('b', 3, 4)];
+      const level1 = run.previewScore(stones);
+
+      run.phase = 'SHOP';
+      run.money = 100;
+      expect(run.polishCharm('echo_chamber').ok).toBe(true); // now level 2
+      run.phase = 'PLAYING';
+      const level2 = run.previewScore(stones);
+
+      // echo_chamber alone contributes chain.length*2 = 4 chips at level 1; level 2's factor is
+      // 1 + (2-1)*0.2 = 1.2, so its delta becomes 4.8 -- 0.8 more than at level 1.
+      expect(level2.chips - level1.chips).toBeCloseTo(0.8, 5);
+    });
+
+    it("scales an onRoundEnd charm's own payout by +20% per level", () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.ownedCharmIds = ['flat_bonus_common']; // always +$3
+      run.startBlind('SMALL');
+      run.act((g) => {
+        g.score = run.getBlindTarget('SMALL');
+      });
+      run.act((g) => g.skipTurn());
+      const line1 = run.lastRoundReward?.lines.find((l) => l.label === 'Basit Zafer');
+      expect(line1?.amount).toBe(3);
+
+      run.proceedToShop();
+      run.money = 100;
+      expect(run.polishCharm('flat_bonus_common').ok).toBe(true); // level 2, factor 1.2
+      run.leaveShop();
+      run.startBlind('BIG');
+      run.act((g) => {
+        g.score = run.getBlindTarget('BIG');
+      });
+      run.act((g) => g.skipTurn());
+      const line2 = run.lastRoundReward?.lines.find((l) => l.label === 'Basit Zafer');
+      expect(line2?.amount).toBe(4); // round(3 * 1.2) = 4
+    });
+
+    it('selling a polished charm clears its level', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.ownedCharmIds = ['echo_chamber'];
+      run.phase = 'SHOP';
+      run.money = 100;
+      run.polishCharm('echo_chamber');
+      expect(run.getCharmLevel('echo_chamber')).toBe(2);
+
+      run.sellCharm('echo_chamber');
+      expect(run.getCharmLevel('echo_chamber')).toBe(1);
     });
   });
 });

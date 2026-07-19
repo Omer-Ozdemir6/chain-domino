@@ -1,6 +1,6 @@
 import type { CharmDef } from '../../models/Charm.js';
 import type { ShopOffer, SkipTag, RuneOptionDef } from '../../game/RunState.js';
-import { FUSION_RECIPES } from '../../game/RunState.js';
+import { FUSION_RECIPES, CHARM_POLISH_MAX_LEVEL, getCharmPolishCost } from '../../game/RunState.js';
 import { CHARMS } from '../../models/CharmRegistry.js';
 import { renderCharmIcon } from './CharmBar.js';
 import type { DominoStone } from '../../models/types.js';
@@ -68,6 +68,9 @@ interface ShopScreenProps {
   fusedCharmIds?: string[];
   /** Sell an owned charm for half its cost back, freeing its slot. Only actionable in the shop. */
   onSell?: (charmId: string) => void;
+  /** Cila (polish): permanently scales up an owned charm's own effect by one level, for money. */
+  onPolish?: (charmId: string) => void;
+  charmLevels?: Record<string, number>;
   activeTag?: SkipTag | null;
   /** Rün Kesesi (Rune Pack) flow: buy -> pick 1 of 3 -> pick K existing customDeck stones -> apply. */
   runeOffers: RuneOptionDef[];
@@ -299,6 +302,8 @@ export default function ShopScreen({
   onFuse,
   fusedCharmIds,
   onSell,
+  onPolish,
+  charmLevels = {},
   activeTag,
   runeOffers,
   onChooseRune,
@@ -961,6 +966,9 @@ export default function ShopScreen({
       </span>
       <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
         {ownedCharms.map((charm) => {
+          const level = charmLevels[charm.id] ?? 1;
+          const isMaxLevel = level >= CHARM_POLISH_MAX_LEVEL;
+          const polishCost = getCharmPolishCost(level);
           const itemDetails = {
             name: charm.name,
             type: 'Tılsım',
@@ -977,8 +985,29 @@ export default function ShopScreen({
               onClick={(e) => handleCardClick(e, itemDetails)}
               className="group flex items-center gap-1.5 pl-1.5 pr-1.5 py-1 rounded-lg border border-stone-800 bg-stone-900/40 text-stone-400 hover:border-amber-500/60 hover:bg-amber-950/10 transition cursor-help select-none"
             >
-              <span className="text-sm shrink-0 leading-none">{renderCharmIcon(charm.id)}</span>
+              <span className="text-sm shrink-0 leading-none relative">
+                {renderCharmIcon(charm.id)}
+                {level > 1 && (
+                  <span className="absolute -top-1.5 -right-1.5 text-[8px] font-pixel font-black bg-amber-500 text-stone-950 rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none">
+                    {level}
+                  </span>
+                )}
+              </span>
               <span className="text-[11px] max-w-24 truncate">{charm.name}</span>
+              {onPolish && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isMaxLevel) onPolish(charm.id);
+                  }}
+                  disabled={isMaxLevel}
+                  title={isMaxLevel ? 'En üst seviyede' : `Cilala: $${polishCost} (Lv.${level} → Lv.${level + 1})`}
+                  className="text-[10px] font-pixel font-bold text-sky-400 hover:text-sky-200 shrink-0 px-1 rounded hover:bg-sky-950/40 transition disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                >
+                  {isMaxLevel ? '★' : `🔨$${polishCost}`}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={(e) => {

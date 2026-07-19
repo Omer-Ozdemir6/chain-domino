@@ -712,6 +712,8 @@ interface CharmBarProps {
   /** Bu tur zaten kullanılmış interactive tılsımlar — griye çevrilip tıklanamaz hale gelir. */
   activatedCharmIds?: readonly string[];
   charmDurability?: Record<string, number>;
+  /** Cila (polish) levels — 1 (default) through CHARM_POLISH_MAX_LEVEL; only shown above 1. */
+  charmLevels?: Record<string, number>;
 }
 
 export default function CharmBar({
@@ -724,6 +726,7 @@ export default function CharmBar({
   armedCharmId = null,
   activatedCharmIds = [],
   charmDurability = {},
+  charmLevels = {},
 }: CharmBarProps) {
   return (
     <div className="flex flex-col gap-2 relative z-30">
@@ -860,6 +863,13 @@ export default function CharmBar({
                   >
                     <span>⏳</span>
                     <span>{charmDurability[charm.id]}</span>
+                  </div>
+                )}
+
+                {/* Cila (polish) level badge — only shown once actually upgraded past level 1. */}
+                {(charmLevels[charm.id] ?? 1) > 1 && (
+                  <div className="absolute top-2 right-2 z-10 w-4 h-4 rounded-full bg-sky-500 border border-sky-300 text-stone-950 font-pixel text-[9px] font-black flex items-center justify-center shadow-md">
+                    {charmLevels[charm.id]}
                   </div>
                 )}
 

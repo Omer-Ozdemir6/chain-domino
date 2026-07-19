@@ -875,6 +875,17 @@ export default function App() {
     }
   }
 
+  function handlePolish(charmId: string): void {
+    const def = CHARMS.find((c) => c.id === charmId);
+    const res = shop((r) => r.polishCharm(charmId));
+    if (res.ok) {
+      playSound('chime');
+      setMessage(`${def?.name ?? 'Tılsım'} cilalandı! (Lv.${run.getCharmLevel(charmId)})`);
+    } else {
+      setMessage('Hata: ' + res.error);
+    }
+  }
+
   function handleFuse(charmAId: string, charmBId: string): void {
     const res = shop((r) => r.attemptFusion(charmAId, charmBId));
     if (!res.ok) {
@@ -972,6 +983,8 @@ export default function App() {
           onFuse={handleFuse}
           fusedCharmIds={run.fusedCharmIds}
           onSell={handleSell}
+          onPolish={handlePolish}
+          charmLevels={run.charmLevel}
           activeTag={run.activeTag}
           runeOffers={run.runeOffers}
           onChooseRune={handleChooseRune}
@@ -1087,6 +1100,7 @@ export default function App() {
                   onActivateCharm={handleActivateCharm}
                   armedCharmId={armedCharmId}
                   charmDurability={run.charmDurability}
+                  charmLevels={run.charmLevel}
                   activatedCharmIds={activatedCharmIdsThisTurn}
                 />
               </div>
@@ -1297,6 +1311,7 @@ export default function App() {
                   armedCharmId={armedCharmId}
                   activatedCharmIds={activatedCharmIdsThisTurn}
                   charmDurability={run.charmDurability}
+                  charmLevels={run.charmLevel}
                 />
               </div>
               

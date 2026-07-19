@@ -102,6 +102,16 @@ export interface RunStateSnapshot {
 // at exactly 2.5x, `Small(ante N+1) == Boss(ante N)` (0.6 × 2.5 == 1.5), so two DIFFERENT
 // blinds on two DIFFERENT antes kept landing on the identical target number. 2.3x keeps the same
 // overall growth shape without that coincidence ever recurring.
+/** Cila (polish) tuning: level 1 is the default/base (every charm starts here, unlisted in
+ *  charmLevel), each level above it scales that charm's own onCalculate/onRoundEnd *delta* by
+ *  +20% (so level 5 = ×1.8), and costs $3 more than the previous polish did. */
+export const CHARM_POLISH_MAX_LEVEL = 5;
+export const CHARM_POLISH_BASE_COST = 4;
+
+export function getCharmPolishCost(currentLevel: number): number {
+  return CHARM_POLISH_BASE_COST + (currentLevel - 1) * 3;
+}
+
 export const ANTE_TARGETS: Record<number, number> = {
   1: 300,
   2: 690,
@@ -593,6 +603,10 @@ export class RunState {
   perishedCharmMessage: string | null = null;
   /** Set the moment rollGamblersLastStand() resolves, read once by the UI, then cleared. */
   lastGambleResult: GamblersLastStandResult | null = null;
+  /** Cila (polish) levels — 1 (default, unlisted) through CHARM_POLISH_MAX_LEVEL. Scales the
+   *  *delta* each polished charm's onCalculate/onRoundEnd hook contributes, applied generically
+   *  in wireCharms() so no per-charm special-casing is needed. */
+  charmLevel: Record<string, number> = {};
 
   // Run Setup selections
   selectedDeck: 'RED' | 'BLUE' | 'YELLOW' = 'RED';
@@ -704,6 +718,7 @@ export class RunState {
     this.isEndless = false;
     this.charmDurability = {};
     this.perishedCharmMessage = null;
+    this.charmLevel = {};
 
     // "Tılsımsız Sefer": no charm slots at all — the shop's own slotsFull check (0 >= 0) then
     // naturally disables every charm/rune "SATIN AL" button without needing a separate guard.
@@ -1095,9 +1110,32 @@ export class RunState {
     const refund = Math.floor(def.cost / 2);
     this.ownedCharmIds.splice(index, 1);
     delete this.charmDurability[charmId]; // Clean durability state
+    delete this.charmLevel[charmId]; // Polish investment is lost along with the charm itself
     this.resetRerollCost(); // Update reroll cost (removes discount if small_number_love is sold)
     this.money += refund;
     return { ok: true, refund };
+  }
+
+  getCharmLevel(charmId: string): number {
+    return this.charmLevel[charmId] ?? 1;
+  }
+
+  /** Spends money to permanently scale up an owned charm's own effect by one polish level. */
+  polishCharm(charmId: string): ShopActionResult {
+    if (this.phase !== 'SHOP') return { ok: false, error: 'Cilalama sadece mağazada yapılabilir.' };
+    if (!this.ownedCharmIds.includes(charmId)) return { ok: false, error: 'Bu tılsıma sahip değilsin.' };
+
+    const level = this.getCharmLevel(charmId);
+    if (level >= CHARM_POLISH_MAX_LEVEL) return { ok: false, error: 'Bu tılsım zaten en üst seviyede.' };
+
+    const cost = getCharmPolishCost(level);
+    if (this.money < cost) return { ok: false, error: 'Yeterli paran yok.' };
+
+    this.money -= cost;
+    this.charmLevel[charmId] = level + 1;
+    // A newly-polished charm's hooks need rebuilding to pick up the new level's scaling.
+    this.roundHooks = this.wireCharms();
+    return { ok: true };
   }
 
   /** Apply a starting chest bonus right after initializeRun(). */
@@ -1560,7 +1598,32 @@ export class RunState {
     return this.ownedCharmIds
       .map((id) => CHARMS.find((c) => c.id === id))
       .filter((c): c is CharmDef => Boolean(c))
-      .map((c) => c.createHooks(hookCtx));
+      .map((c) => this.applyPolishScaling(c.createHooks(hookCtx), this.getCharmLevel(c.id)));
+  }
+
+  /** Scales a polished charm's own numeric *contribution* (not the whole state/context it's
+   *  handed) by its level — generic over every charm's hook implementation, so polish needs no
+   *  per-charm special-casing. onActivate/onSubmitFail are mechanical (split a stone, rewind a
+   *  turn) rather than numeric, so they're left untouched regardless of level. */
+  private applyPolishScaling(hooks: CharmHooks, level: number): CharmHooks {
+    if (level <= 1) return hooks;
+    const factor = 1 + (level - 1) * 0.2;
+    const scaled: CharmHooks = { ...hooks };
+    if (hooks.onCalculate) {
+      const original = hooks.onCalculate;
+      scaled.onCalculate = (state: PlayState, chain: DominoStone[]) => {
+        const after = original(state, chain);
+        return {
+          chips: state.chips + (after.chips - state.chips) * factor,
+          mult: state.mult + (after.mult - state.mult) * factor,
+        };
+      };
+    }
+    if (hooks.onRoundEnd) {
+      const original = hooks.onRoundEnd;
+      scaled.onRoundEnd = (ctx: RoundEndContext) => Math.round(original(ctx) * factor);
+    }
+    return scaled;
   }
   /** The activeCharms array submitChain()'s boss override builds, factored out so previewScore()
    *  can mirror it exactly without risking drift from what actually gets scored. */
