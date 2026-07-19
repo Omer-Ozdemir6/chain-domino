@@ -78,7 +78,7 @@ interface ShopScreenProps {
   onApplyRune: (stoneIds: string[]) => void;
 }
 
-const RARITY_BORDER: Record<CharmDef['rarity'], string> = {
+export const RARITY_BORDER: Record<CharmDef['rarity'], string> = {
   COMMON: 'border-stone-700 bg-stone-950/60 shadow-[inset_0_1px_3px_rgba(255,255,255,0.05)]',
   UNCOMMON: 'border-teal-700/80 bg-teal-950/30',
   RARE: 'border-red-800/80 bg-red-950/30',
@@ -87,7 +87,7 @@ const RARITY_BORDER: Record<CharmDef['rarity'], string> = {
 
 const CURSE_BORDER = 'border-rose-800 bg-rose-950/30';
 
-const GEM_CLASS: Record<CharmDef['rarity'], string> = {
+export const GEM_CLASS: Record<CharmDef['rarity'], string> = {
   COMMON: 'bg-stone-500 shadow-[0_0_8px_#78716c]',
   UNCOMMON: 'bg-teal-400 shadow-[0_0_8px_#2dd4bf]',
   RARE: 'bg-rose-500 shadow-[0_0_8px_#f43f5e]',
@@ -95,7 +95,7 @@ const GEM_CLASS: Record<CharmDef['rarity'], string> = {
 };
 const CURSE_GEM = 'bg-fuchsia-500 shadow-[0_0_10px_#d946ef] animate-pulse';
 
-function renderVoucherIcon(id: string) {
+export function renderVoucherIcon(id: string) {
   if (id === 'voucher_bargaining_power') {
     // Two coin-purses on a scale, tipped toward the fuller one — haggling the reroll price down.
     return (

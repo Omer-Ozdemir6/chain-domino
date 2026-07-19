@@ -2,6 +2,7 @@ import { useReducer, useRef } from 'react';
 import { RunState, type RunConfig } from '../../game/RunState.js';
 import type { GameState } from '../../game/GameState.js';
 import { loadSavedRun, saveRun } from '../persistence.js';
+import { recordDiscoveries } from '../collection.js';
 
 /**
  * RunState is a mutable class, not immutable data. This hook keeps a single stable
@@ -15,7 +16,10 @@ import { loadSavedRun, saveRun } from '../persistence.js';
 export function useRunState(config?: Partial<RunConfig>) {
   const [, bump] = useReducer((c: number) => c + 1, 0);
   const ref = useRef<RunState | null>(null);
-  if (!ref.current) ref.current = loadSavedRun() ?? new RunState(config);
+  if (!ref.current) {
+    ref.current = loadSavedRun() ?? new RunState(config);
+    recordDiscoveries(ref.current);
+  }
   const run = ref.current;
 
   /** Mutates the current round's GameState (place/undo/submit/skip). */
@@ -30,6 +34,7 @@ export function useRunState(config?: Partial<RunConfig>) {
   function shop<T>(fn: (run: RunState) => T): T {
     const result = fn(run);
     saveRun(run);
+    recordDiscoveries(run);
     bump();
     return result;
   }

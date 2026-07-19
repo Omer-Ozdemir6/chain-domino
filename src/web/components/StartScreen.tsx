@@ -3,6 +3,7 @@ import Tile from './Tile.js';
 import { STARTING_CHESTS } from '../../game/RunState.js';
 import type { ChestId } from '../../game/RunState.js';
 import { playSound } from './SoundSynth.js';
+import CollectionScreen from './CollectionScreen.js';
 
 // The domino-tile pip-lighting boot moment that used to be its own full-screen intro page now
 // plays right here on the main menu itself: a 6|3 tile's 9 pips ignite one at a time out of the
@@ -26,7 +27,7 @@ interface StartScreenProps {
   onStart: (deck: 'RED' | 'BLUE' | 'YELLOW', stake: 'WHITE' | 'RED', chestId: ChestId | null, challengeId?: string | null) => void;
 }
 
-type TabState = 'MAIN' | 'DECK_SELECT' | 'STAKE_SELECT' | 'CHALLENGES' | 'SETUP';
+type TabState = 'MAIN' | 'DECK_SELECT' | 'STAKE_SELECT' | 'CHALLENGES' | 'SETUP' | 'COLLECTION';
 
 // ── Floating domino background particles ──────────────────────
 const FLOATING_DOMINOES = [
@@ -317,6 +318,18 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           <span className="font-pixel text-base font-black text-fuchsia-300 tracking-wider">MÜCADELE</span>
           <span className="text-[11px] text-fuchsia-500/70 font-bold leading-tight text-center">4 Mücadele Aktif</span>
         </button>
+
+        {/* KOLEKSİYON Card */}
+        <button
+          type="button"
+          onClick={() => setTab('COLLECTION')}
+          className="menu-card animate-card-deal flex flex-col items-center gap-2.5 w-36 md:w-40 p-4 rounded-2xl border-2 border-amber-700/50 bg-gradient-to-b from-amber-950/50 to-stone-950/80 cursor-pointer select-none"
+          style={{ animationDelay: '320ms', '--glow': 'rgba(217,119,6,0.3)' } as React.CSSProperties}
+        >
+          <span className="text-4xl">📖</span>
+          <span className="font-pixel text-base font-black text-amber-300 tracking-wider">KOLEKSİYON</span>
+          <span className="text-[11px] text-amber-500/70 font-bold leading-tight text-center">Keşfedilenler</span>
+        </button>
       </div>
       )}
 
@@ -514,6 +527,9 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           </div>
         </div>
       )}
+
+      {/* ── COLLECTION ── */}
+      {tab === 'COLLECTION' && <CollectionScreen onBack={() => setTab('MAIN')} />}
 
       {/* ── SETUP & START CONFIRM ── */}
       {tab === 'SETUP' && (
