@@ -14,6 +14,7 @@ import DeckPile from './components/DeckPile.js';
 import ShopScreen, { renderUpgradeIcon } from './components/ShopScreen.js';
 import RoundRewardScreen from './components/RoundRewardScreen.js';
 import RunOverScreen from './components/RunOverScreen.js';
+import GamblersLastStandScreen from './components/GamblersLastStandScreen.js';
 import StartScreen from './components/StartScreen.js';
 import BlindSelectScreen from './components/BlindSelectScreen.js';
 import UnlockPopup from './components/UnlockPopup.js';
@@ -1504,6 +1505,18 @@ export default function App() {
           <div className={overlayClass}>
             <UnlockPopup onContinue={handleRestart} onEndless={handleEndless} />
           </div>
+        </div>
+      );
+    } else if (delayedPhase === 'GAMBLERS_LAST_STAND') {
+      content = (
+        <div className="w-full h-full relative">
+          {content}
+          <GamblersLastStandScreen
+            money={run.money}
+            shortfall={Math.max(0, run.getBlindTarget(run.activeBlind!) - game.score)}
+            result={run.lastGambleResult}
+            onRoll={() => shop((r) => r.rollGamblersLastStand())}
+          />
         </div>
       );
     }

@@ -14,7 +14,19 @@ export type RunPhase =
   | 'ROUND_REWARD'
   | 'SHOP'
   | 'RUN_OVER_SCREEN'
-  | 'CONGRATS_UNLOCK';
+  | 'CONGRATS_UNLOCK'
+  | 'GAMBLERS_LAST_STAND';
+
+/** Result of a resolved "Kumarbazın Son Şansı" (Gambler's Last Stand) roll — shown once by the
+ *  UI, then cleared. */
+export interface GamblersLastStandResult {
+  die1: number;
+  die2: number;
+  wager: number;
+  scoreGained: number;
+  shortfall: number;
+  success: boolean;
+}
 
 export interface SkipTag {
   id: string;
@@ -579,6 +591,8 @@ export class RunState {
   isEndless = false;
   charmDurability: Record<string, number> = {};
   perishedCharmMessage: string | null = null;
+  /** Set the moment rollGamblersLastStand() resolves, read once by the UI, then cleared. */
+  lastGambleResult: GamblersLastStandResult | null = null;
 
   // Run Setup selections
   selectedDeck: 'RED' | 'BLUE' | 'YELLOW' = 'RED';
@@ -824,6 +838,12 @@ export class RunState {
         const rescue = this.rescueUsedThisRound ? null : this.tryOnSubmitFailRescue();
         if (rescue) {
           this.rescueUsedThisRound = true;
+        } else if (this.money > 0) {
+          // Kumarbazın Son Şansı: broke players skip straight to LOST below (nothing to wager) —
+          // everyone else gets one dramatic dice-roll chance to buy their way to the target before
+          // the run is actually declared over.
+          this.lastGambleResult = null;
+          this.phase = 'GAMBLERS_LAST_STAND';
         } else {
           this.status = 'LOST';
           this.defeatedBy =
@@ -868,6 +888,37 @@ export class RunState {
       return this.lastRescueCharmName;
     }
     return null;
+  }
+
+  /** Wagers every dollar in the wallet on two dice — the "Kumarbazın Son Şansı" gamble offered
+   *  once a round is otherwise unrecoverably lost (see the GAMBLERS_LAST_STAND branch in act()).
+   *  Each die pip is worth `wager` points, so betting more buys better odds; the wager is gone
+   *  either way. Success clears the target exactly and resolves the round as a normal win. */
+  rollGamblersLastStand(): ShopActionResult {
+    if (this.phase !== 'GAMBLERS_LAST_STAND') return { ok: false, error: 'Şu anda son şans mevcut değil.' };
+
+    const wager = this.money;
+    const die1 = 1 + Math.floor(Math.random() * 6);
+    const die2 = 1 + Math.floor(Math.random() * 6);
+    const target = this.getBlindTarget(this.activeBlind!);
+    const shortfall = Math.max(0, target - this.game.score);
+    const scoreGained = (die1 + die2) * Math.max(1, wager);
+    const success = scoreGained >= shortfall;
+
+    this.money = 0;
+    this.lastGambleResult = { die1, die2, wager, scoreGained, shortfall, success };
+
+    if (success) {
+      this.game.score = target;
+      this.game.status = 'WON';
+      this.game.lossReason = null;
+      this.completeRound();
+    } else {
+      this.status = 'LOST';
+      this.defeatedBy = '🎲 Kumarbazın Son Şansı — Zarlar seni terk etti!';
+      this.phase = 'RUN_OVER_SCREEN';
+    }
+    return { ok: true };
   }
 
   /** Turda bir kez, oyuncunun tıklayarak elindeki bir taşa uyguladığı manuel tılsım etkisi. */

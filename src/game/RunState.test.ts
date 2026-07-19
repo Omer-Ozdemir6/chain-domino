@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { RunState, SHOP_UPGRADES, BOOSTER_PACKS, RUNE_PACKS, RUNE_POOL } from './RunState.js';
 import { CHARMS } from '../models/CharmRegistry.js';
 import type { DominoStone } from '../models/types.js';
@@ -785,6 +785,94 @@ describe('RunState', () => {
 
       const pips = (stones: DominoStone[]) => stones.map((s) => [s.leftVal, s.rightVal]);
       expect(pips(runA.game.hand)).not.toEqual(pips(runB.game.hand));
+    });
+  });
+
+  describe("Kumarbazın Son Şansı (Gambler's Last Stand)", () => {
+    function forceUnrecoverableLoss(run: RunState) {
+      run.startBlind('SMALL');
+      run.game.hand = [stone('s1', 1, 1)];
+      run.act((g) => g.playStone('s1'));
+      run.game.turn = 6; // RED deck's last turn (maxTurns = 6)
+      run.act((g) => g.submitChain());
+    }
+
+    it('offers the gamble instead of an immediate loss when the wallet still has money', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      expect(run.money).toBeGreaterThan(0);
+
+      forceUnrecoverableLoss(run);
+
+      expect(run.phase).toBe('GAMBLERS_LAST_STAND');
+      expect(run.status).toBe('IN_PROGRESS');
+    });
+
+    it('skips straight to a real loss when the wallet is already empty', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.startBlind('SMALL');
+      run.money = 0;
+      run.game.hand = [stone('s1', 1, 1)];
+      run.act((g) => g.playStone('s1'));
+      run.game.turn = 6;
+      run.act((g) => g.submitChain());
+
+      expect(run.phase).toBe('RUN_OVER_SCREEN');
+      expect(run.status).toBe('LOST');
+    });
+
+    it('rejects rolling when the phase is not GAMBLERS_LAST_STAND', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      run.startBlind('SMALL');
+      expect(run.rollGamblersLastStand().ok).toBe(false);
+    });
+
+    it('a high enough roll rescues the round: money is wagered, target is cleared, round completes', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      forceUnrecoverableLoss(run);
+      expect(run.phase).toBe('GAMBLERS_LAST_STAND');
+      const wager = run.money;
+      run.game.score = run.getBlindTarget('SMALL') - 5; // tiny shortfall, any decent roll clears it
+
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99); // both dice land on 6
+      const result = run.rollGamblersLastStand();
+      randomSpy.mockRestore();
+
+      expect(result.ok).toBe(true);
+      expect(run.lastGambleResult).toEqual({
+        die1: 6,
+        die2: 6,
+        wager,
+        scoreGained: 12 * wager,
+        shortfall: 5,
+        success: true,
+      });
+      // The wager itself was consumed (money hit 0 the instant the dice landed), but a rescued
+      // round still completes normally afterward and pays out its own blind reward on top.
+      expect(run.status).toBe('IN_PROGRESS');
+      expect(run.phase).toBe('ROUND_REWARD');
+      expect(run.lastRoundReward?.moneyBefore).toBe(0);
+    });
+
+    it('a low roll against a large shortfall ends the run for real', () => {
+      const run = new RunState();
+      run.initializeRun('RED', 'WHITE');
+      forceUnrecoverableLoss(run);
+      expect(run.phase).toBe('GAMBLERS_LAST_STAND');
+
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0); // both dice land on 1
+      const result = run.rollGamblersLastStand();
+      randomSpy.mockRestore();
+
+      expect(result.ok).toBe(true);
+      expect(run.lastGambleResult?.success).toBe(false);
+      expect(run.money).toBe(0);
+      expect(run.status).toBe('LOST');
+      expect(run.phase).toBe('RUN_OVER_SCREEN');
+      expect(run.defeatedBy).toContain('Kumarbazın Son Şansı');
     });
   });
 });
