@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GameStatus } from '../../game/GameState.js';
 import type { HandType } from '../../models/types.js';
 import { BOSS_BLINDS } from '../../game/RunState.js';
+import { CHALLENGES } from '../../game/challenges.js';
 import SettingsButton from './SettingsButton.js';
 
 /** True for a brief window right after `value` drops — drives a floating "-1" callout beside a
@@ -68,6 +69,9 @@ interface SidebarHUDProps {
   overallRound?: number;
   maxOverallRounds?: number;
   layout?: 'sidebar' | 'topbar';
+  /** Set only when this run was started under a StartScreen Mücadele — surfaced here so its rule
+   *  stays visible mid-run instead of being forgotten the moment the run actually begins. */
+  activeChallengeId?: string | null;
 }
 
 const BLIND_BADGE: Record<'SMALL' | 'BIG' | 'BOSS', { label: string; className: string }> = {
@@ -119,6 +123,7 @@ export default function SidebarHUD({
   handScoreFlyUp = false,
   overallRound = 0,
   maxOverallRounds = 0,
+  activeChallengeId = null,
 }: SidebarHUDProps) {
   // Counts DOWN from maxTurns instead of the raw (1-indexed, and briefly maxTurns+1 the instant
   // the final turn is spent) `turn` counter — "6 hamle kaldı, sonra 5..." reads far more clearly
@@ -126,6 +131,7 @@ export default function SidebarHUD({
   const turnsLeft = Math.max(0, maxTurns - turn + 1);
   const turnFlash = useDecrementFlash(turnsLeft);
   const discardFlash = useDecrementFlash(discardsLeft);
+  const activeChallenge = activeChallengeId ? CHALLENGES.find((c) => c.id === activeChallengeId) ?? null : null;
   const activeBoss = activeBossId ? BOSS_BLINDS.find((b) => b.id === activeBossId) ?? null : null;
   const bossWarning = activeBoss ? activeBoss.ruleLabel : null;
   const bossTierColor = activeBoss?.tier === 'LETHAL'
@@ -186,6 +192,14 @@ export default function SidebarHUD({
             <span className="block text-[12px] text-stone-500 uppercase font-bold leading-none">Cüzdan</span>
             <span className="font-pixel text-base text-emerald-400">${money}</span>
           </div>
+          {activeChallenge && (
+            <div
+              title={`${activeChallenge.name}: ${activeChallenge.rule}`}
+              className="border border-fuchsia-700/50 rounded bg-fuchsia-950/20 px-2 py-1 flex items-center justify-center text-lg shrink-0"
+            >
+              {activeChallenge.icon}
+            </div>
+          )}
           <SettingsButton compact />
         </div>
       </div>
@@ -212,6 +226,19 @@ export default function SidebarHUD({
       {activeBlind && (
         <div className={`rounded-xl border py-2 text-center font-pixel text-sm lg:text-base font-black uppercase tracking-wider text-white shrink-0 ${BLIND_BADGE[activeBlind].className}`}>
           {BLIND_BADGE[activeBlind].label}
+        </div>
+      )}
+
+      {activeChallenge && (
+        <div
+          title={activeChallenge.description}
+          className="rounded-xl border border-fuchsia-700/50 bg-fuchsia-950/20 px-2.5 py-1.5 flex items-center gap-2 shrink-0"
+        >
+          <span className="text-lg shrink-0">{activeChallenge.icon}</span>
+          <div className="min-w-0">
+            <span className="block text-[10px] font-bold text-fuchsia-400 uppercase tracking-widest leading-none">{activeChallenge.name}</span>
+            <span className="block text-[11px] text-stone-400 leading-tight mt-0.5">{activeChallenge.rule}</span>
+          </div>
         </div>
       )}
 

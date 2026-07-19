@@ -1,6 +1,7 @@
-import { useReducer, useRef } from 'react';
+import { useReducer, useRef, useState } from 'react';
 import { RunState, type RunConfig } from '../../game/RunState.js';
 import type { GameState } from '../../game/GameState.js';
+import type { UnlockDef } from '../../game/unlocks.js';
 import { loadSavedRun, saveRun } from '../persistence.js';
 import { recordDiscoveries, evaluateUnlocks, loadUnlockedIds } from '../collection.js';
 
@@ -16,6 +17,7 @@ import { recordDiscoveries, evaluateUnlocks, loadUnlockedIds } from '../collecti
 export function useRunState(config?: Partial<RunConfig>) {
   const [, bump] = useReducer((c: number) => c + 1, 0);
   const ref = useRef<RunState | null>(null);
+  const [newlyUnlocked, setNewlyUnlocked] = useState<UnlockDef[]>([]);
   if (!ref.current) {
     ref.current = loadSavedRun() ?? new RunState(config);
     ref.current.unlockedIds = loadUnlockedIds();
@@ -27,7 +29,8 @@ export function useRunState(config?: Partial<RunConfig>) {
   function act<T>(fn: (game: GameState) => T): T {
     const result = run.act(fn);
     saveRun(run);
-    evaluateUnlocks(run);
+    const fresh = evaluateUnlocks(run);
+    if (fresh.length > 0) setNewlyUnlocked((prev) => [...prev, ...fresh]);
     bump();
     return result;
   }
@@ -37,7 +40,8 @@ export function useRunState(config?: Partial<RunConfig>) {
     const result = fn(run);
     saveRun(run);
     recordDiscoveries(run);
-    evaluateUnlocks(run);
+    const fresh = evaluateUnlocks(run);
+    if (fresh.length > 0) setNewlyUnlocked((prev) => [...prev, ...fresh]);
     bump();
     return result;
   }
@@ -55,5 +59,10 @@ export function useRunState(config?: Partial<RunConfig>) {
     bump();
   }
 
-  return { run, act, shop, reset };
+  /** Pops the front of the newly-unlocked queue — called once App.tsx has shown its toast for it. */
+  function clearNewlyUnlocked(): void {
+    setNewlyUnlocked((prev) => prev.slice(1));
+  }
+
+  return { run, act, shop, reset, newlyUnlocked, clearNewlyUnlocked };
 }

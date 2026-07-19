@@ -96,4 +96,16 @@ describe('unlock gating (collection.ts + RunState shop pool)', () => {
 
     expect(runB.unlockedIds.has('high_five')).toBe(true);
   });
+
+  it('evaluateUnlocks returns exactly the defs newly met this call, empty after that', () => {
+    const run = new RunState();
+    run.initializeRun('RED', 'WHITE');
+    run.round = 5; // meets high_five's condition
+
+    const first = evaluateUnlocks(run);
+    expect(first.map((d) => d.id)).toEqual(['high_five']);
+
+    const second = evaluateUnlocks(run); // already unlocked — nothing new this time
+    expect(second).toEqual([]);
+  });
 });

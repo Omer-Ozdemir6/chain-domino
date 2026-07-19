@@ -1,5 +1,5 @@
 import type { RunState } from '../game/RunState.js';
-import { UNLOCKS } from '../game/unlocks.js';
+import { UNLOCKS, type UnlockDef } from '../game/unlocks.js';
 
 const COLLECTION_KEY = 'chain-domino-collection-v1';
 
@@ -43,24 +43,29 @@ export function loadUnlockedIds(): Set<string> {
 /**
  * Checks every UNLOCKS condition against the current run; any newly-met one is added to
  * `run.unlockedIds` (so it's available in this run's own later shops too) and persisted
- * immediately, so it stays unlocked forever even if the tab closes right after.
+ * immediately, so it stays unlocked forever even if the tab closes right after. Returns exactly
+ * the defs that were newly met this call (empty array on a call that unlocked nothing new) so the
+ * caller can show a "you just unlocked X" notification instead of this happening silently.
  */
-export function evaluateUnlocks(run: RunState): void {
+export function evaluateUnlocks(run: RunState): UnlockDef[] {
   const current = loadDiscovered();
   const unlocked = new Set(current.unlocked);
   const before = unlocked.size;
+  const newlyUnlocked: UnlockDef[] = [];
 
   for (const def of UNLOCKS) {
     if (unlocked.has(def.id)) continue;
     if (def.isMet(run)) {
       unlocked.add(def.id);
       run.unlockedIds.add(def.id);
+      newlyUnlocked.push(def);
     }
   }
 
   if (unlocked.size !== before) {
     saveDiscovered({ ...current, unlocked: [...unlocked] });
   }
+  return newlyUnlocked;
 }
 
 /**

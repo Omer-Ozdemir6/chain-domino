@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import type { RunConfig, StakeId } from '../game/RunState.js';
-import { SHOP_UPGRADES, BOSS_BLINDS } from '../game/RunState.js';
+import { SHOP_UPGRADES, BOSS_BLINDS, VOUCHERS } from '../game/RunState.js';
 import type { SlotId } from '../models/Board.js';
 import { CHARMS } from '../models/CharmRegistry.js';
 import { useRunState } from './hooks/useRunState.js';
@@ -100,7 +100,7 @@ function useCanvasScale(): { scale: number; width: number; height: number; isPor
 
 export default function App() {
   const { scale, width: canvasWidth, height: canvasHeight, isPortrait } = useCanvasScale();
-  const { run, act, shop, reset } = useRunState(RUN_CONFIG);
+  const { run, act, shop, reset, newlyUnlocked, clearNewlyUnlocked } = useRunState(RUN_CONFIG);
   const [selection, setSelection] = useState<Selection>(null);
   const [message, setMessage] = useState<string | null>(null);
   // "TAŞI DEĞİŞTİR": pick any number of hand stones (1 or many), confirm once — only those
@@ -272,6 +272,23 @@ export default function App() {
     const timer = setTimeout(() => setMessage(null), 2600);
     return () => clearTimeout(timer);
   }, [message]);
+
+  // A charm/voucher's unlock condition being met used to happen completely silently (only
+  // discoverable by later reopening the Koleksiyon screen and noticing a padlock had vanished) —
+  // this surfaces it as the same toast+sound every other player action already gets, one at a
+  // time even if several conditions land on the same move.
+  useEffect(() => {
+    if (newlyUnlocked.length === 0) return;
+    const first = newlyUnlocked[0];
+    const name =
+      first.kind === 'CHARM'
+        ? CHARMS.find((c) => c.id === first.id)?.name
+        : VOUCHERS.find((v) => v.id === first.id)?.name;
+    setMessage(`🔓 Kilit Açıldı: ${name ?? first.id}!`);
+    playSound('trigger');
+    const timer = setTimeout(clearNewlyUnlocked, 2600);
+    return () => clearTimeout(timer);
+  }, [newlyUnlocked]);
 
   useEffect(() => {
     if (!stepPopup) return;
@@ -1079,6 +1096,7 @@ export default function App() {
             message={message}
             activeBossId={run.activeBossId}
             activeBlind={run.activeBlind}
+            activeChallengeId={run.activeChallengeId}
             previewScore={sidebarPreview}
             handScore={handTotalReveal}
             handScoreFlyUp={handScoreFlyUp}
@@ -1289,6 +1307,7 @@ export default function App() {
             message={message}
             activeBossId={run.activeBossId}
             activeBlind={run.activeBlind}
+            activeChallengeId={run.activeChallengeId}
             previewScore={sidebarPreview}
             handScore={handTotalReveal}
             handScoreFlyUp={handScoreFlyUp}
